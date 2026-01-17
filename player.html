@@ -16,9 +16,21 @@
     <div id="joinScreen" class="flex items-center justify-center min-h-screen">
         <div class="bg-gray-800 p-8 rounded-lg border-2 border-orange-500 max-w-md w-full">
             <h1 class="text-3xl font-bold text-orange-500 mb-6 text-center">🦊 LUKAVAC</h1>
+            
+            <!-- Error message -->
+            <div id="errorMessage" class="hidden bg-red-900 border-2 border-red-500 text-white p-3 rounded mb-4">
+                <p class="font-bold">❌ Greška:</p>
+                <p id="errorText" class="text-sm"></p>
+            </div>
+
+            <!-- Success message -->
+            <div id="successMessage" class="hidden bg-green-900 border-2 border-green-500 text-white p-3 rounded mb-4">
+                <p class="font-bold">✅ Firebase spojen!</p>
+            </div>
+
             <input type="text" id="playerName" placeholder="Tvoje ime" 
                    class="w-full bg-gray-700 text-white p-3 rounded mb-4 text-lg">
-            <button onclick="joinGame()" 
+            <button onclick="joinGame()" id="joinButton"
                     class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded text-lg font-bold">
                 Pridruži se igri
             </button>
@@ -26,6 +38,13 @@
                 Igrača: <span id="playerCountJoin">0</span>/8
             </p>
             <a href="index.html" class="block text-center text-orange-400 hover:text-orange-300 mt-4">← Nazad</a>
+
+            <!-- Debug info -->
+            <div class="mt-6 p-3 bg-gray-700 rounded text-xs">
+                <p class="text-gray-400">Debug info:</p>
+                <p class="text-white">Firebase: <span id="firebaseStatus" class="text-yellow-500">Učitavanje...</span></p>
+                <p class="text-white">Database: <span id="databaseStatus" class="text-yellow-500">Učitavanje...</span></p>
+            </div>
         </div>
     </div>
 
@@ -124,47 +143,108 @@
         let allAnswers = {};
         let timerInterval = null;
 
+        // Check Firebase connection
+        console.log('🔍 Provjeravam Firebase konekciju...');
+        console.log('Firebase config:', firebaseConfig);
+        
+        try {
+            console.log('Database object:', database);
+            document.getElementById('firebaseStatus').textContent = '✅ Učitan';
+            document.getElementById('firebaseStatus').className = 'text-green-500';
+
+            // Test database connection
+            database.ref('.info/connected').on('value', (snap) => {
+                if (snap.val() === true) {
+                    console.log('✅ Firebase povezan!');
+                    document.getElementById('databaseStatus').textContent = '✅ Spojen';
+                    document.getElementById('databaseStatus').className = 'text-green-500';
+                    document.getElementById('successMessage').classList.remove('hidden');
+                } else {
+                    console.log('⚠️ Firebase nije povezan');
+                    document.getElementById('databaseStatus').textContent = '⚠️ Nije spojen';
+                    document.getElementById('databaseStatus').className = 'text-yellow-500';
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Firebase greška:', error);
+            document.getElementById('firebaseStatus').textContent = '❌ Greška';
+            document.getElementById('firebaseStatus').className = 'text-red-500';
+            showError('Firebase nije učitan: ' + error.message);
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').classList.remove('hidden');
+            document.getElementById('errorText').textContent = message;
+            console.error('❌', message);
+        }
+
         // Listen to changes
         database.ref('gameState').on('value', (snap) => {
             gameState = snap.val() || {};
+            console.log('📊 Game state updated:', gameState);
             if (playerId) loadQuestion();
             updateGameUI();
+        }, (error) => {
+            showError('Greška pri čitanju gameState: ' + error.message);
         });
 
         database.ref('players').on('value', (snap) => {
             players = snap.val() || {};
+            console.log('👥 Players updated:', Object.keys(players).length);
             document.getElementById('playerCountJoin').textContent = Object.keys(players).length;
             if (playerId && players[playerId]) {
                 document.getElementById('myName').textContent = players[playerId].name;
                 document.getElementById('myScore').textContent = players[playerId].score || 0;
             }
+        }, (error) => {
+            showError('Greška pri čitanju players: ' + error.message);
         });
 
         database.ref('answers').on('value', (snap) => {
             allAnswers = snap.val() || {};
+        }, (error) => {
+            console.error('Greška pri čitanju answers:', error);
         });
 
         function joinGame() {
             const name = document.getElementById('playerName').value.trim();
             if (!name) {
-                alert('Unesi ime!');
+                showError('Molim unesi svoje ime!');
                 return;
             }
             if (Object.keys(players).length >= 8) {
-                alert('Igra je puna (max 8 igrača)!');
+                showError('Igra je puna! Maksimalno 8 igrača.');
                 return;
             }
 
-            const newPlayerRef = database.ref('players').push();
-            newPlayerRef.set({
-                name: name,
-                score: 0,
-                joinedAt: Date.now()
-            });
-            playerId = newPlayerRef.key;
+            console.log('🎮 Pokušavam se pridružiti igri kao:', name);
+            document.getElementById('joinButton').disabled = true;
+            document.getElementById('joinButton').textContent = 'Pridružujem se...';
 
-            document.getElementById('joinScreen').classList.add('hidden');
-            document.getElementById('gameScreen').classList.remove('hidden');
+            try {
+                const newPlayerRef = database.ref('players').push();
+                newPlayerRef.set({
+                    name: name,
+                    score: 0,
+                    joinedAt: Date.now()
+                }).then(() => {
+                    console.log('✅ Uspješno pridružen! ID:', newPlayerRef.key);
+                    playerId = newPlayerRef.key;
+                    document.getElementById('joinScreen').classList.add('hidden');
+                    document.getElementById('gameScreen').classList.remove('hidden');
+                }).catch((error) => {
+                    console.error('❌ Greška pri spremanju igrača:', error);
+                    showError('Greška pri pridruživanju: ' + error.message + '. Provjeri Firebase Database Rules!');
+                    document.getElementById('joinButton').disabled = false;
+                    document.getElementById('joinButton').textContent = 'Pridruži se igri';
+                });
+            } catch (error) {
+                console.error('❌ Kritična greška:', error);
+                showError('Kritična greška: ' + error.message);
+                document.getElementById('joinButton').disabled = false;
+                document.getElementById('joinButton').textContent = 'Pridruži se igri';
+            }
         }
 
         function loadQuestion() {
@@ -172,6 +252,8 @@
                 const questions = snap.val() || [];
                 currentQuestion = questions[gameState.currentQuestion];
                 displayQuestion();
+            }).catch(error => {
+                console.error('Greška pri učitavanju pitanja:', error);
             });
         }
 
@@ -312,10 +394,17 @@
             myAnswer = answerIndex;
             const type = answerType || 'lukavac';
 
+            console.log('📝 Šaljem odgovor:', answerIndex, 'Tip:', type);
+
             database.ref(`answers/${playerId}`).set({
                 answer: answerIndex,
                 type: type,
                 timestamp: Date.now()
+            }).then(() => {
+                console.log('✅ Odgovor spremljen!');
+            }).catch(error => {
+                console.error('❌ Greška pri slanju odgovora:', error);
+                showError('Greška pri slanju odgovora: ' + error.message);
             });
 
             // Highlight selected answer
