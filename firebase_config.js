@@ -11,19 +11,12 @@
 const firebaseConfig = {
 
   apiKey: "AIzaSyCtzey-4az-UKVXWfPi4-62-lZU5usPoCM",
-
   authDomain: "lukavac-4feb1.firebaseapp.com",
-
   databaseURL: "https://lukavac-4feb1-default-rtdb.europe-west1.firebasedatabase.app",
-
   projectId: "lukavac-4feb1",
-
   storageBucket: "lukavac-4feb1.firebasestorage.app",
-
   messagingSenderId: "709802643693",
-
   appId: "1:709802643693:web:003422c72fc8422d07fce4"
-
 };
 
 
