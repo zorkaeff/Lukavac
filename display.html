@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lukavac - TV Display</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5e6d3 0%, #d97706 50%, #f5e6d3 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .answer-display {
+            background: linear-gradient(135deg, #fff5e6 0%, #ffe4cc 100%);
+            border: 4px solid #ea580c;
+            border-radius: 20px;
+            padding: 20px;
+            transition: all 0.5s;
+        }
+        .answer-display.correct {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border-color: #059669;
+            transform: scale(1.05);
+        }
+        .timer-bar {
+            background: linear-gradient(90deg, #10b981 0%, #fbbf24 50%, #ef4444 100%);
+            height: 15px;
+            border-radius: 15px;
+            transition: width 0.1s linear;
+        }
+    </style>
+</head>
+<body class="p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="card p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-5xl font-bold" style="color: #ea580c;">🦊 <span id="quizNameDisplay">LUKAVAC</span></h1>
+                </div>
+                <div class="text-right">
+                    <p class="text-gray-600 text-xl">Krug <span class="text-3xl font-bold" style="color: #ea580c;" id="displayRound">1</span></p>
+                    <p class="text-gray-600 text-xl">Pitanje <span class="text-3xl font-bold" style="color: #ea580c;" id="displayQuestion">1</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timer -->
+        <div id="timerBlock" class="card p-6 mb-6 hidden">
+            <div class="flex items-center justify-center gap-4 mb-4">
+                <span class="text-6xl">⏱️</span>
+                <p class="text-7xl font-bold" style="color: #ea580c;"><span id="timeLeft">20</span>s</p>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full overflow-hidden">
+                <div id="timerBar" class="timer-bar" style="width: 100%"></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-6">
+            <!-- Left - Leaderboard -->
+            <div class="card p-6">
+                <h2 class="text-3xl font-bold mb-4" style="color: #ea580c;">🏆 Poredak</h2>
+                <div id="leaderboard" class="space-y-3">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+
+            <!-- Center & Right - Question/Status -->
+            <div class="col-span-2">
+                <!-- Waiting -->
+                <div id="waitingBlock" class="card p-12 text-center">
+                    <span class="text-9xl">⏳</span>
+                    <p class="text-4xl font-bold mt-6" style="color: #ea580c;">Čekamo početak...</p>
+                </div>
+
+                <!-- Question -->
+                <div id="questionBlock" class="card p-8 hidden">
+                    <h3 class="text-xl font-bold mb-2" style="color: #ea580c;">PITANJE:</h3>
+                    <p class="text-4xl font-bold mb-8" id="questionText">-</p>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-6" id="answersGrid">
+                        <!-- Dynamically populated -->
+                    </div>
+
+                    <!-- Player Answers (shown in lukavac phase) -->
+                    <div id="playerAnswersBlock" class="hidden mt-6">
+                        <h3 class="text-xl font-bold mb-4" style="color: #ea580c;">📊 Odgovori Igrača:</h3>
+                        <div class="grid grid-cols-4 gap-3" id="playerAnswers">
+                            <!-- Dynamically populated -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Round End / Game End -->
+                <div id="endBlock" class="card p-12 text-center hidden">
+                    <span class="text-9xl">🏆</span>
+                    <p class="text-4xl font-bold mt-6" style="color: #ea580c;" id="endMessage">Kraj kruga!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="firebase-config.js"></script>
+    <script>
+        let gameState = {};
+        let players = {};
+        let settings = {};
+        let currentQuestion = null;
+        let allAnswers = {};
+        let timerInterval = null;
+
+        // Firebase listeners
+        database.ref('settings').on('value', snap => {
+            settings = snap.val() || {};
+            document.getElementById('quizNameDisplay').textContent = settings.quizName || 'LUKAVAC';
+        });
+
+        database.ref('gameState').on('value', snap => {
+            gameState = snap.val() || {};
+            loadQuestion();
+            updateUI();
+        });
+
+        database.ref('players').on('value', snap => {
+            players = snap.val() || {};
+            updateLeaderboard();
+        });
+
+        database.ref('questions').on('value', snap => {
+            const questions = snap.val() || [];
+            currentQuestion = questions[gameState.currentQuestion];
+            displayQuestion();
+        });
+
+        database.ref('answers').on('value', snap => {
+            allAnswers = snap.val() || {};
+            if (gameState.phase === 'lukavac' || gameState.phase === 'showAnswer') {
+                showPlayerAnswers();
+            }
+        });
+
+        function loadQuestion() {
+            database.ref('questions').once('value').then(snap => {
+                const questions = snap.val() || [];
+                currentQuestion = questions[gameState.currentQuestion];
+                displayQuestion();
+            });
+        }
+
+        function displayQuestion() {
+            if (!currentQuestion) return;
+
+            document.getElementById('displayRound').textContent = gameState.currentRound || 1;
+            document.getElementById('displayQuestion').textContent = (gameState.currentQuestion || 0) + 1;
+            document.getElementById('questionText').textContent = currentQuestion.text;
+
+            // PRIKAZ ODGOVORA - samo u showAnswer fazi prikazujemo točan odgovor zelenom bojom
+            if (gameState.phase === 'showAnswer') {
+                // Prikaži SAMO točan odgovor
+                const correctAnswerText = currentQuestion.answers[currentQuestion.correct];
+                const correctLetter = String.fromCharCode(65 + currentQuestion.correct);
+                
+                const html = `
+                    <div class="col-span-2 answer-display correct">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-5xl font-bold mr-4" style="color: white;">
+                                    ${correctLetter}.
+                                </span>
+                                <span class="text-4xl font-bold">${correctAnswerText}</span>
+                            </div>
+                            <span class="text-7xl">✅</span>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('answersGrid').innerHTML = html;
+            } else {
+                // U svim ostalim fazama prikaži sve odgovore
+                const html = currentQuestion.answers.map((ans, i) => {
+                    // Count answers for this option (shown in lukavac/showAnswer phase)
+                    const count = Object.values(allAnswers).filter(a => a.answer === i).length;
+                    const showCount = gameState.phase === 'lukavac' || gameState.phase === 'showAnswer';
+                    
+                    return `
+                        <div class="answer-display">
+                            <span class="text-3xl font-bold mr-3" style="color: #ea580c;">
+                                ${String.fromCharCode(65 + i)}.
+                            </span>
+                            <span class="text-2xl font-bold">${ans}</span>
+                            ${showCount ? `<div class="mt-2 text-xl font-bold">${count} odgovora</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+                document.getElementById('answersGrid').innerHTML = html;
+            }
+        }
+
+        function updateUI() {
+            const phase = gameState.phase || 'waiting';
+
+            // Hide all blocks
+            document.getElementById('waitingBlock').classList.add('hidden');
+            document.getElementById('questionBlock').classList.add('hidden');
+            document.getElementById('endBlock').classList.add('hidden');
+            document.getElementById('timerBlock').classList.add('hidden');
+            document.getElementById('playerAnswersBlock').classList.add('hidden');
+
+            if (phase === 'waiting') {
+                document.getElementById('waitingBlock').classList.remove('hidden');
+            }
+            else if (phase === 'answering' || phase === 'lukavac' || phase === 'showAnswer') {
+                document.getElementById('questionBlock').classList.remove('hidden');
+                document.getElementById('timerBlock').classList.remove('hidden');
+                
+                if (phase === 'lukavac' || phase === 'showAnswer') {
+                    document.getElementById('playerAnswersBlock').classList.remove('hidden');
+                    showPlayerAnswers();
+                }
+                
+                displayQuestion();
+                startTimer();
+            }
+            else if (phase === 'pause') {
+                document.getElementById('timerBlock').classList.remove('hidden');
+                startTimer();
+            }
+            else if (phase === 'roundEnd') {
+                document.getElementById('endBlock').classList.remove('hidden');
+                document.getElementById('endMessage').textContent = 'Kraj kruga! Eliminacija...';
+            }
+            else if (phase === 'gameEnd') {
+                document.getElementById('endBlock').classList.remove('hidden');
+                document.getElementById('endMessage').textContent = '🎉 Kraj igre! Imamo pobjednika!';
+            }
+            else if (phase === 'paused') {
+                document.getElementById('waitingBlock').classList.remove('hidden');
+            }
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (!gameState.timerEnd) {
+                    document.getElementById('timeLeft').textContent = '--';
+                    return;
+                }
+                
+                const timeLeft = Math.max(0, Math.ceil((gameState.timerEnd - Date.now()) / 1000));
+                const maxTime = 
+                    gameState.phase === 'answering' ? settings.rounds[gameState.currentRound - 1].time1 :
+                    gameState.phase === 'lukavac' ? settings.rounds[gameState.currentRound - 1].time2 :
+                    gameState.phase === 'showAnswer' ? settings.rounds[gameState.currentRound - 1].timeAnswer :
+                    settings.rounds[gameState.currentRound - 1].timePause;
+                
+                document.getElementById('timeLeft').textContent = timeLeft;
+                const percentage = (timeLeft / maxTime) * 100;
+                document.getElementById('timerBar').style.width = percentage + '%';
+                
+                if (timeLeft === 0) clearInterval(timerInterval);
+            }, 100);
+        }
+
+        function updateLeaderboard() {
+            const sorted = Object.entries(players)
+                .map(([id, data]) => ({ id, ...data }))
+                .sort((a, b) => {
+                    if (b.score !== a.score) return b.score - a.score;
+                    if (b.lukavacCount !== a.lukavacCount) return b.lukavacCount - a.lukavacCount;
+                    if (b.exclamationCount !== a.exclamationCount) return b.exclamationCount - a.exclamationCount;
+                    return a.totalTime - b.totalTime;
+                });
+
+            const html = sorted.map((player, idx) => {
+                const timeInSeconds = Math.floor((player.totalTime || 0) / 1000);
+                const scoreChange = player.lastScoreChange || 0;
+                const scoreChangeText = scoreChange !== 0 ? ` (${scoreChange > 0 ? '+' : ''}${scoreChange}€)` : '';
+                
+                return `
+                <div class="flex justify-between items-center p-4 rounded-xl" style="background: #f5e6d3;">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl font-bold" style="color: #ea580c;">${idx + 1}.</span>
+                        <span class="text-xl font-bold">${player.name}</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-2xl font-bold" style="color: #ea580c;">${player.score || 0}€${scoreChangeText}</span>
+                        <span class="text-sm text-gray-600">${player.lukavacCount || 0}?</span>
+                        <span class="text-sm text-gray-600">${player.exclamationCount || 0}!</span>
+                        <span class="text-xs text-gray-600">⏱️${timeInSeconds}s</span>
+                    </div>
+                </div>
+            `}).join('');
+            document.getElementById('leaderboard').innerHTML = html || '<p class="text-gray-500">Nema igrača</p>';
+        }
+
+        function showPlayerAnswers() {
+            if (!currentQuestion) return;
+            
+            const correctAnswer = currentQuestion.correct;
+            const showCorrectness = gameState.phase === 'showAnswer';
+
+            const html = Object.entries(allAnswers).map(([pid, data]) => {
+                const player = players[pid];
+                if (!player) return '';
+                
+                // Ako je pending (još nije odgovorio)
+                if (data.pending && data.answer === -1) {
+                    return `
+                        <div class="p-3 rounded-xl text-center" style="background: #a855f7;">
+                            <p class="text-white font-bold text-sm">${player.name}</p>
+                            <p class="text-white text-2xl font-bold">?</p>
+                        </div>
+                    `;
+                }
+                
+                const answerLabel = data.answer >= 0 ? String.fromCharCode(65 + data.answer) : '?';
+                const typeSymbol = data.type === 'exclamation' ? '!' : data.type === 'period' ? '.' : '?';
+                
+                // Određivanje boje
+                let bgColor;
+                if (showCorrectness && data.answer >= 0) {
+                    // U showAnswer fazi: zelena za točan, crvena za netočan
+                    bgColor = data.answer === correctAnswer ? '#10b981' : '#ef4444';
+                } else {
+                    // U ostalim fazama: standardne boje po tipu
+                    bgColor = data.type === 'exclamation' ? '#ef4444' :
+                              data.type === 'period' ? '#3b82f6' : '#a855f7';
+                }
+                
+                return `
+                    <div class="p-3 rounded-xl text-center" style="background: ${bgColor};">
+                        <p class="text-white font-bold text-sm">${player.name}</p>
+                        <p class="text-white text-2xl font-bold">${answerLabel}${typeSymbol}</p>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('playerAnswers').innerHTML = html || '<p class="text-gray-500 col-span-4 text-center">Nema odgovora</p>';
+        }
+    </script>
+</body>
+</html>
