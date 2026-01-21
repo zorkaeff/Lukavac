@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lukavac - Kviz Znanja</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5e6d3 0%, #d97706 50%, #f5e6d3 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .menu-btn {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: block;
+            color: white;
+        }
+        .menu-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(234, 88, 12, 0.4);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+    <div class="card p-12 max-w-2xl w-full">
+        <div class="text-center mb-8">
+            <h1 class="text-6xl font-bold mb-4" style="color: #ea580c;">🦊 LUKAVAC</h1>
+            <p class="text-2xl text-gray-600 mb-2">Kviz Znanja</p>
+            <p class="text-gray-500">Multiplayer Realtime Kviz</p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4">
+            <a href="admin.html" class="menu-btn text-center">
+                <div class="text-4xl mb-2">⚙️</div>
+                <div class="text-2xl font-bold">Admin Panel</div>
+                <div class="text-sm mt-1 opacity-90">Kontrola igre i postavke</div>
+            </a>
+            <a href="player.html" class="menu-btn text-center">
+                <div class="text-4xl mb-2">👤</div>
+                <div class="text-2xl font-bold">Igrač</div>
+                <div class="text-sm mt-1 opacity-90">Pridruži se kvizu</div>
+            </a>
+            <a href="display.html" class="menu-btn text-center">
+                <div class="text-4xl mb-2">📺</div>
+                <div class="text-2xl font-bold">Display / TV</div>
+                <div class="text-sm mt-1 opacity-90">Veliki ekran prikaz</div>
+            </a>
+        </div>
+
+        <div class="mt-8 p-6 rounded-xl" style="background: #f5e6d3;">
+            <h3 class="font-bold text-lg mb-3" style="color: #ea580c;">📋 Kako igrati:</h3>
+            <ol class="text-sm space-y-2 text-gray-700">
+                <li><strong>1.</strong> Admin postavi kviz i pokrene igru</li>
+                <li><strong>2.</strong> Igrači se pridruže sa šifrom</li>
+                <li><strong>3.</strong> Svi odgovaraju istovremeno</li>
+                <li><strong>4.</strong> Automatski tijek kroz sve faze</li>
+                <li><strong>5.</strong> Pobjeđuje najlukaviji!</li>
+            </ol>
+        </div>
+
+        <div class="mt-4 text-center text-gray-500 text-sm">
+            <p>Verzija 2.0 - Automatski režim</p>
+        </div>
+    </div>
+</body>
+</html>
