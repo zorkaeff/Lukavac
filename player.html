@@ -281,25 +281,7 @@
         let playerId = null;
         let gameState = {};
         let players = {};
-        
-        // Default settings - fallback ako Firebase nema postavke
-        const defaultSettings = {
-            quizName: "LUKAVAC",
-            password: "1234",
-            minPlayers: 2,
-            maxPlayers: 8,
-            numRounds: 6,
-            rounds: [
-                { questions: 10, values: [10, 5, 0, -5, -10], elimination: 2, time1: 20, time2: 5, timeAnswer: 5, timePause: 45, pauseRound: "manual" },
-                { questions: 10, values: [20, 10, 0, -10, -20], elimination: 1, time1: 20, time2: 5, timeAnswer: 5, timePause: 45, pauseRound: "manual" },
-                { questions: 10, values: [30, 15, 0, -15, -30], elimination: 1, time1: 20, time2: 5, timeAnswer: 5, timePause: 45, pauseRound: "manual" },
-                { questions: 10, values: [40, 20, 0, -20, -40], elimination: 1, time1: 20, time2: 5, timeAnswer: 5, timePause: 45, pauseRound: "manual" },
-                { questions: 10, values: [50, 25, 0, -25, -50], elimination: 1, time1: 20, time2: 5, timeAnswer: 5, timePause: 45, pauseRound: "manual" },
-                { questions: 10, values: [100, 50, 0, -50, -100], elimination: 1, time1: 20, time2: 5, timeAnswer: 5, timePause: 45, pauseRound: "manual" }
-            ]
-        };
-        
-        let settings = defaultSettings;
+        let settings = {};
         let currentQuestion = null;
         let myAnswer = null;
         let myAnswerType = null;
@@ -317,9 +299,7 @@
 
         // Firebase listeners
         database.ref('settings').on('value', snap => {
-            const firebaseSettings = snap.val();
-            // Merge with defaults to ensure all required fields exist
-            settings = firebaseSettings ? { ...defaultSettings, ...firebaseSettings } : defaultSettings;
+            settings = snap.val() || {};
             console.log('⚙️ Settings loaded:', settings);
             document.getElementById('quizNameDisplay').textContent = settings.quizName || 'LUKAVAC';
             document.getElementById('maxPlayersLogin').textContent = settings.maxPlayers || 8;
@@ -426,15 +406,7 @@
             if (!currentQuestion) return;
 
             const round = settings.rounds?.[gameState.currentRound - 1];
-            if (!round) {
-                console.error('⚠️ Round not found for currentRound:', gameState.currentRound);
-                return;
-            }
-            
-            if (!round.values || round.values.length < 5) {
-                console.error('⚠️ Round values not properly defined:', round);
-                return;
-            }
+            if (!round) return;
 
             // Update round/question display
             document.getElementById('displayRound').textContent = gameState.currentRound || 1;
@@ -445,14 +417,10 @@
             document.getElementById('questionTextPhase2').textContent = currentQuestion.text;
             document.getElementById('questionTextPhase3').textContent = currentQuestion.text;
 
-            // Update values - with safety checks
-            try {
-                document.querySelectorAll('.qValueExclaim').forEach(el => el.textContent = Math.abs(round.values[0]));
-                document.querySelectorAll('.qValuePeriod').forEach(el => el.textContent = round.values[1]);
-                document.querySelectorAll('.qValueLukavac').forEach(el => el.textContent = Math.abs(round.values[3]));
-            } catch (e) {
-                console.error('⚠️ Error updating values:', e);
-            }
+            // Update values
+            document.querySelectorAll('.qValueExclaim').forEach(el => el.textContent = Math.abs(round.values[0]));
+            document.querySelectorAll('.qValuePeriod').forEach(el => el.textContent = round.values[1]);
+            document.querySelectorAll('.qValueLukavac').forEach(el => el.textContent = Math.abs(round.values[3]));
 
             // Render Phase 1 answers (! i .)
             renderPhase1Answers();
@@ -465,26 +433,10 @@
         }
 
         function renderPhase1Answers() {
-            console.log('🎯 renderPhase1Answers called', {
-                currentQuestion: !!currentQuestion,
-                rounds: !!settings.rounds,
-                answers: currentQuestion?.answers
-            });
-            
-            if (!currentQuestion || !settings.rounds) {
-                console.warn('⚠️ Cannot render Phase 1 answers - missing data');
-                return;
-            }
+            if (!currentQuestion || !settings.rounds) return;
             
             const round = settings.rounds[gameState.currentRound - 1];
-            if (!round || !round.values || round.values.length < 5) {
-                console.error('⚠️ Round or values not properly defined:', round);
-                return;
-            }
-            
             const answers = currentQuestion.answers;
-            
-            console.log('✅ Rendering', answers.length, 'answers for Phase 1');
             
             // Create 9 buttons: A! A. B! B. C! C. D! D.
             let html = '<div class="grid grid-cols-2 gap-2">';
@@ -500,7 +452,7 @@
                         <div class="flex justify-between items-center mb-1">
                             <span class="text-xl font-bold" style="color: #ef4444;">${letter}!</span>
                             <div class="text-right text-xs">
-                                <div class="text-green-600 font-bold">+${Math.abs(round.values[0])}€</div>
+                                <div class="text-green-600 font-bold">+${round.values[0]}€</div>
                                 <div class="text-red-600 font-bold">${round.values[4]}€</div>
                             </div>
                         </div>
@@ -527,8 +479,6 @@
             
             html += '</div>';
             document.getElementById('answersPhase1Grid').innerHTML = html;
-            
-            console.log('✅ Phase 1 answers rendered successfully');
         }
 
         function renderPhase2Answers() {
@@ -805,12 +755,16 @@
             myAnswer = answerIndex;
             myAnswerType = type;
             
-            console.log('📝 Submitting answer:', answerIndex, 'Type:', type);
+            const round = settings.rounds[gameState.currentRound - 1];
+            const questionStartTime = gameState.timerEnd - (round.time1 * 1000);
+            const elapsedTime = Date.now() - questionStartTime; // Vrijeme od starta pitanja
+            
+            console.log('📝 Submitting answer:', answerIndex, 'Type:', type, 'Elapsed:', elapsedTime);
             
             database.ref(`answers/${playerId}`).set({
                 answer: answerIndex,
                 type: type,
-                timestamp: Date.now() - (gameState.timerEnd - (settings.rounds[gameState.currentRound - 1].time1 * 1000))
+                timestamp: elapsedTime // Relativno vrijeme, ne Date.now()
             });
 
             // Highlight selected answer
@@ -831,14 +785,18 @@
             
             myAnswerType = 'lukavac';
             
-            // ODMAH pošalji u Firebase da admin vidi
+            // ODMAH pošalji u Firebase da admin vidi - sa relativnim vremenom
+            const round = settings.rounds[gameState.currentRound - 1];
+            const questionStartTime = gameState.timerEnd - (round.time1 * 1000);
+            const elapsedTime = Date.now() - questionStartTime;
+            
             database.ref(`answers/${playerId}`).set({
                 answer: -1, // Placeholder
                 type: 'lukavac',
                 pending: true,
-                timestamp: Date.now() + serverTimeOffset
+                timestamp: elapsedTime // Relativno vrijeme
             }).then(() => {
-                console.log('✅ Lukavac status sent to Firebase');
+                console.log('✅ Lukavac status sent, elapsed:', elapsedTime);
             });
             
             const btn = document.getElementById('btnLukavacPhase1');
