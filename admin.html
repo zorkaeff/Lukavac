@@ -229,7 +229,6 @@
         let answers = {};
         let timerInterval = null;
         let serverTimeOffset = 0;
-        let previousScores = {}; // Za praćenje promjena
 
         // Get server time offset for sync
         database.ref('.info/serverTimeOffset').on('value', snap => {
@@ -261,17 +260,7 @@
         });
 
         database.ref('gameState').on('value', snap => {
-            const oldPhase = gameState?.phase;
             gameState = snap.val();
-            
-            // Zapamti scorove prije showAnswer faze
-            if (oldPhase !== 'showAnswer' && gameState?.phase === 'showAnswer') {
-                previousScores = {};
-                Object.entries(players).forEach(([id, data]) => {
-                    previousScores[id] = data.score || 0;
-                });
-            }
-            
             updateUI();
         });
 
@@ -334,46 +323,17 @@
 
             const html = sorted.map((player, idx) => {
                 const timeInSeconds = Math.floor((player.totalTime || 0) / 1000);
-                const currentScore = player.score || 0;
-                const previousScore = previousScores[player.id] || currentScore;
-                const scoreDiff = currentScore - previousScore;
-                
-                // Prikaži odgovor igrača ili razliku u scoreovima
-                const answer = answers[player.id];
-                let extraDisplay = '';
-                
-                if (gameState?.phase === 'answering' || gameState?.phase === 'lukavac' || gameState?.phase === 'pause') {
-                    // Prikaži odgovor
-                    if (answer) {
-                        const answerLabel = answer.answer >= 0 ? String.fromCharCode(65 + answer.answer) : '?';
-                        const typeSymbol = answer.type === 'exclamation' ? '!' : answer.type === 'period' ? '.' : '?';
-                        extraDisplay = `<span class="text-sm font-bold ml-2">${answerLabel}${typeSymbol}</span>`;
-                    }
-                } else if (gameState?.phase === 'showAnswer') {
-                    // Prikaži razliku u cijeni
-                    if (scoreDiff !== 0) {
-                        const color = scoreDiff > 0 ? '#10b981' : '#ef4444';
-                        const sign = scoreDiff > 0 ? '+' : '';
-                        extraDisplay = `<span style="color: ${color}; font-weight: bold; margin-left: 8px;">(${sign}${scoreDiff}€)</span>`;
-                    }
-                }
-                
                 return `
                 <div class="flex justify-between items-center p-3 rounded-lg" style="background: #f5e6d3;">
                     <div class="flex items-center gap-3">
                         <span class="font-bold text-xl" style="color: #ea580c;">${idx + 1}.</span>
                         <span class="font-bold">${player.name}</span>
-                        ${extraDisplay}
                     </div>
                     <div class="flex items-center gap-4">
-                        <span class="font-bold" style="color: #ea580c;">${currentScore}€</span>
+                        <span class="font-bold" style="color: #ea580c;">${player.score || 0}€</span>
                         <span class="text-sm text-gray-600">${player.lukavacCount || 0}?</span>
                         <span class="text-sm text-gray-600">${player.exclamationCount || 0}!</span>
                         <span class="text-xs text-gray-600">⏱️${timeInSeconds}s</span>
-                        <button onclick="kickPlayer('${player.id}', '${player.name}')" 
-                                class="text-red-600 hover:text-red-800 font-bold text-sm">
-                            ❌
-                        </button>
                     </div>
                 </div>
             `}).join('');
@@ -400,14 +360,7 @@
                 // U lukavac/showAnswer fazi - prikaži A? B? C? D? ako je odgovorio
                 const answerLabel = data.answer >= 0 ? String.fromCharCode(65 + data.answer) : '?';
                 const typeSymbol = data.type === 'exclamation' ? '!' : data.type === 'period' ? '.' : '?';
-                
-                let bgColor = data.type === 'exclamation' ? '#ef4444' : data.type === 'period' ? '#3b82f6' : '#a855f7';
-                
-                // U showAnswer fazi, oboji po točnosti
-                if (currentPhase === 'showAnswer' && questions[gameState.currentQuestion]) {
-                    const correct = data.answer === questions[gameState.currentQuestion].correct;
-                    bgColor = correct ? '#10b981' : '#ef4444';
-                }
+                const bgColor = data.type === 'exclamation' ? '#ef4444' : data.type === 'period' ? '#3b82f6' : '#a855f7';
                 
                 // Ako je lukavac i već odgovorio, prikaži A? B? C? D?
                 const displayText = data.type === 'lukavac' && data.answer >= 0 ? 
@@ -618,12 +571,6 @@
                                 pending: true,
                                 timestamp: round.time1 * 1000 // Potrošio je svih 20s
                             });
-                            
-                            // Increment lukavac counter
-                            database.ref(`players/${pid}/lukavacCount`).transaction(val => (val || 0) + 1);
-                            
-                            // Update total time sa maksimalnim vremenom
-                            database.ref(`players/${pid}/totalTime`).transaction(val => (val || 0) + (round.time1 * 1000));
                         }
                     });
                 });
@@ -859,16 +806,6 @@
             if (confirm('❌ RESET IGRAČA - Obrisat će se svi igrači! Sigurno?')) {
                 database.ref('players').set({}).then(() => {
                     alert('✅ Svi igrači obrisani!');
-                });
-            }
-        }
-
-        function kickPlayer(playerId, playerName) {
-            if (confirm(`❌ Izbaci igrača "${playerName}" iz igre?`)) {
-                database.ref(`players/${playerId}`).remove().then(() => {
-                    // Ukloni i njegove odgovore
-                    database.ref(`answers/${playerId}`).remove();
-                    console.log(`✅ Igrač ${playerName} izbačen iz igre`);
                 });
             }
         }
