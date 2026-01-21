@@ -45,7 +45,7 @@
         <div class="card p-6 mb-6">
             <div class="flex justify-between items-center">
                 <div>
-                    <h1 class="text-5xl font-bold" style="color: #ea580c;">🦊 <span id="quizNameDisplay">LUKAVAC</span></h1>
+                    <h1 class="text-5xl font-bold" style="color: #ea580c;">ðŸ¦Š <span id="quizNameDisplay">LUKAVAC</span></h1>
                 </div>
                 <div class="text-right">
                     <p class="text-gray-600 text-xl">Krug <span class="text-3xl font-bold" style="color: #ea580c;" id="displayRound">1</span></p>
@@ -57,7 +57,7 @@
         <!-- Timer -->
         <div id="timerBlock" class="card p-6 mb-6 hidden">
             <div class="flex items-center justify-center gap-4 mb-4">
-                <span class="text-6xl">⏱️</span>
+                <span class="text-6xl">â±ï¸</span>
                 <p class="text-7xl font-bold" style="color: #ea580c;"><span id="timeLeft">20</span>s</p>
             </div>
             <div class="w-full bg-gray-200 rounded-full overflow-hidden">
@@ -68,7 +68,7 @@
         <div class="grid grid-cols-3 gap-6">
             <!-- Left - Leaderboard -->
             <div class="card p-6">
-                <h2 class="text-3xl font-bold mb-4" style="color: #ea580c;">🏆 Poredak</h2>
+                <h2 class="text-3xl font-bold mb-4" style="color: #ea580c;">ðŸ† Poredak</h2>
                 <div id="leaderboard" class="space-y-3">
                     <!-- Dynamically populated -->
                 </div>
@@ -78,8 +78,8 @@
             <div class="col-span-2">
                 <!-- Waiting -->
                 <div id="waitingBlock" class="card p-12 text-center">
-                    <span class="text-9xl">⏳</span>
-                    <p class="text-4xl font-bold mt-6" style="color: #ea580c;">Čekamo početak...</p>
+                    <span class="text-9xl">â³</span>
+                    <p class="text-4xl font-bold mt-6" style="color: #ea580c;">ÄŒekamo poÄetak...</p>
                 </div>
 
                 <!-- Question -->
@@ -93,7 +93,7 @@
 
                     <!-- Player Answers (shown in lukavac phase) -->
                     <div id="playerAnswersBlock" class="hidden mt-6">
-                        <h3 class="text-xl font-bold mb-4" style="color: #ea580c;">📊 Odgovori Igrača:</h3>
+                        <h3 class="text-xl font-bold mb-4" style="color: #ea580c;">ðŸ“Š Odgovori IgraÄa:</h3>
                         <div class="grid grid-cols-4 gap-3" id="playerAnswers">
                             <!-- Dynamically populated -->
                         </div>
@@ -102,7 +102,7 @@
 
                 <!-- Round End / Game End -->
                 <div id="endBlock" class="card p-12 text-center hidden">
-                    <span class="text-9xl">🏆</span>
+                    <span class="text-9xl">ðŸ†</span>
                     <p class="text-4xl font-bold mt-6" style="color: #ea580c;" id="endMessage">Kraj kruga!</p>
                 </div>
             </div>
@@ -113,29 +113,14 @@
     <script>
         let gameState = {};
         let players = {};
-        
-        // Default settings - fallback
-        const defaultSettings = {
-            quizName: "LUKAVAC",
-            rounds: [
-                { questions: 10, values: [10, 5, 0, -5, -10], elimination: 2, time1: 20, time2: 5, timeAnswer: 5, timePause: 45 },
-                { questions: 10, values: [20, 10, 0, -10, -20], elimination: 1, time1: 20, time2: 5, timeAnswer: 5, timePause: 45 },
-                { questions: 10, values: [30, 15, 0, -15, -30], elimination: 1, time1: 20, time2: 5, timeAnswer: 5, timePause: 45 },
-                { questions: 10, values: [40, 20, 0, -20, -40], elimination: 1, time1: 20, time2: 5, timeAnswer: 5, timePause: 45 },
-                { questions: 10, values: [50, 25, 0, -25, -50], elimination: 1, time1: 20, time2: 5, timeAnswer: 5, timePause: 45 },
-                { questions: 10, values: [100, 50, 0, -50, -100], elimination: 1, time1: 20, time2: 5, timeAnswer: 5, timePause: 45 }
-            ]
-        };
-        
-        let settings = defaultSettings;
+        let settings = {};
         let currentQuestion = null;
         let allAnswers = {};
         let timerInterval = null;
 
         // Firebase listeners
         database.ref('settings').on('value', snap => {
-            const firebaseSettings = snap.val();
-            settings = firebaseSettings ? { ...defaultSettings, ...firebaseSettings } : defaultSettings;
+            settings = snap.val() || {};
             document.getElementById('quizNameDisplay').textContent = settings.quizName || 'LUKAVAC';
         });
 
@@ -193,7 +178,7 @@
                         </span>
                         <span class="text-2xl font-bold">${ans}</span>
                         ${showCount ? `<div class="mt-2 text-xl font-bold">${count} odgovora</div>` : ''}
-                        ${isCorrect ? '<span class="float-right text-5xl">✅</span>' : ''}
+                        ${isCorrect ? '<span class="float-right text-5xl">âœ…</span>' : ''}
                     </div>
                 `;
             }).join('');
@@ -235,7 +220,7 @@
             }
             else if (phase === 'gameEnd') {
                 document.getElementById('endBlock').classList.remove('hidden');
-                document.getElementById('endMessage').textContent = '🎉 Kraj igre! Imamo pobjednika!';
+                document.getElementById('endMessage').textContent = 'ðŸŽ‰ Kraj igre! Imamo pobjednika!';
             }
             else if (phase === 'paused') {
                 document.getElementById('waitingBlock').classList.remove('hidden');
@@ -284,14 +269,14 @@
                         <span class="text-xl font-bold">${player.name}</span>
                     </div>
                     <div class="flex items-center gap-4">
-                        <span class="text-2xl font-bold" style="color: #ea580c;">${player.score || 0}€</span>
+                        <span class="text-2xl font-bold" style="color: #ea580c;">${player.score || 0}â‚¬</span>
                         <span class="text-sm text-gray-600">${player.lukavacCount || 0}?</span>
                         <span class="text-sm text-gray-600">${player.exclamationCount || 0}!</span>
-                        <span class="text-xs text-gray-600">⏱️${timeInSeconds}s</span>
+                        <span class="text-xs text-gray-600">â±ï¸${timeInSeconds}s</span>
                     </div>
                 </div>
             `}).join('');
-            document.getElementById('leaderboard').innerHTML = html || '<p class="text-gray-500">Nema igrača</p>';
+            document.getElementById('leaderboard').innerHTML = html || '<p class="text-gray-500">Nema igraÄa</p>';
         }
 
         function showPlayerAnswers() {
@@ -299,7 +284,7 @@
                 const player = players[pid];
                 if (!player) return '';
                 
-                // Ako je pending (još nije odgovorio)
+                // Ako je pending (joÅ¡ nije odgovorio)
                 if (data.pending && data.answer === -1) {
                     return `
                         <div class="p-3 rounded-xl text-center" style="background: #a855f7;">
