@@ -46,7 +46,7 @@
         </div>
 
         <!-- Quick Stats -->
-        <div class="grid grid-cols-5 gap-4 mb-6">
+        <div class="grid grid-cols-4 gap-4 mb-6">
             <div class="card p-4">
                 <p class="text-gray-600 text-sm">Status</p>
                 <p class="text-2xl font-bold" style="color: #ea580c;" id="gameStatus">Čekanje</p>
@@ -62,11 +62,6 @@
             <div class="card p-4">
                 <p class="text-gray-600 text-sm">Timer</p>
                 <p class="text-2xl font-bold" style="color: #ea580c;" id="timerDisplay">--</p>
-            </div>
-            <div class="card p-4 cursor-pointer hover:bg-gray-50" onclick="toggleSettings()">
-                <p class="text-gray-600 text-sm">Settings</p>
-                <p class="text-lg font-bold" style="color: #ea580c;" id="settingsStatus">✅ OK</p>
-                <p class="text-xs text-gray-500">Klikni za uređivanje</p>
             </div>
         </div>
 
@@ -260,19 +255,7 @@
 
         // Firebase listeners
         database.ref('settings').on('value', snap => {
-            const firebaseSettings = snap.val();
-            
-            // Ako nema settings u Firebase, inicijaliziraj sa defaultSettings
-            if (!firebaseSettings) {
-                console.log('🔧 Initializing default settings in Firebase...');
-                database.ref('settings').set(defaultSettings).then(() => {
-                    console.log('✅ Default settings saved to Firebase');
-                });
-                settings = defaultSettings;
-            } else {
-                settings = firebaseSettings;
-            }
-            
+            settings = snap.val() || defaultSettings;
             updateSettingsUI();
         });
 
@@ -460,14 +443,6 @@
             document.getElementById('minPlayers').value = settings.minPlayers || 2;
             document.getElementById('maxPlayersInput').value = settings.maxPlayers || 8;
             document.getElementById('numRounds').value = settings.numRounds || 6;
-            
-            // Update settings status indicator
-            const hasRounds = settings.rounds && settings.rounds.length > 0;
-            const hasValues = hasRounds && settings.rounds[0].values && settings.rounds[0].values.length === 5;
-            document.getElementById('settingsStatus').textContent = hasValues ? '✅ OK' : '⚠️ Konfiguriraj';
-            
-            // Generiraj postavke krugova
-            generateRoundSettings();
         }
 
         function saveSettings() {
@@ -580,7 +555,7 @@
             
             console.log('👁️ Starting Lukavac phase');
             
-            // Auto-assign ? to players who didn't answer
+            // Auto-assign ? to players who didn't answer - SA RELATIVNIM VREMENOM
             database.ref('players').once('value').then(playersSnap => {
                 const allPlayers = playersSnap.val() || {};
                 database.ref('answers').once('value').then(answersSnap => {
@@ -594,7 +569,7 @@
                                 answer: -1, // Placeholder - nije još odgovorio
                                 type: 'lukavac',
                                 pending: true,
-                                timestamp: Date.now()
+                                timestamp: round.time1 * 1000 // Potrošio je svih 20s
                             });
                         }
                     });
