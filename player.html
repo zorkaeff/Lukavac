@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lukavac - Igrač</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5e6d3 0%, #d97706 50%, #f5e6d3 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .answer-btn {
+            background: linear-gradient(135deg, #fff5e6 0%, #ffe4cc 100%);
+            border: 3px solid #ea580c;
+            border-radius: 15px;
+            padding: 12px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .answer-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(234, 88, 12, 0.3);
+        }
+        .answer-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        .answer-btn.selected {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: white;
+            transform: scale(1.05);
+        }
+        .answer-btn.correct-row {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border-color: #059669;
+        }
+        .answer-btn.exclamation {
+            border-color: #ef4444;
+        }
+        .answer-btn.period {
+            border-color: #3b82f6;
+        }
+        .answer-btn.lukavac {
+            border-color: #ea580c;
+        }
+        .answer-btn.lukavac-phase2 {
+            border: 4px solid #a855f7;
+            transform: scale(1.03);
+        }
+        .timer-bar {
+            background: linear-gradient(90deg, #ef4444 0%, #fbbf24 50%, #10b981 100%);
+            height: 30px;
+            border-radius: 15px;
+            transition: width 0.5s ease-out;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .answer-text-large {
+            font-size: 1rem;
+            line-height: 1.5rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="flex items-center justify-center min-h-screen">
+        <div class="card p-8 max-w-md w-full">
+            <div class="text-center mb-6">
+                <h1 class="text-5xl font-bold mb-2" style="color: #ea580c;">🦊 LUKAVAC</h1>
+                <p class="text-gray-600" id="quizNameDisplay">Kviz Znanja</p>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-bold mb-2" style="color: #ea580c;">Šifra za ulaz</label>
+                <input type="text" id="passwordInput" placeholder="Unesi šifru..." 
+                       class="w-full p-4 border-3 rounded-xl text-center text-2xl font-bold"
+                       style="border-color: #ea580c;">
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-bold mb-2" style="color: #ea580c;">Tvoje ime</label>
+                <input type="text" id="playerName" placeholder="Unesi ime..." 
+                       class="w-full p-4 border-3 rounded-xl text-xl"
+                       style="border-color: #ea580c;">
+            </div>
+
+            <button onclick="joinGame()" 
+                    class="w-full py-4 text-white font-bold text-xl rounded-xl"
+                    style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);">
+                Pridruži se igri
+            </button>
+
+            <div class="mt-4 text-center">
+                <p class="text-gray-600">Igrača: <span id="playerCountLogin" class="font-bold" style="color: #ea580c;">0</span>/<span id="maxPlayersLogin">8</span></p>
+            </div>
+
+            <div id="errorMessage" class="hidden mt-4 p-3 bg-red-100 border-2 border-red-500 rounded-xl">
+                <p class="text-red-700 text-center font-bold" id="errorText"></p>
+            </div>
+
+            <a href="index.html" class="block text-center mt-4 text-gray-600 hover:text-gray-800">← Nazad</a>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="hidden max-w-2xl mx-auto">
+        <!-- Player Info -->
+        <div class="card p-2 mb-3">
+            <div class="flex justify-between items-center gap-2 text-sm">
+                <span class="font-bold" style="color: #ea580c;">👤 <span id="myName">-</span></span>
+                <span class="font-bold text-lg" id="myScoreDisplay"><span id="myScore">0</span>€</span>
+                <span class="font-bold"><span style="color: #ef4444;" id="myRank">-</span>/<span class="text-gray-600" id="totalPlayers">-</span></span>
+                <span class="font-bold text-gray-600">🔄<span id="displayRound">1</span>/<span id="totalRounds">-</span></span>
+                <span class="font-bold text-gray-600">❓<span id="displayQuestion">1</span>/<span id="totalQuestions">-</span></span>
+            </div>
+        </div>
+
+        <!-- Timer -->
+        <div id="timerBlock" class="card p-1 mb-3 hidden">
+            <div class="w-full bg-gray-200 rounded-full overflow-hidden" style="height: 20px;">
+                <div id="timerBar" class="timer-bar" style="width: 100%;"></div>
+            </div>
+            <span id="timeLeft" style="display: none;">20</span>
+        </div>
+
+        <!-- Question Block -->
+        <div id="questionBlock" class="hidden">
+            <div class="card p-4 mb-3">
+                <p class="text-lg font-bold mb-4" id="questionText">-</p>
+                
+                <!-- Tekstualni odgovori A, B, C, D -->
+                <div id="answerTexts" class="mb-4 space-y-1" style="margin-left: 10%;">
+                    <!-- Dynamically populated -->
+                </div>
+                
+                <!-- Gumbovi -->
+                <div id="answersGrid" class="space-y-2">
+                    <!-- Dynamically populated -->
+                </div>
+
+                <!-- Info text -->
+                <div id="phaseInfo" class="mt-3 text-center text-sm font-bold" style="color: #ea580c;">
+                    <!-- Phase-specific messages -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard -->
+        <div class="card p-4 mb-3">
+            <h3 class="text-lg font-bold mb-3 text-center" style="color: #ea580c;">🏆 POREDAK</h3>
+            <div id="leaderboard" class="space-y-2">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+
+        <!-- Waiting -->
+        <div id="waitingBlock" class="card p-12 text-center">
+            <span class="text-8xl">⏳</span>
+            <p class="text-2xl font-bold mt-4" style="color: #ea580c;">Čekamo početak...</p>
+        </div>
+    </div>
+
+    <script src="firebase-config.js"></script>
+    <script>
+        let playerId = null;
+        let gameState = {};
+        let players = {};
+        let settings = {};
+        let currentQuestion = null;
+        let myAnswer = null;
+        let myAnswerType = null;
+        let allAnswers = {};
+        let timerInterval = null;
+        let serverTimeOffset = 0;
+
+        database.ref('.info/serverTimeOffset').on('value', snap => {
+            serverTimeOffset = snap.val() || 0;
+        });
+
+        database.ref('settings').on('value', snap => {
+            settings = snap.val() || {};
+            console.log('Settings loaded:', settings);
+            document.getElementById('quizNameDisplay').textContent = settings.quizName || 'LUKAVAC';
+            document.getElementById('maxPlayersLogin').textContent = settings.maxPlayers || 8;
+            
+            // Show warning if no password
+            if (!settings.password) {
+                console.warn('WARNING: No password set in settings!');
+            }
+        });
+
+        database.ref('gameState').on('value', snap => {
+            const newGameState = snap.val() || {};
+            
+            // Ako se faza promijenila na lukavac, resetiraj myAnswer ako je bio pending
+            if (newGameState.phase === 'lukavac' && gameState.phase !== 'lukavac') {
+                const myAnswerData = allAnswers[playerId];
+                if (myAnswerData && myAnswerData.pending === true) {
+                    console.log('Resetting myAnswer for lukavac phase');
+                    myAnswer = null;
+                    myAnswerType = null;
+                }
+            }
+            
+            // Resetiraj myAnswer za novo pitanje
+            if (newGameState.currentQuestion !== gameState.currentQuestion || 
+                newGameState.currentRound !== gameState.currentRound) {
+                myAnswer = null;
+                myAnswerType = null;
+            }
+            
+            gameState = newGameState;
+            loadQuestion();
+            updateGameUI();
+        });
+
+        database.ref('players').on('value', snap => {
+            players = snap.val() || {};
+            updatePlayerCount();
+            updateLeaderboard();
+            
+            if (playerId && players[playerId]) {
+                const score = players[playerId].score || 0;
+                document.getElementById('myScore').textContent = score;
+                const scoreDisplay = document.getElementById('myScoreDisplay');
+                if (score > 0) {
+                    scoreDisplay.style.color = '#10b981'; // Zeleno
+                } else if (score < 0) {
+                    scoreDisplay.style.color = '#ef4444'; // Crveno
+                } else {
+                    scoreDisplay.style.color = '#6b7280'; // Sivo za 0
+                }
+            }
+        });
+
+        database.ref('questions').on('value', snap => {
+            const questions = snap.val() || [];
+            currentQuestion = questions[gameState.currentQuestion];
+            displayQuestion();
+        });
+
+        database.ref('answers').on('value', snap => {
+            allAnswers = snap.val() || {};
+            displayQuestion();
+            updateLeaderboard();
+        });
+
+        function updatePlayerCount() {
+            const count = Object.keys(players).length;
+            document.getElementById('playerCountLogin').textContent = count;
+        }
+
+        function joinGame() {
+            console.log('=== JOIN GAME STARTED ===');
+            const password = document.getElementById('passwordInput').value.trim();
+            const name = document.getElementById('playerName').value.trim();
+            
+            console.log('Password entered:', password);
+            console.log('Name entered:', name);
+            console.log('Settings:', settings);
+            
+            if (!password || !name) {
+                console.log('ERROR: Missing password or name');
+                showError('Unesite šifru i ime!');
+                return;
+            }
+            
+            if (password !== settings.password) {
+                console.log('ERROR: Wrong password. Expected:', settings.password);
+                showError('Pogrešna šifra!');
+                return;
+            }
+            
+            const playerCount = Object.keys(players).length;
+            console.log('Current player count:', playerCount);
+            console.log('Max players:', settings.maxPlayers);
+            
+            if (playerCount >= settings.maxPlayers) {
+                console.log('ERROR: Game is full');
+                showError('Kviz je pun!');
+                return;
+            }
+            
+            console.log('Creating new player...');
+            playerId = database.ref('players').push().key;
+            console.log('Generated player ID:', playerId);
+            
+            database.ref(`players/${playerId}`).set({
+                name: name,
+                score: 0,
+                lukavacCount: 0,
+                exclamationCount: 0,
+                totalTime: 0,
+                joinedAt: Date.now()
+            }).then(() => {
+                console.log('Player added successfully!');
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('gameScreen').classList.remove('hidden');
+                document.getElementById('myName').textContent = name;
+            }).catch(error => {
+                console.error('ERROR adding player:', error);
+                showError('Greška pri dodavanju igrača: ' + error.message);
+            });
+        }
+
+        function showError(msg) {
+            document.getElementById('errorText').textContent = msg;
+            document.getElementById('errorMessage').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('errorMessage').classList.add('hidden');
+            }, 3000);
+        }
+
+        function loadQuestion() {
+            database.ref('questions').once('value').then(snap => {
+                const questions = snap.val() || [];
+                currentQuestion = questions[gameState.currentQuestion];
+                displayQuestion();
+            });
+        }
+
+        function displayQuestion() {
+            if (!currentQuestion) return;
+
+            const round = settings.rounds?.[gameState.currentRound - 1];
+            if (!round) return;
+
+            document.getElementById('displayRound').textContent = gameState.currentRound || 1;
+            document.getElementById('displayQuestion').textContent = (gameState.currentQuestion || 0) + 1;
+            document.getElementById('questionText').textContent = currentQuestion.text;
+
+            renderAnswersGrid();
+        }
+
+        function renderAnswersGrid() {
+            if (!currentQuestion || !settings.rounds) return;
+            
+            const round = settings.rounds[gameState.currentRound - 1];
+            const phase = gameState.phase;
+            
+            // Prikaži tekstualne odgovore
+            let answersTextHtml = '';
+            if (phase === 'showAnswer') {
+                // U showAnswer fazi prikaži SAMO točan odgovor
+                const correctIndex = currentQuestion.correct;
+                const letter = String.fromCharCode(65 + correctIndex);
+                const answerText = currentQuestion.answers[correctIndex];
+                answersTextHtml = `
+                    <div class="flex gap-2 answer-text-large">
+                        <span class="font-bold" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 8px 12px; border-radius: 10px;">${letter}.</span>
+                        <span class="font-bold" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 8px 12px; border-radius: 10px;">${answerText}</span>
+                    </div>
+                `;
+            } else {
+                // U ostalim fazama prikaži sve odgovore
+                currentQuestion.answers.forEach((answerText, i) => {
+                    const letter = String.fromCharCode(65 + i);
+                    answersTextHtml += `
+                        <div class="flex gap-2 answer-text-large">
+                            <span class="font-bold" style="color: #ea580c !important;">${letter}.</span>
+                            <span class="font-bold">${answerText}</span>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('answerTexts').innerHTML = answersTextHtml;
+            
+            // Izračunaj statistiku
+            const stats = {};
+            ['0_exclamation', '0_period', '0_lukavac',
+             '1_exclamation', '1_period', '1_lukavac',
+             '2_exclamation', '2_period', '2_lukavac',
+             '3_exclamation', '3_period', '3_lukavac'].forEach(key => stats[key] = 0);
+            
+            Object.values(allAnswers).forEach(data => {
+                const key = `${data.answer}_${data.type}`;
+                if (stats[key] !== undefined) stats[key]++;
+            });
+            
+            // Uključi i moj trenutni odgovor ako postoji (myAnswer i myAnswerType se postavljaju odmah po kliku)
+            if (myAnswer !== null && myAnswerType !== null && phase === 'lukavac') {
+                const myKey = `${myAnswer}_${myAnswerType}`;
+                if (stats[myKey] !== undefined) {
+                    // Provjeri da li je već uračunat u allAnswers
+                    const myAnswerInDb = allAnswers[playerId];
+                    if (!myAnswerInDb || myAnswerInDb.answer !== myAnswer || myAnswerInDb.type !== myAnswerType) {
+                        stats[myKey]++;
+                    }
+                }
+            }
+            
+            // Ukupan broj odgovora - SAMO relevantni za trenutnu fazu
+            let totalPlayers;
+            let totalLukavacPlayers = 0; // Za ? odgovore
+            
+            if (phase === 'lukavac') {
+                // U lukavac fazi brojimo samo ! i . odgovore (iz faze 1)
+                totalPlayers = 0;
+                Object.keys(stats).forEach(key => {
+                    if (key.includes('_exclamation') || key.includes('_period')) {
+                        totalPlayers += stats[key];
+                    }
+                    if (key.includes('_lukavac')) {
+                        totalLukavacPlayers += stats[key];
+                    }
+                });
+            } else {
+                // U ostalim fazama brojimo sve odgovore
+                totalPlayers = Object.values(stats).reduce((sum, count) => sum + count, 0);
+            }
+            
+            const myAnswerData = allAnswers[playerId];
+            const canAnswerLukavac = phase === 'lukavac' && (myAnswerData?.type === 'lukavac' || !myAnswerData);
+            
+            let html = '';
+            
+            // Container sa paddingom (20% manji gumbi)
+            html += '<div style="padding: 0 10%;">';
+            
+            // FAZA 1: 2 stupca (!, .) redovi + JEDAN ? gumb dolje
+            if (phase === 'answering') {
+                html += '<div class="grid grid-cols-2 gap-2 mb-2">';
+                
+                currentQuestion.answers.forEach((answerText, i) => {
+                    const letter = String.fromCharCode(65 + i);
+                    
+                    // ! gumb
+                    const exclSelected = myAnswerData && myAnswerData.answer === i && myAnswerData.type === 'exclamation';
+                    const exclClass = `answer-btn exclamation ${exclSelected ? 'selected' : ''}`;
+                    const exclDisabled = myAnswerData ? 'disabled' : '';
+                    
+                    html += `
+                        <button onclick="submitAnswer(${i}, 'exclamation')" 
+                                class="${exclClass}" ${exclDisabled} style="position: relative;">
+                            <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 0.78rem; font-weight: bold; color: #10b981;">+${round.values[0]}€</span>
+                            <div class="text-xl font-bold">${letter}!</div>
+                            <span style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 0.78rem; font-weight: bold; color: #ef4444;">${round.values[4]}€</span>
+                        </button>
+                    `;
+                    
+                    // . gumb
+                    const periodSelected = myAnswerData && myAnswerData.answer === i && myAnswerData.type === 'period';
+                    const periodClass = `answer-btn period ${periodSelected ? 'selected' : ''}`;
+                    const periodDisabled = myAnswerData ? 'disabled' : '';
+                    
+                    html += `
+                        <button onclick="submitAnswer(${i}, 'period')" 
+                                class="${periodClass}" ${periodDisabled} style="position: relative;">
+                            <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 0.78rem; font-weight: bold; color: #10b981;">+${round.values[1]}€</span>
+                            <div class="text-xl font-bold">${letter}.</div>
+                            <span style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 0.78rem; font-weight: bold; color: #ef4444;">0€</span>
+                        </button>
+                    `;
+                });
+                
+                html += '</div>';
+                
+                // LUKAVAC separator
+                html += '<div class="text-center text-sm font-bold text-purple-600 my-2" style="opacity: 0.7;">🦊 LUKAVAC</div>';
+                
+                // JEDAN veliki ? gumb dolje
+                const lukavacSelected = myAnswerData && myAnswerData.type === 'lukavac';
+                const lukavacClass = `answer-btn lukavac ${lukavacSelected ? 'selected' : ''}`;
+                const lukavacDisabled = myAnswerData ? 'disabled' : '';
+                
+                html += `
+                    <button onclick="submitAnswer(-1, 'lukavac')" 
+                            class="${lukavacClass}" ${lukavacDisabled}
+                            style="width: 100%; position: relative; min-height: 68px;">
+                        <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.9rem; font-weight: bold; color: #10b981;">+${round.values[1]}€</span>
+                        <div class="text-3xl font-bold">?</div>
+                        <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 0.9rem; font-weight: bold; color: #ef4444;">${round.values[3]}€</span>
+                    </button>
+                `;
+                
+            } else if (phase === 'lukavac' || phase === 'showAnswer') {
+                // FAZA 2 i 3: Prva 4 reda (!, .) sa % progress bar + dolje A?, B?, C?, D?
+                
+                html += '<div class="grid grid-cols-2 gap-2 mb-2">';
+                
+                currentQuestion.answers.forEach((answerText, i) => {
+                    const letter = String.fromCharCode(65 + i);
+                    const isCorrectAnswer = i === currentQuestion.correct;
+                    
+                    // ! gumb
+                    const exclKey = `${i}_exclamation`;
+                    const exclCount = stats[exclKey] || 0;
+                    const exclPercentage = totalPlayers > 0 ? Math.round((exclCount / totalPlayers) * 100) : 0;
+                    const exclSelected = myAnswerData && myAnswerData.answer === i && myAnswerData.type === 'exclamation';
+                    let exclClass = `answer-btn exclamation ${exclSelected ? 'selected' : ''}`;
+                    let exclStyle = '';
+                    
+                    if (phase === 'showAnswer' && isCorrectAnswer) {
+                        // Zelena pozadina, crveni border (iz .exclamation klase)
+                        exclStyle = 'background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; border: 4px solid #ef4444 !important; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5) !important;';
+                    } else if (phase === 'lukavac') {
+                        // Transparentno
+                        exclStyle = 'border: none !important; background: transparent !important; box-shadow: none !important;';
+                    }
+                    
+                    html += `
+                        <button disabled class="${exclClass}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; ${exclStyle}">
+                            <div class="text-xl font-bold mb-1" style="color: #ea580c !important;">${letter}!</div>
+                            <div style="width: 100%;">
+                                <div style="background: rgba(0,0,0,0.1); height: 12px; border-radius: 4px; overflow: hidden; margin-bottom: 2px;">
+                                    <div style="background: #dc2626; height: 100%; width: ${exclPercentage}%; transition: width 0.3s;"></div>
+                                </div>
+                                <div class="text-xs font-bold text-center">${exclPercentage}%</div>
+                            </div>
+                        </button>
+                    `;
+                    
+                    // . gumb
+                    const periodKey = `${i}_period`;
+                    const periodCount = stats[periodKey] || 0;
+                    const periodPercentage = totalPlayers > 0 ? Math.round((periodCount / totalPlayers) * 100) : 0;
+                    const periodSelected = myAnswerData && myAnswerData.answer === i && myAnswerData.type === 'period';
+                    let periodClass = `answer-btn period ${periodSelected ? 'selected' : ''}`;
+                    let periodStyle = '';
+                    
+                    if (phase === 'showAnswer' && isCorrectAnswer) {
+                        // Zelena pozadina, plavi border (iz .period klase)
+                        periodStyle = 'background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; border: 4px solid #3b82f6 !important; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5) !important;';
+                    } else if (phase === 'lukavac') {
+                        // Transparentno
+                        periodStyle = 'border: none !important; background: transparent !important; box-shadow: none !important;';
+                    }
+                    
+                    html += `
+                        <button disabled class="${periodClass}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; ${periodStyle}">
+                            <div class="text-xl font-bold mb-1" style="color: #ea580c !important;">${letter}.</div>
+                            <div style="width: 100%;">
+                                <div style="background: rgba(0,0,0,0.1); height: 12px; border-radius: 4px; overflow: hidden; margin-bottom: 2px;">
+                                    <div style="background: #2563eb; height: 100%; width: ${periodPercentage}%; transition: width 0.3s;"></div>
+                                </div>
+                                <div class="text-xs font-bold text-center">${periodPercentage}%</div>
+                            </div>
+                        </button>
+                    `;
+                });
+                
+                html += '</div>';
+                
+                // LUKAVAC separator
+                html += '<div class="text-center text-sm font-bold text-purple-600 my-2" style="opacity: 0.7;">🦊 LUKAVAC</div>';
+                
+                // Dolje: A?, B?, C?, D? (4 stupca u jednom redu)
+                // PRIVATNOST: Ako mogu odgovoriti (canAnswerLukavac), NE prikazuj % drugih
+                const showLukavacPercentages = phase === 'showAnswer' || !canAnswerLukavac;
+                
+                html += '<div class="grid grid-cols-4 gap-2">';
+                
+                currentQuestion.answers.forEach((answerText, i) => {
+                    const letter = String.fromCharCode(65 + i);
+                    const isCorrectAnswer = i === currentQuestion.correct;
+                    
+                    const lukavacKey = `${i}_lukavac`;
+                    const lukavacCount = stats[lukavacKey] || 0;
+                    const lukavacPercentage = (phase === 'lukavac' && totalLukavacPlayers > 0) 
+                        ? Math.round((lukavacCount / totalLukavacPlayers) * 100) 
+                        : (totalPlayers > 0 ? Math.round((lukavacCount / totalPlayers) * 100) : 0);
+                    const lukavacSelected = myAnswerData && myAnswerData.answer === i && myAnswerData.type === 'lukavac';
+                    
+                    let lukavacClass = `answer-btn lukavac ${lukavacSelected ? 'selected' : ''}`;
+                    let lukavacEnabled = false;
+                    let lukavacStyle = '';
+                    
+                    if (phase === 'showAnswer' && isCorrectAnswer) {
+                        // Zelena pozadina, narančasti border (iz .lukavac klase)
+                        lukavacStyle = 'background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; border: 4px solid #ea580c !important; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5) !important; min-height: 60px;';
+                    } else if (phase === 'lukavac' && canAnswerLukavac) {
+                        lukavacEnabled = true;
+                        lukavacStyle = 'border-width: 3px; min-height: 60px;';
+                    } else if (phase === 'lukavac') {
+                        lukavacStyle = 'opacity: 0.7; min-height: 60px;';
+                    } else {
+                        lukavacStyle = 'min-height: 60px;';
+                    }
+                    
+                    const disabled = !lukavacEnabled ? 'disabled' : '';
+                    
+                    // Prikaži % samo ako:
+                    // 1. U showAnswer fazi (uvijek)
+                    // 2. U lukavac fazi ALI samo ako NE mogu odgovoriti (već sam odgovorio sa !)
+                    const displayPercentage = showLukavacPercentages ? lukavacPercentage : '?';
+                    const percentageOpacity = showLukavacPercentages ? '1' : '0.3';
+                    
+                    html += `
+                        <button onclick="submitAnswer(${i}, 'lukavac')" 
+                                class="${lukavacClass}" ${disabled} style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; ${lukavacStyle}">
+                            <div class="text-xl font-bold mb-1">${letter}?</div>
+                            <div style="width: 100%; opacity: ${percentageOpacity};">
+                                <div style="background: rgba(0,0,0,0.1); height: 12px; border-radius: 4px; overflow: hidden; margin-bottom: 2px;">
+                                    <div style="background: #9333ea; height: 100%; width: ${showLukavacPercentages ? lukavacPercentage : 0}%; transition: width 0.3s;"></div>
+                                </div>
+                                <div class="text-xs font-bold text-center">${displayPercentage}${showLukavacPercentages ? '%' : ''}</div>
+                            </div>
+                        </button>
+                    `;
+                });
+                
+                html += '</div>';
+            }
+            
+            // Zatvori container
+            html += '</div>';
+            
+            document.getElementById('answersGrid').innerHTML = html;
+            
+            let phaseInfoText = '';
+            if (phase === 'answering') {
+                phaseInfoText = 'Odaberi odgovor!';
+            } else if (phase === 'lukavac') {
+                phaseInfoText = canAnswerLukavac ? '🦊 Vidi % - odaberi sa ?' : 'Čekamo ostale igrače...';
+            } else if (phase === 'showAnswer') {
+                const correct = myAnswerData && myAnswerData.answer === currentQuestion.correct;
+                phaseInfoText = correct ? '✅ TOČNO!' : '❌ NETOČNO!';
+            }
+            document.getElementById('phaseInfo').textContent = phaseInfoText;
+        }
+
+        function submitAnswer(answerIndex, type) {
+            if (myAnswer !== null && myAnswerType !== null) return;
+            if (!settings.rounds) return;
+            
+            const phase = gameState.phase;
+            
+            if (phase === 'lukavac') {
+                const myAnswerData = allAnswers[playerId];
+                console.log('Lukavac phase check:', {myAnswerData, type, playerId});
+                
+                // Mogu odgovoriti samo ako:
+                // 1. Nemam odgovor uopće (!myAnswerData)
+                // 2. Imam pending lukavac (pending === true)
+                // 3. Već sam odgovorio sa lukavac u fazi 1 (type === 'lukavac' && answer === -1)
+                const canAnswer = !myAnswerData || 
+                                  myAnswerData.pending === true || 
+                                  (myAnswerData.type === 'lukavac' && myAnswerData.answer === -1);
+                
+                if (!canAnswer || type !== 'lukavac') {
+                    console.log('Cannot answer in lukavac phase:', {canAnswer, type, myAnswerData});
+                    return;
+                }
+            } else if (phase !== 'answering') {
+                return;
+            }
+
+            myAnswer = answerIndex;
+            myAnswerType = type;
+            
+            const round = settings.rounds[gameState.currentRound - 1];
+            const questionStartTime = gameState.timerEnd - (phase === 'answering' ? round.time1 * 1000 : round.time2 * 1000);
+            const elapsedTime = Date.now() - questionStartTime;
+            
+            // Ako je lukavac u fazi 1, postavi answer na -1 (pending)
+            const answerValue = (phase === 'answering' && type === 'lukavac') ? -1 : answerIndex;
+            const isPending = (phase === 'answering' && type === 'lukavac');
+            
+            database.ref(`answers/${playerId}`).set({
+                answer: answerValue,
+                type: type,
+                timestamp: elapsedTime,
+                pending: isPending
+            });
+            
+            // Brojači ! i ? - samo ako NIJE već brojao za ovaj tip
+            const myAnswerData = allAnswers[playerId];
+            const alreadyCounted = myAnswerData && myAnswerData.type === type;
+            
+            if (type === 'exclamation' && !alreadyCounted) {
+                database.ref(`players/${playerId}/exclamationCount`).transaction(val => (val || 0) + 1);
+            } else if (type === 'lukavac' && !alreadyCounted) {
+                database.ref(`players/${playerId}/lukavacCount`).transaction(val => (val || 0) + 1);
+            }
+            
+            database.ref(`players/${playerId}/totalTime`).transaction(val => (val || 0) + elapsedTime);
+        }
+
+        function updateGameUI() {
+            const phase = gameState.phase || 'waiting';
+
+            document.getElementById('waitingBlock').classList.add('hidden');
+            document.getElementById('questionBlock').classList.add('hidden');
+            document.getElementById('timerBlock').classList.add('hidden');
+
+            if (phase === 'waiting' || phase === 'paused' || phase === 'roundEnd' || phase === 'gameEnd') {
+                document.getElementById('waitingBlock').classList.remove('hidden');
+                myAnswer = null;
+                myAnswerType = null;
+            } else if (phase === 'pause') {
+                // U fazi pauze: prikaži timer i leaderboard, ALI sakrij pitanje
+                document.getElementById('timerBlock').classList.remove('hidden');
+                startTimer();
+            } else if (phase === 'answering' || phase === 'lukavac' || phase === 'showAnswer') {
+                document.getElementById('questionBlock').classList.remove('hidden');
+                document.getElementById('timerBlock').classList.remove('hidden');
+                displayQuestion();
+                startTimer();
+            }
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            
+            timerInterval = setInterval(() => {
+                if (!gameState.timerEnd || !settings.rounds) {
+                    document.getElementById('timeLeft').textContent = '0';
+                    document.getElementById('timerBar').style.width = '0%';
+                    return;
+                }
+                
+                const serverNow = Date.now() + serverTimeOffset;
+                const timeRemaining = Math.max(0, gameState.timerEnd - serverNow);
+                const timeLeft = Math.ceil(timeRemaining / 1000);
+                
+                const round = settings.rounds[gameState.currentRound - 1];
+                if (!round) return;
+                
+                const maxTime = 
+                    gameState.phase === 'answering' ? round.time1 :
+                    gameState.phase === 'lukavac' ? round.time2 :
+                    gameState.phase === 'showAnswer' ? round.timeAnswer :
+                    round.timePause;
+                
+                document.getElementById('timeLeft').textContent = timeLeft;
+                
+                // Smooth percentage based on exact milliseconds
+                const percentage = Math.max(0, Math.min(100, (timeRemaining / (maxTime * 1000)) * 100));
+                document.getElementById('timerBar').style.width = percentage + '%';
+                
+                if (timeLeft === 0) clearInterval(timerInterval);
+            }, 50); // Update more frequently for smoother animation
+        }
+
+        function updateLeaderboard() {
+            const sorted = Object.entries(players)
+                .map(([id, data]) => ({ id, ...data }))
+                .sort((a, b) => {
+                    if (b.score !== a.score) return b.score - a.score;
+                    if ((b.lukavacCount || 0) !== (a.lukavacCount || 0)) return (b.lukavacCount || 0) - (a.lukavacCount || 0);
+                    if ((b.exclamationCount || 0) !== (a.exclamationCount || 0)) return (b.exclamationCount || 0) - (a.exclamationCount || 0);
+                    return (a.totalTime || 0) - (b.totalTime || 0);
+                });
+
+            // Update my rank in header
+            const myRankIndex = sorted.findIndex(p => p.id === playerId);
+            if (myRankIndex !== -1) {
+                document.getElementById('myRank').textContent = myRankIndex + 1;
+            }
+            document.getElementById('totalPlayers').textContent = sorted.length;
+
+            const html = sorted.map((player, idx) => {
+                const isMe = player.id === playerId;
+                const timeInSeconds = Math.floor((player.totalTime || 0) / 1000);
+                const currentScore = player.score || 0;
+                
+                const answer = allAnswers[player.id];
+                let answerDisplay = '';
+                
+                // Provjeri da li JA mogu vidjeti odgovore
+                const myAnswer = allAnswers[playerId];
+                const hasAnswered = myAnswer && myAnswer.answer >= 0 && !myAnswer.pending;
+                
+                // FAZA 1 (answering): Prikaži odgovore SAMO ako sam i JA odgovorio
+                if (gameState.phase === 'answering' && answer && answer.answer >= 0) {
+                    // NE prikazuj pending ? odgovore
+                    if (!(answer.type === 'lukavac' && answer.pending)) {
+                        // Prikaži SAMO ako sam JA odgovorio ili ako je to MOJ odgovor
+                        if (hasAnswered || player.id === playerId) {
+                            const answerLabel = String.fromCharCode(65 + answer.answer);
+                            let typeSymbol = '?';
+                            if (answer.type === 'exclamation') typeSymbol = '!';
+                            else if (answer.type === 'period') typeSymbol = '.';
+                            answerDisplay = `<span class="text-sm font-bold ml-2">${answerLabel}${typeSymbol}</span>`;
+                        }
+                    }
+                }
+                // FAZA 2 (lukavac): Prikaži SVE odgovore iz Faze 1 (!, ., ?), ALI NE odgovore iz Faze 2
+                else if (gameState.phase === 'lukavac' && answer) {
+                    console.log('Leaderboard lukavac:', {
+                        playerId: player.id, 
+                        playerName: player.name,
+                        answer: answer,
+                        answerValue: answer.answer,
+                        isPending: answer.pending,
+                        type: answer.type,
+                        willShow: '?'
+                    });
+                    
+                    // Prikaži ! i . (uvijek iz Faze 1)
+                    if ((answer.type === 'exclamation' || answer.type === 'period') && answer.answer >= 0) {
+                        const answerLabel = String.fromCharCode(65 + answer.answer);
+                        const typeSymbol = answer.type === 'exclamation' ? '!' : '.';
+                        answerDisplay = `<span class="text-sm font-bold ml-2">${answerLabel}${typeSymbol}</span>`;
+                    }
+                    // Prikaži ? iz FAZE 1 (type = lukavac, answer = -1, pending = true ILI undefined)
+                    // ILI (type = lukavac, answer = -1) - to znači Faza 1
+                    else if (answer.type === 'lukavac' && answer.answer === -1) {
+                        answerDisplay = `<span class="text-sm font-bold ml-2">?</span>`;
+                    }
+                    // NE prikazuj ? iz FAZE 2 (type = lukavac, answer >= 0)
+                } 
+                // FAZA 3 (showAnswer): Prikaži SVE odgovore (!, ., ?)
+                else if (gameState.phase === 'showAnswer' && answer && answer.answer >= 0) {
+                    const answerLabel = String.fromCharCode(65 + answer.answer);
+                    const typeSymbol = answer.type === 'exclamation' ? '!' : answer.type === 'period' ? '.' : '?';
+                    answerDisplay = `<span class="text-sm font-bold ml-2">${answerLabel}${typeSymbol}</span>`;
+                }
+                
+                return `
+                    <div class="flex justify-between items-center p-2 rounded-xl ${isMe ? 'border-2' : ''}" 
+                         style="background: ${isMe ? '#fff5e6' : '#f5e6d3'}; ${isMe ? 'border-color: #ea580c;' : ''}">
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg font-bold" style="color: #ea580c;">${idx + 1}.</span>
+                            <span class="text-sm font-bold">${player.name}${isMe ? ' (TI)' : ''}</span>
+                            ${answerDisplay}
+                        </div>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-lg font-bold" style="color: ${currentScore > 0 ? '#10b981' : currentScore < 0 ? '#ef4444' : '#6b7280'};">${currentScore}€</span>
+                            ${gameState.phase === 'showAnswer' ? `
+                                <span class="font-bold">${player.lukavacCount || 0}?</span>
+                                <span class="font-bold">${player.exclamationCount || 0}!</span>
+                            ` : ''}
+                            ${(gameState.phase !== 'answering' && gameState.phase !== 'lukavac') ? `<span class="text-gray-600">⏱️${timeInSeconds}s</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('leaderboard').innerHTML = html || '<p class="text-gray-500">Nema igrača</p>';
+        }
+    </script>
+</body>
+</html>
