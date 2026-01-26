@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<!-- Player Registration & Profile System - 2026-01-27 -->
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registracija - Lukavac Kviz</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tillana:wght@400;700&family=Hallock&family=Metal+Mania&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Tillana', cursive;
+            background: linear-gradient(135deg, #fffff1 0%, #ffd995 100%);
+            min-height: 100vh;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(183, 88, 0, 0.2);
+        }
+        .fox-logo {
+            font-family: 'Metal Mania', cursive;
+            color: #b75800;
+            font-size: 3rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        input, select, textarea {
+            border: 2px solid #ffd995;
+            border-radius: 10px;
+            padding: 10px;
+            width: 100%;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: #b75800;
+            outline: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #b75800 0%, #ffd995 100%);
+            color: white;
+            font-weight: bold;
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+        }
+        .privacy-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .toggle-switch.active {
+            background: #10b981;
+        }
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: left 0.3s;
+        }
+        .toggle-switch.active .toggle-slider {
+            left: 26px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <img src="cunning_logo_lukavac.png" alt="Lukavac Logo" style="width: 150px; height: 150px; margin: 0 auto;">
+            <div class="fox-logo mb-2">LUKAVAC</div>
+            <h1 class="text-3xl font-bold" style="color: #632705;">Registracija Igrača</h1>
+            <p class="text-gray-600 mt-2">Kreiraj svoj profil za Lukavac kviz natjecanja</p>
+        </div>
+
+        <!-- Registration Form -->
+        <div class="card p-8" id="registerForm">
+            <form onsubmit="registerPlayer(event)">
+                <h2 class="text-2xl font-bold mb-6" style="color: #b75800;">Osnovni Podaci</h2>
+                
+                <!-- Profile Photo Upload -->
+                <div class="mb-6 text-center">
+                    <label class="block font-bold mb-3" style="color: #632705;">
+                        Profilna Slika
+                    </label>
+                    <div class="relative inline-block">
+                        <img id="profilePreview" src="https://via.placeholder.com/150?text=👤" 
+                             class="w-32 h-32 rounded-full border-4 border-yellow-600 object-cover mx-auto">
+                        <label for="profilePhoto" class="absolute bottom-0 right-0 bg-yellow-600 text-white rounded-full p-2 cursor-pointer hover:bg-yellow-700">
+                            📷
+                            <input type="file" id="profilePhoto" accept="image/*" class="hidden" onchange="previewPhoto(event)">
+                        </label>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2">Klikni na kameru za upload slike</p>
+                </div>
+
+                <!-- Required Field: Nickname -->
+                <div class="mb-4">
+                    <label class="block font-bold mb-2" style="color: #632705;">
+                        Nadimak <span style="color: #ef4444;">*</span>
+                    </label>
+                    <input type="text" id="nickname" required placeholder="Tvoj kviz nadimak...">
+                    <div class="privacy-toggle">
+                        <span class="text-sm text-gray-600">Privatnost:</span>
+                        <div class="toggle-switch active" onclick="togglePrivacy(this, 'nickname')" data-public="true">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <span class="text-sm font-bold" style="color: #10b981;">Javno</span>
+                    </div>
+                </div>
+
+                <!-- Optional: Name -->
+                <div class="mb-4">
+                    <label class="block font-bold mb-2" style="color: #632705;">Ime</label>
+                    <input type="text" id="firstName" placeholder="Unesi ime...">
+                    <div class="privacy-toggle">
+                        <span class="text-sm text-gray-600">Privatnost:</span>
+                        <div class="toggle-switch active" onclick="togglePrivacy(this, 'firstName')" data-public="true">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <span class="text-sm font-bold" style="color: #10b981;">Javno</span>
+                    </div>
+                </div>
+
+                <!-- Optional: Surname -->
+                <div class="mb-4">
+                    <label class="block font-bold mb-2" style="color: #632705;">Prezime</label>
+                    <input type="text" id="lastName" placeholder="Unesi prezime...">
+                    <div class="privacy-toggle">
+                        <span class="text-sm text-gray-600">Privatnost:</span>
+                        <div class="toggle-switch" onclick="togglePrivacy(this, 'lastName')" data-public="false">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <span class="text-sm font-bold" style="color: #ef4444;">Privatno</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block font-bold mb-2" style="color: #632705;">Datum Rođenja</label>
+                        <input type="date" id="birthDate">
+                        <div class="privacy-toggle">
+                            <div class="toggle-switch" onclick="togglePrivacy(this, 'birthDate')" data-public="false">
+                                <div class="toggle-slider"></div>
+                            </div>
+                            <span class="text-sm font-bold" style="color: #ef4444;">Privatno</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-bold mb-2" style="color: #632705;">Zanimanje</label>
+                        <input type="text" id="occupation" placeholder="Tvoj posao...">
+                        <div class="privacy-toggle">
+                            <div class="toggle-switch" onclick="togglePrivacy(this, 'occupation')" data-public="false">
+                                <div class="toggle-slider"></div>
+                            </div>
+                            <span class="text-sm font-bold" style="color: #ef4444;">Privatno</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block font-bold mb-2" style="color: #632705;">Mjesto Stanovanja</label>
+                    <input type="text" id="location" placeholder="Grad/Država...">
+                    <div class="privacy-toggle">
+                        <div class="toggle-switch active" onclick="togglePrivacy(this, 'location')" data-public="true">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <span class="text-sm font-bold" style="color: #10b981;">Javno</span>
+                    </div>
+                </div>
+
+                <h2 class="text-2xl font-bold mt-8 mb-6" style="color: #b75800;">Kviz Iskustvo</h2>
+
+                <div class="mb-4">
+                    <label class="block font-bold mb-2" style="color: #632705;">Jaka Područja</label>
+                    <textarea id="strongAreas" rows="3" placeholder="npr. Sport, Geografija, Film..."></textarea>
+                    <div class="privacy-toggle">
+                        <div class="toggle-switch active" onclick="togglePrivacy(this, 'strongAreas')" data-public="true">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <span class="text-sm font-bold" style="color: #10b981;">Javno</span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block font-bold mb-2" style="color: #632705;">Slaba Područja</label>
+                    <textarea id="weakAreas" rows="3" placeholder="npr. Muzika, Likovna umjetnost..."></textarea>
+                    <div class="privacy-toggle">
+                        <div class="toggle-switch" onclick="togglePrivacy(this, 'weakAreas')" data-public="false">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <span class="text-sm font-bold" style="color: #ef4444;">Privatno</span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block font-bold mb-2" style="color: #632705;">TV Kvizovi (Iskustvo)</label>
+                    <textarea id="tvQuizExperience" rows="2" placeholder="npr. Potjera 2022, Tko želi biti milijunaš..."></textarea>
+                    <div class="privacy-toggle">
+                        <div class="toggle-switch active" onclick="togglePrivacy(this, 'tvQuizExperience')" data-public="true">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <span class="text-sm font-bold" style="color: #10b981;">Javno</span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block font-bold mb-2" style="color: #632705;">Pub Kvizovi (Iskustvo)</label>
+                    <textarea id="pubQuizExperience" rows="2" placeholder="npr. Kviz Plebs Zagreb..."></textarea>
+                    <div class="privacy-toggle">
+                        <div class="toggle-switch active" onclick="togglePrivacy(this, 'pubQuizExperience')" data-public="true">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <span class="text-sm font-bold" style="color: #10b981;">Javno</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block font-bold mb-2" style="color: #632705;">Zarada na Kvizovima (€)</label>
+                        <input type="number" id="quizEarnings" placeholder="0" min="0">
+                        <div class="privacy-toggle">
+                            <div class="toggle-switch" onclick="togglePrivacy(this, 'quizEarnings')" data-public="false">
+                                <div class="toggle-slider"></div>
+                            </div>
+                            <span class="text-sm font-bold" style="color: #ef4444;">Privatno</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-bold mb-2" style="color: #632705;">Broj Pobjeda</label>
+                        <input type="number" id="wins" placeholder="0" min="0">
+                        <div class="privacy-toggle">
+                            <div class="toggle-switch active" onclick="togglePrivacy(this, 'wins')" data-public="true">
+                                <div class="toggle-slider"></div>
+                            </div>
+                            <span class="text-sm font-bold" style="color: #10b981;">Javno</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block font-bold mb-2" style="color: #632705;">Član Kviz Udruge/Ekipe/Tima</label>
+                    <input type="text" id="team" placeholder="npr. Kviz Udruga Zagreb">
+                    <div class="privacy-toggle">
+                        <div class="toggle-switch active" onclick="togglePrivacy(this, 'team')" data-public="true">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <span class="text-sm font-bold" style="color: #10b981;">Javno</span>
+                    </div>
+                </div>
+
+                <h2 class="text-2xl font-bold mt-8 mb-6" style="color: #b75800;">Kontakt</h2>
+
+                <div class="mb-4">
+                    <label class="block font-bold mb-2" style="color: #632705;">Email</label>
+                    <input type="email" id="email" placeholder="tvoj@email.com">
+                    <div class="privacy-toggle">
+                        <div class="toggle-switch" onclick="togglePrivacy(this, 'email')" data-public="false">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <span class="text-sm font-bold" style="color: #ef4444;">Privatno</span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block font-bold mb-2" style="color: #632705;">Broj Mobitela</label>
+                    <input type="tel" id="phone" placeholder="+385 ...">
+                    <div class="privacy-toggle">
+                        <div class="toggle-switch" onclick="togglePrivacy(this, 'phone')" data-public="false">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <span class="text-sm font-bold" style="color: #ef4444;">Privatno</span>
+                    </div>
+                </div>
+
+                <h2 class="text-2xl font-bold mt-8 mb-6" style="color: #b75800;">Rang Lista Ambicije</h2>
+
+                <div class="mb-4">
+                    <label class="block font-bold mb-2" style="color: #632705;">Željena Pozicija na Rang Listi</label>
+                    <select id="rankingGoal">
+                        <option value="">-- Odaberi --</option>
+                        <option value="top10">TOP 10</option>
+                        <option value="top50">TOP 50</option>
+                        <option value="top100">TOP 100</option>
+                        <option value="top500">TOP 500</option>
+                        <option value="casual">Casual Igrač (bez ambicija)</option>
+                    </select>
+                    <div class="privacy-toggle">
+                        <div class="toggle-switch active" onclick="togglePrivacy(this, 'rankingGoal')" data-public="true">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <span class="text-sm font-bold" style="color: #10b981;">Javno</span>
+                    </div>
+                </div>
+
+                <!-- Notifications -->
+                <h2 class="text-2xl font-bold mt-8 mb-6" style="color: #b75800;">Notifikacije</h2>
+                
+                <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="notifyEmail" class="w-5 h-5">
+                        <span class="font-bold">Email obavijesti</span>
+                    </label>
+                    <p class="text-sm text-gray-600 ml-8">Primaj pozive za kvizove i rezultate</p>
+                </div>
+
+                <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="notifyWhatsApp" class="w-5 h-5">
+                        <span class="font-bold">WhatsApp obavijesti</span>
+                    </label>
+                    <p class="text-sm text-gray-600 ml-8">Pozivi i brzi updatei</p>
+                </div>
+
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="notifyInApp" class="w-5 h-5" checked>
+                        <span class="font-bold">In-App obavijesti</span>
+                    </label>
+                    <p class="text-sm text-gray-600 ml-8">Notifikacije unutar kviza</p>
+                </div>
+
+                <!-- Submit -->
+                <div class="text-center mt-8">
+                    <button type="submit" class="btn-primary text-xl px-12 py-4">
+                        🦊 Kreiraj Profil
+                    </button>
+                </div>
+
+                <p class="text-center text-sm text-gray-600 mt-4">
+                    * Samo nadimak je obavezno polje
+                </p>
+            </form>
+        </div>
+
+        <!-- Success Message -->
+        <div class="card p-12 text-center hidden" id="successMessage">
+            <div class="text-8xl mb-4">🎉</div>
+            <h2 class="text-3xl font-bold mb-4" style="color: #10b981;">Profil Kreiran!</h2>
+            <p class="text-xl mb-6">Dobrodošao u Lukavac kviz zajednicu!</p>
+            <p class="text-lg mb-8">Tvoj ID: <span id="playerIdDisplay" class="font-bold" style="color: #b75800;">-</span></p>
+            
+            <!-- Share with Friends -->
+            <div class="mb-8 p-6 bg-gray-50 rounded-xl">
+                <h3 class="text-xl font-bold mb-4" style="color: #632705;">📢 Podijeli sa Prijateljima!</h3>
+                <p class="text-sm text-gray-600 mb-4">Pozovi prijatelje da se pridruže Lukavac kvizu!</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <!-- WhatsApp -->
+                    <button onclick="shareWhatsApp()" class="flex items-center justify-center gap-2 bg-green-500 text-white px-4 py-3 rounded-lg hover:bg-green-600 font-bold">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                        </svg>
+                        WhatsApp
+                    </button>
+                    
+                    <!-- Email -->
+                    <button onclick="shareEmail()" class="flex items-center justify-center gap-2 bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600 font-bold">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        Email
+                    </button>
+                    
+                    <!-- Copy Link -->
+                    <button onclick="copyLink()" class="flex items-center justify-center gap-2 bg-yellow-600 text-white px-4 py-3 rounded-lg hover:bg-yellow-700 font-bold">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        Kopiraj Link
+                    </button>
+                </div>
+                
+                <div id="copySuccess" class="hidden mt-3 text-green-600 font-bold">
+                    ✅ Link kopiran u clipboard!
+                </div>
+            </div>
+            
+            <button onclick="goToLogin()" class="btn-primary text-xl px-8 py-3">
+                Idi na Login
+            </button>
+        </div>
+
+        <!-- Already Registered -->
+        <div class="text-center mt-6">
+            <p class="text-gray-600">
+                Već imaš račun? 
+                <a href="login.html" class="font-bold" style="color: #b75800;">Prijavi se</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Firebase config (REPLACE WITH YOUR CONFIG)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBRzKSLJ3zid7cv-kdOEP8e0hxZsbe3s-w",
+            authDomain: "lukavac-cff99.firebaseapp.com",
+            databaseURL: "https://lukavac-cff99-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "lukavac-cff99",
+            storageBucket: "lukavac-cff99.firebasestorage.app",
+            messagingSenderId: "642670009033",
+            appId: "1:642670009033:web:3d3ba0ba2d16f03a1dc0a8"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        function togglePrivacy(element, fieldId) {
+            const isPublic = element.getAttribute('data-public') === 'true';
+            element.setAttribute('data-public', !isPublic);
+            element.classList.toggle('active');
+            
+            const label = element.nextElementSibling;
+            if (!isPublic) {
+                label.textContent = 'Javno';
+                label.style.color = '#10b981';
+            } else {
+                label.textContent = 'Privatno';
+                label.style.color = '#ef4444';
+            }
+        }
+
+        function getFieldValue(id) {
+            const element = document.getElementById(id);
+            return element ? element.value.trim() : '';
+        }
+
+        function getFieldPrivacy(id) {
+            const toggle = document.querySelector(`[onclick*="${id}"]`);
+            return toggle ? toggle.getAttribute('data-public') === 'true' : false;
+        }
+
+        function registerPlayer(event) {
+            event.preventDefault();
+            
+            console.log('🔵 Registration started...');
+            
+            const nickname = getFieldValue('nickname');
+            console.log('Nickname:', nickname);
+            
+            if (!nickname) {
+                console.log('❌ No nickname provided');
+                alert('Nadimak je obavezno polje!');
+                return;
+            }
+
+            console.log('✅ Validation passed, generating player ID...');
+            
+            // Generate unique player ID
+            const playerId = database.ref('playerProfiles').push().key;
+            console.log('Generated player ID:', playerId);
+
+            console.log('📸 Uploading photo...');
+            
+            // Upload photo if provided
+            uploadProfilePhoto(playerId).then(photoURL => {
+                console.log('Photo uploaded:', photoURL ? 'Yes' : 'No photo');
+                
+                // Collect all data
+                const playerData = {
+                    // Basic Info
+                    firstName: getFieldValue('firstName'),
+                    lastName: getFieldValue('lastName'),
+                    nickname: nickname,
+                    birthDate: getFieldValue('birthDate'),
+                    occupation: getFieldValue('occupation'),
+                    location: getFieldValue('location'),
+                    profilePhoto: photoURL || '',
+
+                    // Quiz Experience
+                    strongAreas: getFieldValue('strongAreas'),
+                    weakAreas: getFieldValue('weakAreas'),
+                    tvQuizExperience: getFieldValue('tvQuizExperience'),
+                    pubQuizExperience: getFieldValue('pubQuizExperience'),
+                    quizEarnings: parseFloat(getFieldValue('quizEarnings')) || 0,
+                    wins: parseInt(getFieldValue('wins')) || 0,
+                    team: getFieldValue('team'),
+
+                    // Contact
+                    email: getFieldValue('email'),
+                    phone: getFieldValue('phone'),
+
+                    // Goals
+                    rankingGoal: getFieldValue('rankingGoal'),
+
+                    // Notifications
+                    notifications: {
+                        email: document.getElementById('notifyEmail').checked,
+                        whatsApp: document.getElementById('notifyWhatsApp').checked,
+                        inApp: document.getElementById('notifyInApp').checked
+                    },
+
+                    // Privacy Settings
+                    privacy: {
+                        firstName: getFieldPrivacy('firstName'),
+                        lastName: getFieldPrivacy('lastName'),
+                        nickname: getFieldPrivacy('nickname'),
+                        birthDate: getFieldPrivacy('birthDate'),
+                        occupation: getFieldPrivacy('occupation'),
+                        location: getFieldPrivacy('location'),
+                        strongAreas: getFieldPrivacy('strongAreas'),
+                        weakAreas: getFieldPrivacy('weakAreas'),
+                        tvQuizExperience: getFieldPrivacy('tvQuizExperience'),
+                        pubQuizExperience: getFieldPrivacy('pubQuizExperience'),
+                        quizEarnings: getFieldPrivacy('quizEarnings'),
+                        wins: getFieldPrivacy('wins'),
+                        team: getFieldPrivacy('team'),
+                        email: getFieldPrivacy('email'),
+                        phone: getFieldPrivacy('phone'),
+                        rankingGoal: getFieldPrivacy('rankingGoal'),
+                        profilePhoto: true  // Always public
+                    },
+
+                    // Stats (to be updated over time)
+                    stats: {
+                        totalGames: 0,
+                        totalEarnings: 0,
+                        averageRating: 0,
+                        bestRank: 0,
+                        currentRank: 0
+                    },
+
+                    // Metadata
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                    playerId: playerId
+                };
+
+                console.log('💾 Saving to Firebase...', playerData);
+
+                // Save to Firebase
+                database.ref(`playerProfiles/${playerId}`).set(playerData)
+                    .then(() => {
+                        console.log('✅ Player registered successfully!');
+                        document.getElementById('registerForm').classList.add('hidden');
+                        document.getElementById('successMessage').classList.remove('hidden');
+                        document.getElementById('playerIdDisplay').textContent = playerId;
+                    })
+                    .catch(error => {
+                        console.error('❌ Error registering player:', error);
+                        alert('Greška pri registraciji: ' + error.message);
+                    });
+            }).catch(error => {
+                console.error('❌ Error uploading photo:', error);
+                alert('Greška pri uploadu slike: ' + error.message);
+            });
+        }
+
+        function previewPhoto(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('profilePreview').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function uploadProfilePhoto(playerId) {
+            return new Promise((resolve) => {
+                const fileInput = document.getElementById('profilePhoto');
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    resolve(''); // No photo uploaded
+                    return;
+                }
+
+                // Convert to base64 and store (for simple implementation)
+                // For production, use Firebase Storage
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    resolve(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function shareWhatsApp() {
+            const url = window.location.origin + window.location.pathname.replace('register.html', 'register.html');
+            const text = '🦊 Pridruži se Lukavac Kvizu! Registriraj se ovdje:';
+            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+
+        function shareEmail() {
+            const url = window.location.origin + window.location.pathname.replace('register.html', 'register.html');
+            const subject = '🦊 Poziv na Lukavac Kviz';
+            const body = `Pozdrav!\n\nPozivam te da se pridružiš Lukavac Kviz platformi!\n\nRegistriraj se ovdje:\n${url}\n\nVidimo se u kvizu! 🎯`;
+            const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.location.href = mailtoUrl;
+        }
+
+        function copyLink() {
+            const url = window.location.origin + window.location.pathname.replace('register.html', 'register.html');
+            navigator.clipboard.writeText(url).then(() => {
+                const msg = document.getElementById('copySuccess');
+                msg.classList.remove('hidden');
+                setTimeout(() => msg.classList.add('hidden'), 3000);
+            });
+        }
+
+        function goToLogin() {
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>

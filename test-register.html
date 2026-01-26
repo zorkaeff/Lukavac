@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Test</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+</head>
+<body>
+    <h1>🦊 Quick Registration Test</h1>
+    
+    <form id="testForm">
+        <label>Nadimak*:</label><br>
+        <input type="text" id="nickname" required><br><br>
+        
+        <button type="submit">Kreiraj Profil</button>
+    </form>
+    
+    <div id="result"></div>
+    
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBRzKSLJ3zid7cv-kdOEP8e0hxZsbe3s-w",
+            authDomain: "lukavac-cff99.firebaseapp.com",
+            databaseURL: "https://lukavac-cff99-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "lukavac-cff99",
+            storageBucket: "lukavac-cff99.firebasestorage.app",
+            messagingSenderId: "642670009033",
+            appId: "1:642670009033:web:3d3ba0ba2d16f03a1dc0a8"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
+        document.getElementById('testForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const nickname = document.getElementById('nickname').value;
+            console.log('Nickname:', nickname);
+            
+            const playerId = database.ref('playerProfiles').push().key;
+            console.log('Player ID:', playerId);
+            
+            const data = {
+                nickname: nickname,
+                createdAt: Date.now()
+            };
+            
+            console.log('Saving:', data);
+            
+            database.ref(`playerProfiles/${playerId}`).set(data)
+                .then(() => {
+                    console.log('✅ SUCCESS!');
+                    document.getElementById('result').innerHTML = '<h2 style="color: green;">✅ Profil kreiran! ID: ' + playerId + '</h2>';
+                })
+                .catch(error => {
+                    console.error('❌ ERROR:', error);
+                    document.getElementById('result').innerHTML = '<h2 style="color: red;">❌ Greška: ' + error.message + '</h2>';
+                });
+        });
+    </script>
+</body>
+</html>
