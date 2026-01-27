@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<!-- Admin Super Dashboard - Complete Overview - 2026-01-27 -->
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Lukavac</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: Arial; background: #f5f5f5; }
+        .card { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .sidebar { background: #1f2937; color: white; min-height: 100vh; }
+        .sidebar-item { padding: 15px 20px; cursor: pointer; transition: background 0.2s; }
+        .sidebar-item:hover { background: #374151; }
+        .sidebar-item.active { background: #b75800; }
+        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        table { width: 100%; }
+        table th { background: #f9fafb; padding: 12px; text-align: left; font-weight: bold; }
+        table td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+        .badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .badge-easy { background: #10b981; color: white; }
+        .badge-medium { background: #f59e0b; color: white; }
+        .badge-hard { background: #ef4444; color: white; }
+        .badge-used { background: #6b7280; color: white; }
+        .badge-unused { background: #3b82f6; color: white; }
+    </style>
+</head>
+<body class="flex">
+    <!-- Sidebar -->
+    <div class="sidebar" style="width: 250px;">
+        <div class="p-6">
+            <h1 class="text-2xl font-bold">🦊 ADMIN</h1>
+            <p class="text-sm text-gray-400">Lukavac Platform</p>
+        </div>
+        
+        <div class="sidebar-item active" onclick="showSection('dashboard')">
+            📊 Dashboard
+        </div>
+        <div class="sidebar-item" onclick="showSection('questions')">
+            ❓ Baza Pitanja
+        </div>
+        <div class="sidebar-item" onclick="showSection('players')">
+            👥 Baza Igrača
+        </div>
+        <div class="sidebar-item" onclick="showSection('results')">
+            📈 Baza Rezultata
+        </div>
+        <div class="sidebar-item" onclick="showSection('quizzes')">
+            🎮 Napravljeni Kvizovi
+        </div>
+        <div class="sidebar-item" onclick="showSection('schedule')">
+            📅 Zakaži Novi Kviz
+        </div>
+        <div class="sidebar-item" onclick="showSection('live')">
+            🔴 Uživo Kontrola
+        </div>
+        <div class="sidebar-item" onclick="window.location.href='admin.html'">
+            🎮 Stari Admin Panel
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 p-6">
+        <!-- Dashboard Section -->
+        <div id="section-dashboard">
+            <h1 class="text-3xl font-bold mb-6">📊 Dashboard Pregled</h1>
+            
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="card stat-card p-6">
+                    <p class="text-sm opacity-80">Ukupno Pitanja</p>
+                    <p class="text-4xl font-bold" id="stat-questions">0</p>
+                </div>
+                <div class="card stat-card p-6">
+                    <p class="text-sm opacity-80">Ukupno Igrača</p>
+                    <p class="text-4xl font-bold" id="stat-players">0</p>
+                </div>
+                <div class="card stat-card p-6">
+                    <p class="text-sm opacity-80">Odigrano Kvizova</p>
+                    <p class="text-4xl font-bold" id="stat-quizzes">0</p>
+                </div>
+                <div class="card stat-card p-6">
+                    <p class="text-sm opacity-80">Ukupna Zarada</p>
+                    <p class="text-4xl font-bold" id="stat-earnings">0€</p>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card p-6 mb-6">
+                <h2 class="text-xl font-bold mb-4">🔔 Nedavne Aktivnosti</h2>
+                <div id="recent-activity"></div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-3 gap-4">
+                <div class="card p-6 cursor-pointer hover:shadow-lg" onclick="showSection('schedule')">
+                    <div class="text-4xl mb-2">📅</div>
+                    <p class="font-bold">Zakaži Kviz</p>
+                </div>
+                <div class="card p-6 cursor-pointer hover:shadow-lg" onclick="showSection('questions')">
+                    <div class="text-4xl mb-2">➕</div>
+                    <p class="font-bold">Dodaj Pitanja</p>
+                </div>
+                <div class="card p-6 cursor-pointer hover:shadow-lg" onclick="showSection('live')">
+                    <div class="text-4xl mb-2">🔴</div>
+                    <p class="font-bold">Pokreni Uživo</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Questions Database Section -->
+        <div id="section-questions" class="hidden">
+            <h1 class="text-3xl font-bold mb-6">❓ Baza Pitanja</h1>
+            
+            <div class="card p-6 mb-4">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex gap-4">
+                        <select id="filter-difficulty" class="px-4 py-2 border rounded">
+                            <option value="">Sve težine</option>
+                            <option value="easy">Lako</option>
+                            <option value="medium">Srednje</option>
+                            <option value="hard">Teško</option>
+                        </select>
+                        <select id="filter-category" class="px-4 py-2 border rounded">
+                            <option value="">Sve kategorije</option>
+                        </select>
+                        <select id="filter-used" class="px-4 py-2 border rounded">
+                            <option value="">Sve</option>
+                            <option value="used">Korišteno</option>
+                            <option value="unused">Nekorišteno</option>
+                        </select>
+                    </div>
+                    <button onclick="addNewQuestion()" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        ➕ Novo Pitanje
+                    </button>
+                </div>
+                
+                <table id="questions-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Pitanje</th>
+                            <th>Kategorija</th>
+                            <th>Težina</th>
+                            <th>Korišteno</th>
+                            <th>Puta Korišteno</th>
+                            <th>Akcije</th>
+                        </tr>
+                    </thead>
+                    <tbody id="questions-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Players Database Section -->
+        <div id="section-players" class="hidden">
+            <h1 class="text-3xl font-bold mb-6">👥 Baza Igrača</h1>
+            
+            <div class="card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <input type="text" id="search-players" placeholder="Traži igrače..." 
+                           class="px-4 py-2 border rounded w-96">
+                    <button onclick="exportPlayers()" class="px-6 py-2 bg-green-600 text-white rounded">
+                        📥 Export CSV
+                    </button>
+                </div>
+                
+                <table id="players-table">
+                    <thead>
+                        <tr>
+                            <th>Profil</th>
+                            <th>Nadimak</th>
+                            <th>Ime</th>
+                            <th>Lokacija</th>
+                            <th>Pobjede</th>
+                            <th>Zarada</th>
+                            <th>Ocjena</th>
+                            <th>Igre</th>
+                            <th>Akcije</th>
+                        </tr>
+                    </thead>
+                    <tbody id="players-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Results Database Section -->
+        <div id="section-results" class="hidden">
+            <h1 class="text-3xl font-bold mb-6">📈 Baza Rezultata</h1>
+            
+            <div class="card p-6">
+                <div class="mb-4">
+                    <select id="filter-quiz" class="px-4 py-2 border rounded">
+                        <option value="">Svi kvizovi</option>
+                    </select>
+                </div>
+                
+                <table id="results-table">
+                    <thead>
+                        <tr>
+                            <th>Kviz</th>
+                            <th>Igrač</th>
+                            <th>Rang</th>
+                            <th>Bodovi</th>
+                            <th>Zarada</th>
+                            <th>Ocjena</th>
+                            <th>Vrijeme</th>
+                            <th>Datum</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Scheduled Quizzes Section -->
+        <div id="section-quizzes" class="hidden">
+            <h1 class="text-3xl font-bold mb-6">🎮 Napravljeni Kvizovi</h1>
+            
+            <div class="grid grid-cols-3 gap-4" id="saved-quizzes"></div>
+        </div>
+
+        <!-- Schedule New Quiz Section -->
+        <div id="section-schedule" class="hidden">
+            <h1 class="text-3xl font-bold mb-6">📅 Zakaži Novi Kviz</h1>
+            
+            <div class="card p-6">
+                <form id="schedule-form">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block font-bold mb-2">Naziv Kviza</label>
+                            <input type="text" id="quiz-name" class="w-full px-4 py-2 border rounded" required>
+                        </div>
+                        <div>
+                            <label class="block font-bold mb-2">Tip</label>
+                            <select id="quiz-type" class="w-full px-4 py-2 border rounded">
+                                <option value="sata">Lukavac Sata</option>
+                                <option value="dana">Lukavac Dana</option>
+                                <option value="noci">Lukavac Noći</option>
+                                <option value="tjedna">Lukavac Tjedna</option>
+                                <option value="mjeseca">Lukavac Mjeseca</option>
+                                <option value="premium">Lukavac Premium</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block font-bold mb-2">Datum i Vrijeme Početka</label>
+                            <input type="datetime-local" id="quiz-start" class="w-full px-4 py-2 border rounded" required>
+                        </div>
+                        <div>
+                            <label class="block font-bold mb-2">Nagradni Fond (€)</label>
+                            <input type="number" id="quiz-prize" class="w-full px-4 py-2 border rounded" value="1000">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block font-bold mb-2">Odaberi Pitanja</label>
+                        <button type="button" onclick="selectQuestions()" class="px-4 py-2 bg-blue-600 text-white rounded">
+                            Odaberi iz Baze
+                        </button>
+                        <p class="text-sm text-gray-600 mt-2" id="selected-questions-count">0 pitanja odabrano</p>
+                    </div>
+                    
+                    <button type="submit" class="px-8 py-3 bg-green-600 text-white rounded-lg font-bold text-lg">
+                        📅 Zakaži Kviz
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Live Control Section -->
+        <div id="section-live" class="hidden">
+            <h1 class="text-3xl font-bold mb-6">🔴 Uživo Kontrola</h1>
+            
+            <div class="card p-6">
+                <h2 class="text-xl font-bold mb-4">Odaberi Kviz za Pokretanje</h2>
+                <div id="live-quiz-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSection = 'dashboard';
+        
+        function showSection(section) {
+            // Hide all sections
+            document.querySelectorAll('[id^="section-"]').forEach(el => el.classList.add('hidden'));
+            
+            // Show selected section
+            document.getElementById(`section-${section}`).classList.remove('hidden');
+            
+            // Update sidebar
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            currentSection = section;
+            
+            // Load section data
+            loadSectionData(section);
+        }
+        
+        function loadSectionData(section) {
+            switch(section) {
+                case 'dashboard':
+                    loadDashboardStats();
+                    break;
+                case 'questions':
+                    loadQuestionsDatabase();
+                    break;
+                case 'players':
+                    loadPlayersDatabase();
+                    break;
+                case 'results':
+                    loadResultsDatabase();
+                    break;
+                case 'quizzes':
+                    loadSavedQuizzes();
+                    break;
+            }
+        }
+        
+        function loadDashboardStats() {
+            // Load overview statistics
+            database.ref('questionBank').once('value').then(snap => {
+                const count = snap.exists() ? Object.keys(snap.val()).length : 0;
+                document.getElementById('stat-questions').textContent = count;
+            });
+            
+            database.ref('playerProfiles').once('value').then(snap => {
+                const count = snap.exists() ? Object.keys(snap.val()).length : 0;
+                document.getElementById('stat-players').textContent = count;
+            });
+            
+            database.ref('completedQuizzes').once('value').then(snap => {
+                const count = snap.exists() ? Object.keys(snap.val()).length : 0;
+                document.getElementById('stat-quizzes').textContent = count;
+            });
+        }
+        
+        function loadQuestionsDatabase() {
+            database.ref('questionBank').once('value').then(snap => {
+                const questions = snap.val() || {};
+                let html = '';
+                
+                Object.entries(questions).forEach(([id, q]) => {
+                    const difficultyBadge = q.difficulty === 'easy' ? 'badge-easy' : 
+                                          q.difficulty === 'medium' ? 'badge-medium' : 'badge-hard';
+                    const usedBadge = q.timesUsed > 0 ? 'badge-used' : 'badge-unused';
+                    
+                    html += `
+                        <tr>
+                            <td>${id.substr(0, 8)}...</td>
+                            <td>${q.text}</td>
+                            <td>${q.category || 'N/A'}</td>
+                            <td><span class="badge ${difficultyBadge}">${q.difficulty || 'N/A'}</span></td>
+                            <td><span class="badge ${usedBadge}">${q.timesUsed > 0 ? 'DA' : 'NE'}</span></td>
+                            <td>${q.timesUsed || 0}</td>
+                            <td>
+                                <button onclick="editQuestion('${id}')" class="text-blue-600">✏️</button>
+                                <button onclick="deleteQuestion('${id}')" class="text-red-600">🗑️</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                document.getElementById('questions-tbody').innerHTML = html || '<tr><td colspan="7" class="text-center text-gray-500">Nema pitanja</td></tr>';
+            });
+        }
+        
+        function loadPlayersDatabase() {
+            database.ref('playerProfiles').once('value').then(snap => {
+                const players = snap.val() || {};
+                let html = '';
+                
+                Object.entries(players).forEach(([id, p]) => {
+                    html += `
+                        <tr>
+                            <td><img src="${p.profilePhoto || 'https://via.placeholder.com/40'}" class="w-10 h-10 rounded-full"></td>
+                            <td><strong>${p.nickname || 'N/A'}</strong></td>
+                            <td>${p.firstName || ''} ${p.lastName || ''}</td>
+                            <td>${p.location || 'N/A'}</td>
+                            <td><strong>${p.wins || 0}</strong></td>
+                            <td class="text-green-600"><strong>${p.stats?.totalEarnings || 0}€</strong></td>
+                            <td><strong>${(p.stats?.averageRating || 0).toFixed(1)}</strong>/10</td>
+                            <td>${p.stats?.totalGames || 0}</td>
+                            <td>
+                                <button onclick="viewPlayer('${id}')" class="text-blue-600">👁️</button>
+                                <button onclick="editPlayer('${id}')" class="text-blue-600">✏️</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                document.getElementById('players-tbody').innerHTML = html || '<tr><td colspan="9" class="text-center text-gray-500">Nema igrača</td></tr>';
+            });
+        }
+        
+        // Initialize
+        window.onload = function() {
+            loadDashboardStats();
+        };
+        
+        // Placeholder functions (to be implemented)
+        function addNewQuestion() { alert('Funkcija u razvoju'); }
+        function editQuestion(id) { alert('Edit question: ' + id); }
+        function deleteQuestion(id) { if(confirm('Obriši?')) database.ref(`questionBank/${id}`).remove(); }
+        function exportPlayers() { alert('Export u razvoju'); }
+        function viewPlayer(id) { alert('View player: ' + id); }
+        function editPlayer(id) { alert('Edit player: ' + id); }
+        function loadResultsDatabase() { alert('Results DB loading...'); }
+        function loadSavedQuizzes() { alert('Saved quizzes loading...'); }
+        function selectQuestions() { alert('Question selector opening...'); }
+    </script>
+</body>
+</html>
