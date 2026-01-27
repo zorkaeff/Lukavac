@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <title>Register Debug</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #fff5e6; }
+        input, button { display: block; margin: 10px 0; padding: 10px; width: 300px; }
+        button { background: #b75800; color: white; border: none; cursor: pointer; font-size: 18px; }
+        .debug { background: #f0f0f0; padding: 10px; margin: 10px 0; border-left: 4px solid #b75800; }
+    </style>
+</head>
+<body>
+    <h1>🦊 Register Debug Test</h1>
+    
+    <div class="debug" id="debugLog">
+        <strong>Debug Log:</strong><br>
+        Waiting...
+    </div>
+    
+    <form id="testForm">
+        <label>Nadimak (obavezno):</label>
+        <input type="text" id="nickname" required placeholder="Unesi nadimak...">
+        
+        <label>Ime (opciono):</label>
+        <input type="text" id="firstName" placeholder="Unesi ime...">
+        
+        <button type="submit">🦊 KREIRAJ PROFIL</button>
+    </form>
+    
+    <div class="debug" id="result" style="display: none;">
+        <strong>Rezultat:</strong><br>
+        <div id="resultText"></div>
+    </div>
+    
+    <script>
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBRzKSLJ3zid7cv-kdOEP8e0hxZsbe3s-w",
+            authDomain: "lukavac-cff99.firebaseapp.com",
+            databaseURL: "https://lukavac-cff99-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "lukavac-cff99",
+            storageBucket: "lukavac-cff99.firebasestorage.app",
+            messagingSenderId: "642670009033",
+            appId: "1:642670009033:web:3d3ba0ba2d16f03a1dc0a8"
+        };
+        
+        function log(message) {
+            const logDiv = document.getElementById('debugLog');
+            logDiv.innerHTML += '<br>' + message;
+            console.log(message);
+        }
+        
+        log('🔵 Script loaded');
+        
+        try {
+            firebase.initializeApp(firebaseConfig);
+            const database = firebase.database();
+            log('✅ Firebase initialized');
+        } catch (error) {
+            log('❌ Firebase init error: ' + error.message);
+        }
+        
+        document.getElementById('testForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            log('🔵 Form submitted!');
+            
+            const nickname = document.getElementById('nickname').value.trim();
+            const firstName = document.getElementById('firstName').value.trim();
+            
+            log('Nickname: ' + (nickname || '(empty)'));
+            log('FirstName: ' + (firstName || '(empty)'));
+            
+            if (!nickname) {
+                log('❌ No nickname - showing alert');
+                alert('Nadimak je obavezno polje!');
+                return;
+            }
+            
+            log('✅ Validation passed');
+            log('📝 Generating player ID...');
+            
+            try {
+                const playerId = database.ref('playerProfiles').push().key;
+                log('Player ID: ' + playerId);
+                
+                const playerData = {
+                    nickname: nickname,
+                    firstName: firstName,
+                    createdAt: Date.now()
+                };
+                
+                log('💾 Saving to Firebase...');
+                
+                database.ref(`playerProfiles/${playerId}`).set(playerData)
+                    .then(() => {
+                        log('✅ SUCCESS! Player saved to Firebase');
+                        document.getElementById('result').style.display = 'block';
+                        document.getElementById('resultText').innerHTML = 
+                            '<span style="color: green; font-size: 20px;">✅ PROFIL KREIRAN!</span><br>' +
+                            'Player ID: ' + playerId + '<br>' +
+                            'Nadimak: ' + nickname + '<br>' +
+                            'Ime: ' + (firstName || '(nije uneseno)');
+                    })
+                    .catch(error => {
+                        log('❌ Firebase save error: ' + error.message);
+                        document.getElementById('result').style.display = 'block';
+                        document.getElementById('resultText').innerHTML = 
+                            '<span style="color: red;">❌ GREŠKA: ' + error.message + '</span>';
+                    });
+                    
+            } catch (error) {
+                log('❌ Error during registration: ' + error.message);
+            }
+        });
+        
+        log('🟢 Event listener attached');
+    </script>
+</body>
+</html>
