@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<!-- SUPER ADMIN PANEL - Ultimate Control - 2026-01-27 -->
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <title>Super Admin - Lukavac</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        body { font-family: Arial; background: #f5f5f5; margin: 0; }
+        .sidebar { background: #1f2937; color: white; min-height: 100vh; width: 250px; position: fixed; overflow-y: auto; }
+        .main-content { margin-left: 250px; padding: 20px; }
+        .sidebar-item { padding: 15px 20px; cursor: pointer; transition: background 0.2s; border-left: 4px solid transparent; }
+        .sidebar-item:hover { background: #374151; }
+        .sidebar-item.active { background: #b75800; border-left-color: #ffd995; }
+        .card { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 20px; }
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; transition: all 0.2s; display: inline-block; }
+        .btn-sm { padding: 6px 12px; font-size: 0.875rem; }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-warning:hover { background: #d97706; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; margin-bottom: 10px; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; }
+        table th { background: #f9fafb; padding: 12px; text-align: left; font-weight: bold; border-bottom: 2px solid #e5e7eb; }
+        table td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+        table tr:hover { background: #f9fafb; }
+        .badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; }
+        .badge-green { background: #d1fae5; color: #065f46; }
+        .badge-yellow { background: #fef3c7; color: #92400e; }
+        .badge-red { background: #fee2e2; color: #991b1b; }
+        .badge-blue { background: #dbeafe; color: #1e40af; }
+        .badge-purple { background: #e9d5ff; color: #6b21a8; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; }
+        .question-card { border: 2px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
+        .question-card:hover { border-color: #3b82f6; background: #f0f9ff; }
+        .question-card.selected { border-color: #10b981; background: #d1fae5; }
+        .player-card { border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+        .player-card:hover { border-color: #3b82f6; }
+        .player-card.qualified { border-color: #10b981; background: #d1fae5; }
+        .player-card.ticket { border-color: #f59e0b; background: #fef3c7; }
+        .difficulty-badge { font-weight: bold; padding: 2px 8px; border-radius: 4px; }
+        .diff-1 { background: #d1fae5; color: #065f46; }
+        .diff-2 { background: #d1f4f4; color: #0e7490; }
+        .diff-3 { background: #fef3c7; color: #92400e; }
+        .diff-4 { background: #fed7aa; color: #9a3412; }
+        .diff-5 { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="p-6 border-b border-gray-700">
+            <h1 class="text-2xl font-bold">🦊 SUPER ADMIN</h1>
+            <p class="text-sm text-gray-400">Ultimate Control Panel</p>
+        </div>
+        
+        <div class="sidebar-item active" onclick="showSection('overview')">📊 Pregled</div>
+        <div class="sidebar-item" onclick="window.location.href='quiz-builder.html'">🎮 Quiz Builder (Round Setup)</div>
+        <div class="sidebar-item" onclick="showSection('players')">👥 Pozovi Igrače</div>
+        <div class="sidebar-item" onclick="showSection('tickets')">🎟️ Ulaznice</div>
+        <div class="sidebar-item" onclick="showSection('questions')">❓ Pitanja (Import/Export)</div>
+        <div class="sidebar-item" onclick="showSection('database')">📊 Baza Podataka</div>
+        <div class="sidebar-item" onclick="showSection('scheduled')">📅 Zakazani Kvizovi</div>
+        <div class="sidebar-item" onclick="window.location.href='admin.html'">🔴 Uživo Kontrola</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- OVERVIEW SECTION -->
+        <div id="section-overview" class="section active">
+            <h1 class="text-3xl font-bold mb-6">📊 Pregled Platforme</h1>
+            
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="stat-card">
+                    <p class="text-sm opacity-80">Ukupno Igrača</p>
+                    <p class="text-4xl font-bold" id="stat-players">0</p>
+                </div>
+                <div class="stat-card">
+                    <p class="text-sm opacity-80">Ukupno Pitanja</p>
+                    <p class="text-4xl font-bold" id="stat-questions">0</p>
+                </div>
+                <div class="stat-card">
+                    <p class="text-sm opacity-80">Kvalificirani</p>
+                    <p class="text-4xl font-bold" id="stat-qualified">0</p>
+                </div>
+                <div class="stat-card">
+                    <p class="text-sm opacity-80">Prodane Ulaznice</p>
+                    <p class="text-4xl font-bold" id="stat-tickets">0€</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">🚀 Brze Akcije</h2>
+                <div class="grid grid-cols-3 gap-4">
+                    <button onclick="window.location.href='quiz-builder.html'" class="btn btn-primary p-6">
+                        <div class="text-3xl mb-2">🎮</div>
+                        <div>Quiz Builder</div>
+                    </button>
+                    <button onclick="showSection('questions')" class="btn btn-success p-6">
+                        <div class="text-3xl mb-2">📥</div>
+                        <div>Import Pitanja</div>
+                    </button>
+                    <button onclick="window.location.href='admin.html'" class="btn btn-danger p-6">
+                        <div class="text-3xl mb-2">🔴</div>
+                        <div>Pokreni Uživo</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETUP QUIZ SECTION -->
+        <div id="section-setup-quiz" class="section">
+            <h1 class="text-3xl font-bold mb-6">🎮 Setup Kompletnog Kviza</h1>
+            
+            <!-- Step 1: Basic Info -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">Korak 1: Osnovne Informacije</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="font-bold">Naziv Kviza:</label>
+                        <input type="text" id="setupQuizName" placeholder="Lukavac Sata 08:00">
+                    </div>
+                    <div>
+                        <label class="font-bold">Tip:</label>
+                        <select id="setupQuizType">
+                            <option value="sata">🕐 Lukavac Sata</option>
+                            <option value="dana">🌙 Lukavac Dana</option>
+                            <option value="noci">🌃 Lukavac Noći</option>
+                            <option value="premium">💎 Lukavac Premium</option>
+                            <option value="tjedna">📅 Lukavac Tjedna</option>
+                            <option value="mjeseca">📆 Lukavac Mjeseca</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="font-bold">Datum i Vrijeme:</label>
+                        <input type="datetime-local" id="setupQuizTime">
+                    </div>
+                    <div>
+                        <label class="font-bold">Nagradni Fond:</label>
+                        <input type="number" id="setupQuizPrize" value="1000">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Select Questions -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">Korak 2: Odaberi Pitanja</h2>
+                <div class="flex gap-4 mb-4">
+                    <select id="filterDifficulty" onchange="filterSetupQuestions()">
+                        <option value="">Sve Težine (1-5)</option>
+                        <option value="1">⭐ Težina 1 (Najlakše)</option>
+                        <option value="2">⭐⭐ Težina 2</option>
+                        <option value="3">⭐⭐⭐ Težina 3</option>
+                        <option value="4">⭐⭐⭐⭐ Težina 4</option>
+                        <option value="5">⭐⭐⭐⭐⭐ Težina 5 (Najteže)</option>
+                    </select>
+                    <select id="filterCategory" onchange="filterSetupQuestions()">
+                        <option value="">Sve Kategorije</option>
+                        <option>Sport</option>
+                        <option>Geografija</option>
+                        <option>Povijest</option>
+                        <option>Filmovi</option>
+                        <option>Muzika</option>
+                        <option>Znanost</option>
+                    </select>
+                    <select id="filterUsage" onchange="filterSetupQuestions()">
+                        <option value="">Sva Pitanja</option>
+                        <option value="unused">Samo Nekorištena</option>
+                        <option value="used">Samo Korištena</option>
+                    </select>
+                    <button onclick="selectAllQuestions()" class="btn btn-primary">Odaberi Sva</button>
+                    <button onclick="deselectAllQuestions()" class="btn btn-warning">Poništi Odabir</button>
+                </div>
+                <div id="setupQuestionsList" style="max-height: 500px; overflow-y: auto;"></div>
+                <p class="mt-4 font-bold">Odabrano: <span id="selectedQuestionsCount">0</span> pitanja</p>
+            </div>
+
+            <!-- Step 3: Configure Game Settings -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">Korak 3: Postavke Igre (Kao Admin.html)</h2>
+                
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="font-bold">Max Broj Igrača:</label>
+                        <input type="number" id="setupMaxPlayers" value="100">
+                    </div>
+                    <div>
+                        <label class="font-bold">Cijena Ulaznice (€):</label>
+                        <input type="number" id="setupTicketPrice" value="1" step="0.1">
+                    </div>
+                    <div>
+                        <label class="font-bold">Šifra Kviza:</label>
+                        <input type="text" id="setupPassword" value="lukavac123">
+                    </div>
+                </div>
+
+                <h3 class="font-bold text-lg mb-3">⏱️ Vremena Faza</h3>
+                <div class="grid grid-cols-4 gap-4 mb-4">
+                    <div>
+                        <label class="font-bold">Faza 1 - Odgovaranje (s):</label>
+                        <input type="number" id="setupTime1" value="20">
+                    </div>
+                    <div>
+                        <label class="font-bold">Faza 2 - Lukavac (s):</label>
+                        <input type="number" id="setupTime2" value="5">
+                    </div>
+                    <div>
+                        <label class="font-bold">Faza 3 - Prikaz Odgovora (s):</label>
+                        <input type="number" id="setupTime3" value="5">
+                    </div>
+                    <div>
+                        <label class="font-bold">Pauza između pitanja (s):</label>
+                        <input type="number" id="setupPauseTime" value="3">
+                    </div>
+                </div>
+
+                <h3 class="font-bold text-lg mb-3">💰 Bodovanje - Uzvičnik (!)</h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="font-bold">! Točno:</label>
+                        <input type="number" id="setupExclamCorrect" value="150">
+                    </div>
+                    <div>
+                        <label class="font-bold">! Krivo:</label>
+                        <input type="number" id="setupExclamWrong" value="-50">
+                    </div>
+                </div>
+
+                <h3 class="font-bold text-lg mb-3">💰 Bodovanje - Točka (.)</h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="font-bold">. Točno:</label>
+                        <input type="number" id="setupPeriodCorrect" value="50">
+                    </div>
+                    <div>
+                        <label class="font-bold">. Krivo:</label>
+                        <input type="number" id="setupPeriodWrong" value="-10">
+                    </div>
+                </div>
+
+                <h3 class="font-bold text-lg mb-3">💰 Bodovanje - Upitnik (?)</h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="font-bold">? Točno:</label>
+                        <input type="number" id="setupLukavacCorrect" value="50">
+                    </div>
+                    <div>
+                        <label class="font-bold">? Krivo:</label>
+                        <input type="number" id="setupLukavacWrong" value="-25">
+                    </div>
+                </div>
+
+                <h3 class="font-bold text-lg mb-3">🔄 Broj Krugova</h3>
+                <div class="mb-4">
+                    <label class="font-bold">Koliko krugova (rundi):</label>
+                    <input type="number" id="setupRounds" value="3" min="1" max="10">
+                    <small class="text-gray-600 block mt-2">Svaki krug može imati više pitanja. Broj krugova određuje strukturu igre.</small>
+                </div>
+            </div>
+
+            <button onclick="setupCompleteQuiz()" class="btn btn-success w-full p-4 text-xl">
+                🚀 Kreiraj Kompletan Kviz
+            </button>
+        </div>
+
+        <!-- INVITE PLAYERS SECTION -->
+        <div id="section-players" class="section">
+            <h1 class="text-3xl font-bold mb-6">👥 Pozovi Igrače na Kviz</h1>
+            
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">Odaberi Kviz:</h2>
+                <select id="inviteQuizSelect" onchange="loadPlayersForInvite()">
+                    <option value="">Odaberi kviz...</option>
+                </select>
+            </div>
+
+            <div class="card">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Dostupni Igrači</h2>
+                    <div class="flex gap-2">
+                        <button onclick="inviteQualified()" class="btn btn-success">✅ Pozovi Kvalificirane</button>
+                        <button onclick="inviteAll()" class="btn btn-primary">📧 Pozovi Sve</button>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <input type="text" placeholder="🔍 Traži igrača..." id="searchInvitePlayers" oninput="filterInvitePlayers()">
+                </div>
+                
+                <div id="invitePlayersList" style="max-height: 600px; overflow-y: auto;"></div>
+            </div>
+        </div>
+
+        <!-- TICKETS SECTION -->
+        <div id="section-tickets" class="section">
+            <h1 class="text-3xl font-bold mb-6">🎟️ Prodaja Ulaznica</h1>
+            
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">Odaberi Kviz:</h2>
+                <select id="ticketQuizSelect" onchange="loadTicketSales()">
+                    <option value="">Odaberi kviz...</option>
+                </select>
+            </div>
+
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">📊 Statistika Prodaje</h2>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="p-4 bg-blue-100 rounded">
+                        <p class="text-2xl font-bold" id="ticketsSold">0</p>
+                        <p class="text-sm">Prodanih Ulaznica</p>
+                    </div>
+                    <div class="p-4 bg-green-100 rounded">
+                        <p class="text-2xl font-bold" id="ticketsRevenue">0€</p>
+                        <p class="text-sm">Ukupna Zarada</p>
+                    </div>
+                    <div class="p-4 bg-purple-100 rounded">
+                        <p class="text-2xl font-bold" id="ticketsQualified">0</p>
+                        <p class="text-sm">Kvalificiranih (Free)</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">Ručna Prodaja Ulaznice</h2>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="font-bold">Odaberi Igrača:</label>
+                        <select id="manualTicketPlayer">
+                            <option value="">Odaberi...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="font-bold">Cijena:</label>
+                        <input type="number" id="manualTicketPrice" value="1">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="sellTicket()" class="btn btn-success w-full">💳 Prodaj Ulaznicu</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">📋 Lista Kupljenih Ulaznica</h2>
+                <div id="ticketsList"></div>
+            </div>
+        </div>
+
+        <!-- QUESTIONS IMPORT/EXPORT SECTION -->
+        <div id="section-questions" class="section">
+            <h1 class="text-3xl font-bold mb-6">❓ Upravljanje Pitanjima</h1>
+            
+            <!-- Import CSV -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">📥 Import Pitanja iz CSV</h2>
+                <div class="mb-4">
+                    <label class="font-bold">CSV Format:</label>
+                    <code class="block bg-gray-100 p-3 rounded mt-2">
+                        pitanje,odgovorA,odgovorB,odgovorC,odgovorD,tocan_index,kategorija,tezina(1-5)
+                    </code>
+                    <small class="text-gray-600">Primjer: "Glavni grad Hrvatske?,Zagreb,Split,Rijeka,Osijek,0,Geografija,1"</small>
+                </div>
+                <input type="file" id="csvFileInput" accept=".csv" class="mb-4">
+                <button onclick="importCSV()" class="btn btn-success">📤 Import CSV</button>
+            </div>
+
+            <!-- Export CSV -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">📤 Export Pitanja u CSV</h2>
+                <div class="flex gap-4">
+                    <button onclick="exportAllQuestions()" class="btn btn-primary">📥 Export SVA Pitanja</button>
+                    <button onclick="exportUnusedQuestions()" class="btn btn-success">📥 Export NEKORIŠTENA</button>
+                    <button onclick="exportUsedQuestions()" class="btn btn-warning">📥 Export KORIŠTENA</button>
+                </div>
+            </div>
+
+            <!-- Add Single Question -->
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4">➕ Dodaj Pojedinačno Pitanje</h2>
+                <form id="addQuestionForm" onsubmit="addQuestion(event)">
+                    <label class="font-bold">Pitanje:</label>
+                    <input type="text" id="qText" required>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="font-bold">A:</label><input type="text" id="qA" required></div>
+                        <div><label class="font-bold">B:</label><input type="text" id="qB" required></div>
+                        <div><label class="font-bold">C:</label><input type="text" id="qC" required></div>
+                        <div><label class="font-bold">D:</label><input type="text" id="qD" required></div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="font-bold">Točan:</label>
+                            <select id="qCorrect" required>
+                                <option value="0">A</option><option value="1">B</option>
+                                <option value="2">C</option><option value="3">D</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="font-bold">Kategorija:</label>
+                            <select id="qCategory" required>
+                                <option>Sport</option><option>Geografija</option><option>Povijest</option>
+                                <option>Filmovi</option><option>Muzika</option><option>Znanost</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="font-bold">Težina (1-5):</label>
+                            <select id="qDifficulty" required>
+                                <option value="1">⭐ 1 - Najlakše</option>
+                                <option value="2">⭐⭐ 2</option>
+                                <option value="3">⭐⭐⭐ 3</option>
+                                <option value="4">⭐⭐⭐⭐ 4</option>
+                                <option value="5">⭐⭐⭐⭐⭐ 5 - Najteže</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success w-full mt-4">💾 Spremi</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- DATABASE SECTION -->
+        <div id="section-database" class="section">
+            <h1 class="text-3xl font-bold mb-6">📊 Baza Pitanja</h1>
+            
+            <div class="card">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Sva Pitanja</h2>
+                    <div class="flex gap-2">
+                        <select id="dbFilterDifficulty" onchange="filterDatabaseQuestions()">
+                            <option value="">Sve Težine</option>
+                            <option value="1">⭐ 1</option><option value="2">⭐⭐ 2</option>
+                            <option value="3">⭐⭐⭐ 3</option><option value="4">⭐⭐⭐⭐ 4</option>
+                            <option value="5">⭐⭐⭐⭐⭐ 5</option>
+                        </select>
+                        <select id="dbFilterCategory" onchange="filterDatabaseQuestions()">
+                            <option value="">Sve Kategorije</option>
+                            <option>Sport</option><option>Geografija</option><option>Povijest</option>
+                        </select>
+                        <select id="dbFilterUsed" onchange="filterDatabaseQuestions()">
+                            <option value="">Sva</option>
+                            <option value="used">Korištena</option>
+                            <option value="unused">Nekorištena</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="databaseQuestionsList"></div>
+            </div>
+        </div>
+
+        <!-- SCHEDULED QUIZZES SECTION -->
+        <div id="section-scheduled" class="section">
+            <h1 class="text-3xl font-bold mb-6">📅 Zakazani Kvizovi</h1>
+            <div id="scheduledQuizzesList" class="grid grid-cols-3 gap-4"></div>
+        </div>
+    </div>
+
+    <script>
+        let allPlayers = [];
+        let allQuestions = [];
+        let selectedQuestions = [];
+        let allQuizzes = [];
+
+        window.onload = function() {
+            loadStats();
+            loadPlayers();
+            loadQuestions();
+            loadScheduledQuizzes();
+        };
+
+        function showSection(section) {
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.getElementById(`section-${section}`).classList.add('active');
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function loadStats() {
+            database.ref('playerProfiles').once('value').then(snap => {
+                const count = snap.exists() ? Object.keys(snap.val()).length : 0;
+                document.getElementById('stat-players').textContent = count;
+            });
+            
+            database.ref('questionBank').once('value').then(snap => {
+                const count = snap.exists() ? Object.keys(snap.val()).length : 0;
+                document.getElementById('stat-questions').textContent = count;
+            });
+        }
+
+        function loadPlayers() {
+            database.ref('playerProfiles').on('value', snap => {
+                const players = snap.val() || {};
+                allPlayers = Object.entries(players).map(([id, data]) => ({id, ...data}));
+                
+                // Populate player dropdowns
+                let options = '<option value="">Odaberi...</option>';
+                allPlayers.forEach(p => {
+                    options += `<option value="${p.id}">${p.nickname || p.firstName} (${p.email})</option>`;
+                });
+                document.getElementById('manualTicketPlayer').innerHTML = options;
+            });
+        }
+
+        function loadQuestions() {
+            database.ref('questionBank').on('value', snap => {
+                const questions = snap.val() || {};
+                allQuestions = Object.entries(questions).map(([id, data]) => ({id, ...data}));
+                displaySetupQuestions();
+                displayDatabaseQuestions();
+            });
+        }
+
+        function displaySetupQuestions() {
+            let html = '';
+            allQuestions.forEach(q => {
+                const isUsed = q.usageHistory && q.usageHistory.length > 0;
+                const diffClass = `diff-${q.difficulty || 3}`;
+                const usageInfo = isUsed ? 
+                    `<br><small class="text-red-600">Korišteno ${q.usageHistory.length}x: ${q.usageHistory.map(h => h.quizName + ' (' + new Date(h.date).toLocaleDateString() + ')').join(', ')}</small>` : 
+                    '<small class="text-green-600">Nekorišteno ✓</small>';
+                
+                html += `
+                    <div class="question-card ${selectedQuestions.includes(q.id) ? 'selected' : ''}" onclick="toggleQuestion('${q.id}')">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <strong>${q.text}</strong>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    ${q.answers.join(' | ')}<br>
+                                    Točan: <strong>${q.answers[q.correct]}</strong>
+                                </p>
+                                <div class="mt-2">
+                                    <span class="badge badge-blue">${q.category}</span>
+                                    <span class="difficulty-badge ${diffClass}">Težina ${q.difficulty || 3}/5</span>
+                                    ${usageInfo}
+                                </div>
+                            </div>
+                            <div class="text-2xl">${selectedQuestions.includes(q.id) ? '✅' : '⬜'}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('setupQuestionsList').innerHTML = html;
+            document.getElementById('selectedQuestionsCount').textContent = selectedQuestions.length;
+        }
+
+        function toggleQuestion(id) {
+            const index = selectedQuestions.indexOf(id);
+            if (index > -1) {
+                selectedQuestions.splice(index, 1);
+            } else {
+                selectedQuestions.push(id);
+            }
+            displaySetupQuestions();
+        }
+
+        function selectAllQuestions() {
+            selectedQuestions = allQuestions.map(q => q.id);
+            displaySetupQuestions();
+        }
+
+        function deselectAllQuestions() {
+            selectedQuestions = [];
+            displaySetupQuestions();
+        }
+
+        function setupCompleteQuiz() {
+            const name = document.getElementById('setupQuizName').value;
+            const type = document.getElementById('setupQuizType').value;
+            const time = document.getElementById('setupQuizTime').value;
+            const prize = document.getElementById('setupQuizPrize').value;
+            const maxPlayers = document.getElementById('setupMaxPlayers').value;
+            const ticketPrice = document.getElementById('setupTicketPrice').value;
+            const password = document.getElementById('setupPassword').value;
+
+            if (!name || !time || selectedQuestions.length === 0) {
+                alert('⚠️ Popuni sve podatke i odaberi barem 1 pitanje!');
+                return;
+            }
+
+            const quizId = database.ref('scheduledQuizzes').push().key;
+            
+            // Get selected questions data
+            const selectedQuestionsData = selectedQuestions.map(qId => {
+                const q = allQuestions.find(quest => quest.id === qId);
+                return {
+                    id: qId,
+                    text: q.text,
+                    answers: q.answers,
+                    correct: q.correct,
+                    difficulty: q.difficulty,
+                    category: q.category
+                };
+            });
+
+            // Calculate rounds distribution
+            const totalQuestions = selectedQuestions.length;
+            const numRounds = parseInt(document.getElementById('setupRounds').value);
+            const questionsPerRound = Math.ceil(totalQuestions / numRounds);
+            
+            const rounds = [];
+            for (let i = 0; i < numRounds; i++) {
+                rounds.push({
+                    roundNumber: i + 1,
+                    questionsCount: questionsPerRound,
+                    time1: parseInt(document.getElementById('setupTime1').value),
+                    time2: parseInt(document.getElementById('setupTime2').value),
+                    time3: parseInt(document.getElementById('setupTime3').value),
+                    pauseTime: parseInt(document.getElementById('setupPauseTime').value)
+                });
+            }
+
+            // Create complete quiz settings
+            const quizSettings = {
+                name: name,
+                type: type,
+                startTime: new Date(time).getTime(),
+                prizePool: parseInt(prize),
+                maxPlayers: parseInt(maxPlayers),
+                ticketPrice: parseFloat(ticketPrice),
+                password: password,
+                
+                // Questions
+                questions: selectedQuestionsData,
+                questionIds: selectedQuestions,
+                questionCount: selectedQuestions.length,
+                
+                // Game settings
+                settings: {
+                    quizName: name,
+                    maxPlayers: parseInt(maxPlayers),
+                    password: password,
+                    rounds: rounds,
+                    
+                    // Timing
+                    time1: parseInt(document.getElementById('setupTime1').value),
+                    time2: parseInt(document.getElementById('setupTime2').value),
+                    time3: parseInt(document.getElementById('setupTime3').value),
+                    pauseTime: parseInt(document.getElementById('setupPauseTime').value),
+                    
+                    // Scoring
+                    exclamationCorrect: parseInt(document.getElementById('setupExclamCorrect').value),
+                    exclamationWrong: parseInt(document.getElementById('setupExclamWrong').value),
+                    periodCorrect: parseInt(document.getElementById('setupPeriodCorrect').value),
+                    periodWrong: parseInt(document.getElementById('setupPeriodWrong').value),
+                    lukavacCorrect: parseInt(document.getElementById('setupLukavacCorrect').value),
+                    lukavacWrong: parseInt(document.getElementById('setupLukavacWrong').value)
+                },
+                
+                // Status
+                status: 'scheduled',
+                playerCount: 0,
+                qualifiedPlayers: [],
+                ticketsSold: [],
+                createdAt: Date.now()
+            };
+
+            // Save to Firebase
+            database.ref(`scheduledQuizzes/${quizId}`).set(quizSettings).then(() => {
+                // Mark questions as used
+                selectedQuestions.forEach(qId => {
+                    const usageHistory = allQuestions.find(q => q.id === qId).usageHistory || [];
+                    usageHistory.push({
+                        quizId: quizId,
+                        quizName: name,
+                        date: Date.now()
+                    });
+                    database.ref(`questionBank/${qId}/usageHistory`).set(usageHistory);
+                });
+
+                alert('✅ KVIZ KOMPLETAN KREIRAN!\n\n' + 
+                      `Naziv: ${name}\n` +
+                      `Pitanja: ${selectedQuestions.length}\n` +
+                      `Krugovi: ${numRounds}\n` +
+                      `Vrijeme: ${new Date(time).toLocaleString()}\n` +
+                      `Šifra: ${password}\n\n` +
+                      `Sve postavke spremljene!\n` +
+                      `Kviz spreman za pokretanje u admin.html!`);
+                
+                selectedQuestions = [];
+                document.getElementById('setupQuizName').value = '';
+                document.getElementById('setupQuizTime').value = '';
+                displaySetupQuestions();
+                loadScheduledQuizzes();
+                showSection('scheduled');
+            });
+        }
+
+        function loadScheduledQuizzes() {
+            database.ref('scheduledQuizzes').on('value', snap => {
+                const quizzes = snap.val() || {};
+                allQuizzes = Object.entries(quizzes).map(([id, data]) => ({id, ...data}));
+                
+                let html = '';
+                allQuizzes.forEach(q => {
+                    const date = new Date(q.startTime).toLocaleString('hr-HR');
+                    const statusBadge = q.status === 'live' ? 'badge-red' : q.status === 'scheduled' ? 'badge-yellow' : 'badge-green';
+                    html += `
+                        <div class="card">
+                            <h3 class="font-bold text-lg">${q.name}</h3>
+                            <p class="text-sm text-gray-600">${date}</p>
+                            <p class="mt-2">💰 ${q.prizePool}€ | ❓ ${q.questions?.length || 0} pitanja</p>
+                            <p>🎟️ ${q.ticketPrice}€ po ulaznici</p>
+                            <span class="badge ${statusBadge}">${q.status}</span>
+                            <div class="mt-3 flex gap-2">
+                                <button onclick="viewQuizDetails('${q.id}')" class="btn btn-primary btn-sm">👁️ Detalji</button>
+                                <button onclick="startQuiz('${q.id}')" class="btn btn-success btn-sm">▶️ Start</button>
+                                <button onclick="deleteQuiz('${q.id}')" class="btn btn-danger btn-sm">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                document.getElementById('scheduledQuizzesList').innerHTML = html || '<p>Nema zakazanih kvizova</p>';
+                
+                // Populate quiz selects
+                let options = '<option value="">Odaberi kviz...</option>';
+                allQuizzes.forEach(q => {
+                    options += `<option value="${q.id}">${q.name} - ${new Date(q.startTime).toLocaleDateString()}</option>`;
+                });
+                document.getElementById('inviteQuizSelect').innerHTML = options;
+                document.getElementById('ticketQuizSelect').innerHTML = options;
+            });
+        }
+
+        function viewQuizDetails(quizId) {
+            const quiz = allQuizzes.find(q => q.id === quizId);
+            if (!quiz) return;
+            
+            const questions = quiz.questions || [];
+            const usedQuestions = questions.map(q => 
+                `${q.text} (Težina: ${q.difficulty}/5, ${q.category})`
+            ).join('\n');
+            
+            alert(`Detalji Kviza:\n\n` +
+                  `Naziv: ${quiz.name}\n` +
+                  `Vrijeme: ${new Date(quiz.startTime).toLocaleString()}\n` +
+                  `Nagrada: ${quiz.prizePool}€\n` +
+                  `Pitanja: ${questions.length}\n` +
+                  `Ulaznica: ${quiz.ticketPrice}€\n\n` +
+                  `Pitanja:\n${usedQuestions}`);
+        }
+
+        function addQuestion(e) {
+            e.preventDefault();
+            const qId = database.ref('questionBank').push().key;
+            
+            database.ref(`questionBank/${qId}`).set({
+                text: document.getElementById('qText').value,
+                answers: [
+                    document.getElementById('qA').value,
+                    document.getElementById('qB').value,
+                    document.getElementById('qC').value,
+                    document.getElementById('qD').value
+                ],
+                correct: parseInt(document.getElementById('qCorrect').value),
+                category: document.getElementById('qCategory').value,
+                difficulty: parseInt(document.getElementById('qDifficulty').value),
+                usageHistory: [],
+                createdAt: Date.now()
+            }).then(() => {
+                alert('✅ Pitanje dodano!');
+                document.getElementById('addQuestionForm').reset();
+            });
+        }
+
+        function importCSV() {
+            const file = document.getElementById('csvFileInput').files[0];
+            if (!file) {
+                alert('Odaberi CSV file!');
+                return;
+            }
+            
+            Papa.parse(file, {
+                complete: (results) => {
+                    const questions = results.data.slice(1).filter(row => row.length >= 8);
+                    let imported = 0;
+                    
+                    questions.forEach(row => {
+                        const qId = database.ref('questionBank').push().key;
+                        database.ref(`questionBank/${qId}`).set({
+                            text: row[0],
+                            answers: [row[1], row[2], row[3], row[4]],
+                            correct: parseInt(row[5]),
+                            category: row[6],
+                            difficulty: parseInt(row[7]),
+                            usageHistory: [],
+                            createdAt: Date.now()
+                        });
+                        imported++;
+                    });
+                    
+                    alert(`✅ Importirano ${imported} pitanja!`);
+                    document.getElementById('csvFileInput').value = '';
+                }
+            });
+        }
+
+        function exportAllQuestions() {
+            exportQuestionsCSV(allQuestions, 'sva-pitanja');
+        }
+
+        function exportUnusedQuestions() {
+            const unused = allQuestions.filter(q => !q.usageHistory || q.usageHistory.length === 0);
+            exportQuestionsCSV(unused, 'nekoristena-pitanja');
+        }
+
+        function exportUsedQuestions() {
+            const used = allQuestions.filter(q => q.usageHistory && q.usageHistory.length > 0);
+            exportQuestionsCSV(used, 'koristena-pitanja');
+        }
+
+        function exportQuestionsCSV(questions, filename) {
+            let csv = 'pitanje,odgovorA,odgovorB,odgovorC,odgovorD,tocan_index,kategorija,tezina,koristeno,kvizovi\n';
+            questions.forEach(q => {
+                const usageInfo = q.usageHistory ? q.usageHistory.map(h => h.quizName).join('; ') : '';
+                csv += `"${q.text}","${q.answers[0]}","${q.answers[1]}","${q.answers[2]}","${q.answers[3]}",${q.correct},"${q.category}",${q.difficulty},${q.usageHistory?.length || 0},"${usageInfo}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename}-${Date.now()}.csv`;
+            a.click();
+        }
+
+        function displayDatabaseQuestions() {
+            let html = '<div class="space-y-2">';
+            allQuestions.forEach(q => {
+                const diffClass = `diff-${q.difficulty || 3}`;
+                const usage = q.usageHistory || [];
+                const usageText = usage.length > 0 ? 
+                    usage.map(h => `${h.quizName} (${new Date(h.date).toLocaleDateString()})`).join('<br>') : 
+                    '<span class="text-green-600">Nekorišteno ✓</span>';
+                
+                html += `
+                    <div class="p-4 border rounded">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <strong>${q.text}</strong><br>
+                                <small class="text-gray-600">${q.answers.join(' | ')}<br>
+                                Točan: <strong>${q.answers[q.correct]}</strong></small><br>
+                                <span class="badge badge-blue">${q.category}</span>
+                                <span class="difficulty-badge ${diffClass}">⭐ ${q.difficulty}/5</span><br>
+                                <small class="text-gray-600">Korišteno: ${usage.length}x<br>${usageText}</small>
+                            </div>
+                            <button onclick="deleteQuestion('${q.id}')" class="btn btn-danger btn-sm">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            document.getElementById('databaseQuestionsList').innerHTML = html;
+        }
+
+        function deleteQuestion(id) {
+            if (confirm('Obrisati pitanje?')) {
+                database.ref(`questionBank/${id}`).remove();
+            }
+        }
+
+        function deleteQuiz(id) {
+            if (confirm('Obrisati kviz?')) {
+                database.ref(`scheduledQuizzes/${id}`).remove();
+            }
+        }
+
+        function startQuiz(id) {
+            if (!confirm('Učitati ovaj kviz u admin.html i pokrenuti uživo?')) {
+                return;
+            }
+            
+            database.ref(`scheduledQuizzes/${id}`).once('value').then(snap => {
+                const quiz = snap.val();
+                
+                if (!quiz) {
+                    alert('❌ Kviz nije pronađen!');
+                    return;
+                }
+                
+                console.log('📊 Loading quiz to admin.html:', quiz.name);
+                
+                // Load questions to /questions
+                database.ref('questions').set(quiz.questions).then(() => {
+                    console.log('✅ Questions loaded');
+                });
+                
+                // Load settings to /settings
+                database.ref('settings').set(quiz.settings).then(() => {
+                    console.log('✅ Settings loaded');
+                });
+                
+                // Initialize game state
+                database.ref('gameState').set({
+                    phase: 'waiting',
+                    currentRound: 1,
+                    currentQuestion: 0,
+                    isActive: false,
+                    quizId: id,
+                    quizName: quiz.name
+                }).then(() => {
+                    console.log('✅ Game state initialized');
+                });
+                
+                // Clear old data
+                database.ref('players').remove();
+                database.ref('answers').remove();
+                
+                alert('✅ Kviz učitan u admin.html!\n\n' +
+                      `Naziv: ${quiz.name}\n` +
+                      `Pitanja: ${quiz.questions.length}\n` +
+                      `Krugovi: ${quiz.settings.rounds.length}\n\n` +
+                      `Sada možeš otvoriti admin.html i pokrenuti kviz!`);
+                
+                // Open admin.html
+                window.open('admin.html', '_blank');
+            });
+        }
+
+        function filterSetupQuestions() { /* TODO */ }
+        function filterDatabaseQuestions() { /* TODO */ }
+        function loadPlayersForInvite() { /* TODO */ }
+        function inviteQualified() { alert('Feature dolazi uskoro!'); }
+        function inviteAll() { alert('Feature dolazi uskoro!'); }
+        function filterInvitePlayers() { /* TODO */ }
+        function loadTicketSales() { /* TODO */ }
+        function sellTicket() { alert('Feature dolazi uskoro!'); }
+    </script>
+</body>
+</html>
