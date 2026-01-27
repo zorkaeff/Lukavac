@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<!-- Quizzes List - 2026-01-27 -->
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kvizovi - Lukavac</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tillana:wght@400;700&family=Metal+Mania&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Tillana', cursive; background: linear-gradient(135deg, #fffff1 0%, #ffd995 100%); }
+        .card { background: white; border-radius: 20px; box-shadow: 0 8px 32px rgba(183, 88, 0, 0.2); }
+        .quiz-card { background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%); border: 2px solid #b75800; border-radius: 15px; padding: 20px; cursor: pointer; transition: all 0.3s; }
+        .quiz-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(183, 88, 0, 0.3); }
+        .quiz-live { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
+        .badge-live { background: #ef4444; color: white; }
+        .badge-scheduled { background: #3b82f6; color: white; }
+        .badge-finished { background: #6b7280; color: white; }
+        .filter-btn { padding: 8px 16px; border-radius: 10px; border: 2px solid #b75800; background: white; cursor: pointer; transition: all 0.2s; }
+        .filter-btn:hover, .filter-btn.active { background: #b75800; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-6 max-w-6xl">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-4xl font-bold" style="color: #b75800;">🎮 Svi Kvizovi</h1>
+                <p class="text-gray-600">Odaberi kviz i pridruži se igri!</p>
+            </div>
+            <button onclick="window.location.href='dashboard.html'" class="px-6 py-3 bg-gray-200 rounded-lg hover:bg-gray-300">
+                ← Natrag na Dashboard
+            </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="card p-6 mb-6">
+            <h2 class="font-bold mb-4" style="color: #632705;">Filtriraj po tipu:</h2>
+            <div class="flex flex-wrap gap-3">
+                <button class="filter-btn active" onclick="filterQuizzes('all')">Svi</button>
+                <button class="filter-btn" onclick="filterQuizzes('live')">🔴 Uživo</button>
+                <button class="filter-btn" onclick="filterQuizzes('scheduled')">📅 Zakazano</button>
+                <button class="filter-btn" onclick="filterQuizzes('sata')">🕐 Sata</button>
+                <button class="filter-btn" onclick="filterQuizzes('dana')">🌙 Dana</button>
+                <button class="filter-btn" onclick="filterQuizzes('noci')">🌃 Noći</button>
+                <button class="filter-btn" onclick="filterQuizzes('premium')">💎 Premium</button>
+                <button class="filter-btn" onclick="filterQuizzes('tjedna')">📅 Tjedna</button>
+                <button class="filter-btn" onclick="filterQuizzes('mjeseca')">📆 Mjeseca</button>
+            </div>
+        </div>
+
+        <!-- Quizzes Grid -->
+        <div id="quizzes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <p class="text-gray-500">Učitavam kvizove...</p>
+        </div>
+    </div>
+
+    <script>
+        let allQuizzes = [];
+        let currentFilter = 'all';
+
+        window.onload = function() {
+            loadQuizzes();
+        };
+
+        function loadQuizzes() {
+            database.ref('scheduledQuizzes').on('value', snap => {
+                const quizzes = snap.val() || {};
+                allQuizzes = Object.entries(quizzes).map(([id, data]) => ({id, ...data}));
+                allQuizzes.sort((a, b) => a.startTime - b.startTime);
+                displayQuizzes();
+            });
+        }
+
+        function displayQuizzes() {
+            const filtered = currentFilter === 'all' ? allQuizzes :
+                           currentFilter === 'live' ? allQuizzes.filter(q => q.status === 'live') :
+                           currentFilter === 'scheduled' ? allQuizzes.filter(q => q.status === 'scheduled') :
+                           allQuizzes.filter(q => q.type === currentFilter);
+
+            let html = '';
+            const now = Date.now();
+
+            filtered.forEach(quiz => {
+                const isLive = quiz.status === 'live';
+                const isScheduled = quiz.startTime > now && quiz.status === 'scheduled';
+                const isFinished = quiz.status === 'finished';
+
+                const badge = isLive ? '<span class="badge badge-live">🔴 UŽIVO</span>' :
+                             isScheduled ? '<span class="badge badge-scheduled">📅 ZAKAZANO</span>' :
+                             '<span class="badge badge-finished">✅ ZAVRŠENO</span>';
+
+                const startDate = new Date(quiz.startTime);
+                const timeStr = startDate.toLocaleString('hr-HR', {
+                    weekday: 'short',
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const cardClass = isLive ? 'quiz-card quiz-live' : 'quiz-card';
+                const typeIcon = quiz.type === 'sata' ? '🕐' : quiz.type === 'dana' ? '🌙' : 
+                               quiz.type === 'noci' ? '🌃' : quiz.type === 'premium' ? '💎' : 
+                               quiz.type === 'tjedna' ? '📅' : '📆';
+
+                html += `
+                    <div class="${cardClass}" onclick="joinQuiz('${quiz.id}', ${isFinished})">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <p class="text-2xl mb-1">${typeIcon}</p>
+                                <h3 class="text-xl font-bold">${quiz.name}</h3>
+                            </div>
+                            ${badge}
+                        </div>
+                        <p class="text-sm mb-3" style="color: #632705;">🕐 ${timeStr}</p>
+                        <div class="grid grid-cols-3 gap-2 text-sm mb-3" style="color: #632705;">
+                            <div><strong>💰 ${quiz.prizePool || 0}€</strong></div>
+                            <div><strong>👥 ${quiz.playerCount || 0}</strong></div>
+                            <div><strong>❓ ${quiz.questionCount || 10}</strong></div>
+                        </div>
+                        ${isLive ? '<p class="text-center font-bold text-lg mt-3">⚡ PRIDRUŽI SE!</p>' : ''}
+                        ${isFinished ? '<p class="text-center text-gray-500 text-sm mt-3">📊 Vidi rezultate</p>' : ''}
+                    </div>
+                `;
+            });
+
+            document.getElementById('quizzes-grid').innerHTML = html || '<p class="text-gray-500 col-span-full text-center">Nema kvizova za prikaz</p>';
+        }
+
+        function filterQuizzes(type) {
+            currentFilter = type;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            displayQuizzes();
+        }
+
+        function joinQuiz(quizId, isFinished) {
+            if (isFinished) {
+                window.location.href = `quiz-results.html?id=${quizId}`;
+            } else {
+                sessionStorage.setItem('currentQuizId', quizId);
+                window.location.href = 'player.html';
+            }
+        }
+    </script>
+</body>
+</html>
