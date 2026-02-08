@@ -149,6 +149,20 @@
         .incorrect-answer-pulse {
             animation: incorrectAnswerPulse 2s ease-in-out infinite;
         }
+        @keyframes blinkGreen {
+            0%, 49% { color: #10b981; }
+            50%, 100% { color: #059669; }
+        }
+        .blink-green {
+            animation: blinkGreen 1.5s infinite;
+        }
+        @keyframes blinkRed {
+            0%, 49% { color: #ef4444; }
+            50%, 100% { color: #dc2626; }
+        }
+        .blink-red {
+            animation: blinkRed 1.5s infinite;
+        }
     </style>
 </head>
 <body class="min-h-screen p-4">
@@ -199,32 +213,46 @@
     <div id="gameScreen" class="hidden max-w-2xl mx-auto">
         <!-- Gornji headbar (prikazuje se na svim zaslonima osim ulaznog) -->
         <div id="top-headbar" class="top-headbar" style="display: none;">
-            <!-- Prvi red -->
+            <!-- RED 1: Player Name | KRUG | UK. IGRAČA -->
             <div style="display: flex; justify-content: space-between; width: 100%; font-weight: bold; margin-bottom: 4px;">
-                <div style="color: #000000; flex: 1; text-align: left;">
-                    Krug <span id="headbar-round">1</span>/<span id="headbar-total-rounds">6</span>
+                <div style="color: #b75800; flex: 1; text-align: left;">
+                    <span id="headbar-player-name">Player</span>
                 </div>
                 <div style="color: #000000; flex: 1; text-align: center;">
-                    Pitanje <span id="headbar-question">2</span>/<span id="headbar-round-questions">10</span> (<span id="headbar-total-questions">29</span>)
+                    KRUG <span id="headbar-round">1</span>/<span id="headbar-total-rounds">6</span>
                 </div>
                 <div style="color: #000000; flex: 1; text-align: right;">
-                    Uk. igrača <span id="headbar-total-players">20</span>
+                    UK. IGRAČA <span id="headbar-total-players">20</span>
                 </div>
             </div>
-            <!-- Drugi red -->
-            <div style="display: flex; justify-content: space-between; width: 100%; font-weight: bold; align-items: center;">
-                <div style="color: #10b981; flex: 1; text-align: left; display: flex; align-items: center;">
-                    <span style="vertical-align: middle;">∑</span><span id="headbar-total-max-value">150</span>€
+            
+            <!-- RED 2: RANK23=200€ | PITANJE | UK. PITANJA -->
+            <div id="headbar-question-container" style="display: flex; justify-content: space-between; width: 100%; font-weight: bold; margin-bottom: 4px;">
+                <div style="flex: 1; text-align: left;">
+                    <span id="headbar-rank-score" style="color: #10b981;">RANK1=0€</span>
                 </div>
-                <div style="display: flex; gap: 6px; align-items: center; font-size: 0.85rem; flex: 1; justify-content: center;">
+                <div style="color: #000000; flex: 1; text-align: center;">
+                    PITANJE <span id="headbar-question">2</span>/<span id="headbar-round-questions">10</span>
+                </div>
+                <div style="color: #000000; flex: 1; text-align: right;">
+                    UK. PITANJA <span id="headbar-total-questions-new">24</span>
+                </div>
+            </div>
+            
+            <!-- RED 3: RANK64 | IZNOSI | >>>MAX -->
+            <div style="display: flex; justify-content: space-between; width: 100%; font-weight: bold; align-items: center;">
+                <div style="flex: 1; text-align: left;" class="blink-text">
+                    <span style="color: #ef4444;">RANK<span id="headbar-cutoff-rank">64</span></span>
+                </div>
+                <div style="flex: 1; text-align: center; display: flex; gap: 6px; align-items: center; font-size: 0.85rem; justify-content: center;">
                     <span id="headbar-value-0" style="color: #10b981;">10€</span>
                     <span id="headbar-value-1" style="color: #10b981;">+5€</span>
                     <span id="headbar-value-2" style="color: #6b7280;">0€</span>
                     <span id="headbar-value-3" style="color: #ef4444;">-5€</span>
                     <span id="headbar-value-4" style="color: #ef4444;">-10€</span>
                 </div>
-                <div style="color: #ef4444; flex: 1; text-align: right;" class="blink-text">
-                    >>>TOP<span id="headbar-top10">10</span>
+                <div style="flex: 1; text-align: right; color: #10b981;">
+                    >>>MAX. <span id="headbar-max-possible">1000</span>€
                 </div>
             </div>
         </div>
@@ -1052,28 +1080,105 @@
         }
 
         function updateTopHeadbar() {
-            // Ažuriraj Krug
+            // RED 1: Player Name
+            const player = players[playerId];
+            if (player) {
+                document.getElementById('headbar-player-name').textContent = player.name || 'Player';
+            }
+            
+            // RED 1: UK. IGRAČA - ukupan broj igrača koji je ikad bio u igri
+            const totalPlayersCount = Object.keys(players).length;
+            document.getElementById('headbar-total-players').textContent = totalPlayersCount;
+            
+            // RED 1: KRUG
             const currentRound = gameState.currentRound || 1;
             document.getElementById('headbar-round').textContent = currentRound;
             
-            // Ažuriraj ukupan broj krugova
+            // RED 1: Ažuriraj ukupan broj krugova
             if (settings.rounds) {
                 document.getElementById('headbar-total-rounds').textContent = settings.rounds.length;
             }
             
-            // Izračunaj ukupan max (∑) - zbir svih ! zarada × pitanja kroz sve krugove
-            let totalMax = 0;
+            // RED 2: RANK=SCORE
+            // Izračunaj trenutni rank
+            const myScore = player?.score || 0;
+            const sorted = Object.entries(players)
+                .map(([id, p]) => ({ id, ...p }))
+                .sort((a, b) => {
+                    if (b.score !== a.score) return b.score - a.score;
+                    const aTime = a.totalTime || 0;
+                    const bTime = b.totalTime || 0;
+                    return aTime - bTime;
+                });
+            
+            const myRank = sorted.findIndex(p => p.id === playerId) + 1;
+            
+            // Odredi cutoff rank (koliko igrača prolazi)
+            let cutoffRank = 999;
+            if (settings.rounds && settings.rounds[currentRound - 1]) {
+                const currentRoundData = settings.rounds[currentRound - 1];
+                cutoffRank = currentRoundData.playersRemaining ?? currentRoundData.remainingPlayers ?? currentRoundData.advanceCount ?? 999;
+            }
+            
+            // Postavi tekst i boju za RANK=SCORE (Red 2, lijevo)
+            const rankScoreElem = document.getElementById('headbar-rank-score');
+            rankScoreElem.textContent = `RANK${myRank}=${myScore}€`;
+            
+            // Trepće zeleno ako je rank <= cutoff, crveno ako je rank > cutoff
+            rankScoreElem.className = ''; // Reset klasa
+            if (myRank <= cutoffRank) {
+                rankScoreElem.classList.add('blink-green');
+            } else {
+                rankScoreElem.classList.add('blink-red');
+            }
+            
+            // RED 2: PITANJE (broj u trenutnom krugu)
+            // U pauza fazi prikaži SLJEDEĆE pitanje (+2), u ostalim fazama trenutno (+1)
+            let currentQ;
+            if (gameState.phase === 'pause') {
+                // Ako smo tek ušli u pause fazu, izračunaj i zaključaj broj
+                if (headbarQuestionLocked === null) {
+                    currentQ = (gameState.currentQuestion || 0) + 2;
+                    headbarQuestionLocked = currentQ;
+                } else {
+                    // Koristi zaključani broj
+                    currentQ = headbarQuestionLocked;
+                }
+            } else {
+                // U drugim fazama oslobodi lock i koristi trenutni broj
+                headbarQuestionLocked = null;
+                currentQ = (gameState.currentQuestion || 0) + 1;
+            }
+            document.getElementById('headbar-question').textContent = currentQ;
+            
+            // RED 2: Broj pitanja u trenutnom krugu
+            if (settings.rounds && settings.rounds[currentRound - 1]) {
+                const round = settings.rounds[currentRound - 1];
+                document.getElementById('headbar-round-questions').textContent = round.questions || 10;
+            }
+            
+            // RED 2: UK. PITANJA - ukupan broj pitanja (rounds × questions per round)
+            if (settings.rounds) {
+                const totalAllQ = settings.rounds.reduce((sum, r) => sum + (r.questions || 0), 0);
+                document.getElementById('headbar-total-questions-new').textContent = totalAllQ;
+            }
+            
+            // RED 3: RANK cutoff (koliko igrača prolazi dalje) - lijevo
+            document.getElementById('headbar-cutoff-rank').textContent = cutoffRank;
+            
+            // RED 3: MAX. - maksimalni mogući iznos (zbir svih ! zarada kroz sve krugove)
+            let maxPossible = 0;
             if (settings.rounds) {
                 for (let i = 0; i < settings.rounds.length; i++) {
                     const round = settings.rounds[i];
                     const exclamValue = round.values?.[0] || 10;
                     const questionsInRound = round.questions || 10;
-                    totalMax += exclamValue * questionsInRound;
+                    maxPossible += exclamValue * questionsInRound;
                 }
-                document.getElementById('headbar-total-max-value').textContent = totalMax;
+                document.getElementById('headbar-max-possible').textContent = maxPossible;
             }
             
-            // Ažuriraj bodove za trenutni krug
+            // RED 3: Ažuriraj bodove za trenutni krug (sredina)
             if (settings.rounds && settings.rounds[currentRound - 1]) {
                 const round = settings.rounds[currentRound - 1];
                 const values = round.values || [10, 5, 0, -5, -10];
@@ -1096,46 +1201,6 @@
                         }
                     }
                 }
-            }
-            
-            // Ažuriraj Pitanje (broj u trenutnom krugu)
-            // U pauza fazi prikaži SLJEDEĆE pitanje (+2), u ostalim fazama trenutno (+1)
-            let currentQ;
-            if (gameState.phase === 'pause') {
-                // Ako smo tek ušli u pause fazu, izračunaj i zaključaj broj
-                if (headbarQuestionLocked === null) {
-                    currentQ = (gameState.currentQuestion || 0) + 2;
-                    headbarQuestionLocked = currentQ;
-                } else {
-                    // Koristi zaključani broj
-                    currentQ = headbarQuestionLocked;
-                }
-            } else {
-                // U drugim fazama oslobodi lock i koristi trenutni broj
-                headbarQuestionLocked = null;
-                currentQ = (gameState.currentQuestion || 0) + 1;
-            }
-            document.getElementById('headbar-question').textContent = currentQ;
-            
-            // Ažuriraj broj pitanja u trenutnom krugu
-            if (settings.rounds && settings.rounds[currentRound - 1]) {
-                const round = settings.rounds[currentRound - 1];
-                document.getElementById('headbar-round-questions').textContent = round.questions || 10;
-            }
-            
-            // Ažuriraj ukupan broj pitanja
-            if (settings.rounds) {
-                const totalAllQ = settings.rounds.reduce((sum, r) => sum + (r.questions || 0), 0);
-                document.getElementById('headbar-total-questions').textContent = totalAllQ;
-            }
-            
-            // Ažuriraj TOP (koliko igrača prolazi dalje)
-            if (settings.rounds && settings.rounds[currentRound - 1]) {
-                const currentRoundData = settings.rounds[currentRound - 1];
-                const remaining = currentRoundData.playersRemaining ?? currentRoundData.remainingPlayers ?? currentRoundData.advanceCount ?? '-';
-                document.getElementById('headbar-top10').textContent = remaining;
-            } else {
-                document.getElementById('headbar-top10').textContent = '-';
             }
         }
 
@@ -1873,15 +1938,17 @@
             console.log('🎬 ANIMATING QUESTION:', questionNum);
             // Dohvati element pitanja iz headbara
             const headbarQuestion = document.getElementById('headbar-question');
-            const headbarQuestionContainer = headbarQuestion.parentElement;
+            const headbarQuestionContainer = document.getElementById('headbar-question-container');
             
             // Dodaj animaciju klasu
-            headbarQuestionContainer.classList.add('headbar-pulse');
-            
-            // Makni klasu nakon animacije
-            setTimeout(() => {
-                headbarQuestionContainer.classList.remove('headbar-pulse');
-            }, 4200);
+            if (headbarQuestionContainer) {
+                headbarQuestionContainer.classList.add('headbar-pulse');
+                
+                // Makni klasu nakon animacije
+                setTimeout(() => {
+                    headbarQuestionContainer.classList.remove('headbar-pulse');
+                }, 4200);
+            }
         }
 
         function submitAnswer(answerIndex, type) {
