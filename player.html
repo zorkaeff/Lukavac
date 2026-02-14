@@ -1372,21 +1372,26 @@
                     if (phase === 'cunning') {
                         // Provjeri je li igrač odgovorio - smije vidjeti % samo ako je odgovorio
                         const hasAnswered = myAnswerData && !myAnswerData.pending;
-                        
-                        if (hasAnswered) {
+                        // Također provjeri lokalni state (prije nego Firebase ažurira)
+                        const hasAnsweredLocal = hasAnswered || (myAnswer !== null && myAnswerType === 'cunning');
+
+                        if (hasAnsweredLocal) {
                             // Igrač je odgovorio - prikaži progress bar
                             const exclamKey = `${i}_exclamation`;
                             const periodKey = `${i}_period`;
                             const cunningKey = `${i}_cunning`;
-                            
+
                             const totalForThisAnswer = (stats[exclamKey] || 0) + (stats[periodKey] || 0) + (stats[cunningKey] || 0);
                             // Koristi totalAnswersForNormalization koji broji samo odgovorene (! . ?)
-                            const percentage = totalAnswersForNormalization > 0 ? Math.round((totalForThisAnswer / totalAnswersForNormalization) * 100) : 0;
-                            
+                            // Ako nitko nije odgovorio u Fazi 1 (totalPlayers === 0), prikaži 200% umjesto 100%
+                            const multiplier = totalPlayers === 0 ? 200 : 100;
+                            const percentage = totalAnswersForNormalization > 0 ? Math.round((totalForThisAnswer / totalAnswersForNormalization) * multiplier) : 0;
+                            const barWidth = Math.min(percentage, 100); // Bar max 100%, ali tekst može biti 200%
+
                             progressBarHtml = `
                                 <div style="flex: 1; display: flex; align-items: center; gap: 4px;">
                                     <div style="flex: 1; background: rgba(183, 88, 0, 0.15); height: 12px; border-radius: 6px; overflow: hidden;">
-                                        <div style="background: #b75800; height: 100%; width: ${percentage}%; transition: width 0.5s;"></div>
+                                        <div style="background: #b75800; height: 100%; width: ${barWidth}%; transition: width 0.5s;"></div>
                                     </div>
                                     <span style="font-size: 0.7rem; font-weight: bold; color: #b75800; min-width: 30px; text-align: right;">${percentage}%</span>
                                 </div>
@@ -1425,7 +1430,10 @@
             }
             document.getElementById('answerTexts').innerHTML = answersTextHtml;
             
-            const canAnswerCunning = phase === 'cunning' && (myAnswerData?.type === 'cunning' || !myAnswerData);
+            // Provjeri je li igrač VEĆ odgovorio u cunning fazi (Firebase ILI lokalni state)
+            const hasAlreadyAnsweredCunning = myAnswerData?.phase2Answer !== undefined ||
+                                              (phase === 'cunning' && myAnswer !== null && myAnswerType === 'cunning');
+            const canAnswerCunning = phase === 'cunning' && (myAnswerData?.type === 'cunning' || !myAnswerData) && !hasAlreadyAnsweredCunning;
             
             let html = '';
             
@@ -1612,8 +1620,10 @@
                 const myAnswerInDb = allAnswers[playerId];
                 const myPhase1Type = myAnswerInDb?.phase1Type || myAnswerInDb?.type;
                 const hasPhase2Answer = myAnswerInDb?.phase2Answer !== undefined;
-                const canSeeCunningPercentages = (phase === 'cunning' || phase === 'showAnswer') && 
-                                                (myPhase1Type === 'exclamation' || myPhase1Type === 'period' || hasPhase2Answer);
+                // Također provjeri lokalni state za instant feedback nakon klika
+                const hasPhase2AnswerLocal = hasPhase2Answer || (phase === 'cunning' && myAnswer !== null && myAnswerType === 'cunning');
+                const canSeeCunningPercentages = (phase === 'cunning' || phase === 'showAnswer') &&
+                                                (myPhase1Type === 'exclamation' || myPhase1Type === 'period' || hasPhase2AnswerLocal);
                 
                 // Veliki okvir sa logom - deblji border u showAnswer fazi
                 const outerBorder = phase === 'showAnswer' ? 'border: 2.5px solid #b75800;' : 'border: 1px solid #b75800;';
@@ -1626,10 +1636,14 @@
                     
                     const cunningKey = `${i}_cunning`;
                     const cunningCount = stats[cunningKey] || 0;
+                    // Ako nitko nije odgovorio u Fazi 1 (totalPlayers === 0), prikaži 200% umjesto 100%
+                    const cunningMultiplier = (phase === 'cunning' && totalPlayers === 0) ? 200 : 100;
                     const cunningPercentage = totalAnswersForNormalization > 0
-                        ? Math.round((cunningCount / totalAnswersForNormalization) * 100) 
+                        ? Math.round((cunningCount / totalAnswersForNormalization) * cunningMultiplier)
                         : 0;
-                    const cunningSelected = myAnswerData && myAnswerData.answer === i && myAnswerData.type === 'cunning';
+                    // Provjeri Firebase state ILI lokalni state za instant feedback
+                    const cunningSelected = (myAnswerData && myAnswerData.answer === i && myAnswerData.type === 'cunning') ||
+                                            (phase === 'cunning' && myAnswer === i && myAnswerType === 'cunning');
                     
                     let cunningEnabled = false;
                     if (phase === 'cunning' && canAnswerCunning) {
@@ -1683,7 +1697,7 @@
                             <div class="text-lg font-bold mb-1" style="color: ${letterColor};">${letter}?</div>
                             <div style="width: 100%;">
                                 <div style="background: rgba(183, 88, 0, 0.15); height: 10px; border-radius: 4px; overflow: hidden; margin-bottom: 2px;">
-                                    <div style="background: #b75800; height: 100%; width: ${canSeeCunningPercentages ? cunningPercentage : 0}%; transition: width 0.3s;"></div>
+                                    <div style="background: #b75800; height: 100%; width: ${canSeeCunningPercentages ? Math.min(cunningPercentage, 100) : 0}%; transition: width 0.3s;"></div>
                                 </div>
                                 <div class="text-xs font-bold text-center" style="font-size: 0.65rem; color: ${percentColor};">${displayPercentage}${canSeeCunningPercentages ? '%' : ''}</div>
                             </div>
