@@ -262,11 +262,12 @@
         }
         
         /* Blokiraj sve animacije na statistici tablicama */
-        #waitingText table,
-        #waitingText table *,
-        #roundEndLeaderboard table,
-        #roundEndLeaderboard table * {
+        #waitingText,
+        #waitingText *,
+        #roundEndLeaderboard,
+        #roundEndLeaderboard * {
             animation: none !important;
+            -webkit-animation: none !important;
         }
         
         @keyframes correctAnswerPulse {
@@ -2629,23 +2630,41 @@
                     const totalPlayers = sortedForRating.length;
                     const myRating = calculatePlayerRating(myFinalRank, totalPlayers);
                     
-                    console.log('🔴 Stats calculated:', {myFinalRank, totalPlayers, myRating});
+                    console.log('🔴 Stats calculated:', {myFinalRank, totalPlayers, myRating, phase});
+                    
+                    // Provjeri je li gameEnd faza
+                    const isGameEnd = phase === 'gameEnd';
                     
                     // Postavi naslov i sliku
                     const roundEndTitle = document.getElementById('roundEndTitle');
                     const roundEndImage = document.getElementById('roundEndImage');
                     
-                    if (roundEndTitle) {
-                        roundEndTitle.textContent = 'ISPADAŠ IZ IGRE';
-                        roundEndTitle.style.color = '#ef4444';
-                    }
-                    
-                    if (roundEndImage) {
-                        roundEndImage.src = 'Lukavac_statistika.png';
-                        roundEndImage.onerror = function() {
-                            console.error('Failed to load Lukavac_statistika.png');
-                            this.src = 'Lukavac_je_pogriješio.png'; // fallback
-                        };
+                    if (isGameEnd) {
+                        // GameEnd - samo statistika, bez "ISPADAŠ IZ IGRE"
+                        if (roundEndTitle) {
+                            roundEndTitle.textContent = 'STATISTIKA';
+                            roundEndTitle.style.color = '#b75800';
+                        }
+                        if (roundEndImage) {
+                            roundEndImage.src = 'Lukavac_statistika.png';
+                            roundEndImage.onerror = function() {
+                                console.error('Failed to load Lukavac_statistika.png');
+                                this.src = 'Lukavac_godine.png'; // fallback za gameEnd
+                            };
+                        }
+                    } else {
+                        // RoundEnd - ISPADAŠ IZ IGRE
+                        if (roundEndTitle) {
+                            roundEndTitle.textContent = 'ISPADAŠ IZ IGRE';
+                            roundEndTitle.style.color = '#ef4444';
+                        }
+                        if (roundEndImage) {
+                            roundEndImage.src = 'Lukavac_statistika.png';
+                            roundEndImage.onerror = function() {
+                                console.error('Failed to load Lukavac_statistika.png');
+                                this.src = 'Lukavac_je_pogriješio.png'; // fallback
+                            };
+                        }
                     }
                     
                     // Popuni statistiku tablicu
@@ -3613,7 +3632,8 @@
                                              ${player.eliminated ? 'text-decoration: line-through; color: #9ca3af;' : ''}">${player.name}${isMe ? ' (TI)' : ''}</span>
                                 ${player.eliminated ? `<span style="font-size: 0.65rem; color: #9ca3af;">❌</span>` : ''}
                                 ${player.rating > 0 && !player.eliminated ? `<span style="color: #d97706; font-size: 0.65rem;">⭐${player.rating}</span>` : ''}
-                                ${isCunningAnswer ? `<span class="text-xs font-bold hallock-font" style="color: #b75800; min-width: 70px; text-align: center; display: inline-block; position: absolute; left: 50%; transform: translateX(-50%);">CUNNING</span>` : ''}
+                                ${player.eliminated && player.eliminatedRound ? `<span class="text-xs font-bold hallock-font" style="color: #ef4444; min-width: 70px; text-align: center; display: inline-block; position: absolute; left: 50%; transform: translateX(-50%);">R${player.eliminatedRound}</span>` : ''}
+                                ${!player.eliminated && isCunningAnswer ? `<span class="text-xs font-bold hallock-font" style="color: #b75800; min-width: 70px; text-align: center; display: inline-block; position: absolute; left: 50%; transform: translateX(-50%);">CUNNING</span>` : ''}
                             </div>
                             <div class="flex items-center gap-1" style="font-size: 0.7rem; flex-shrink: 0;">
                                 ${answerDisplay && !player.eliminated ? `<span style="min-width: 1.8rem; text-align: right; font-weight: bold;">${answerDisplay}</span>` : ''}
