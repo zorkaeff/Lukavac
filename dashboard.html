@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<!-- Player Dashboard v2.1 -->
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Lukavac Kviz</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tillana:wght@400;500;600;700;800&family=Metal+Mania&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --brand:      #b75800;
+            --brand-dark: #632705;
+            --brand-mid:  #d97706;
+            --brand-light:#ffd995;
+            --brand-pale: #fffff1;
+            --card-shadow:0 4px 15px rgba(0,0,0,0.15);
+        }
+        * { box-sizing: border-box; }
+
+        body {
+            background: linear-gradient(135deg, #f5e6d3 0%, #d97706 50%, #f5e6d3 100%);
+            font-family: 'Tillana','Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+            min-height: 100vh;
+        }
+        .hallock { font-family: 'Metal Mania', cursive; }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+        }
+
+        /* ── HEADER ── */
+        .top-headbar {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            padding: 10px 14px;
+            margin-bottom: 8px;
+        }
+        .profile-ring {
+            width: 46px; height: 46px;
+            border-radius: 50%;
+            border: 2.5px solid var(--brand);
+            object-fit: cover;
+            cursor: pointer;
+            transition: transform .2s;
+        }
+        .profile-ring:hover { transform: scale(1.1); }
+
+        /* ── STATS CARDS ── */
+        .stat-card {
+            background: linear-gradient(160deg, #fff8e6 0%, var(--brand-pale) 100%);
+            border: 2.5px solid var(--brand);
+            border-radius: 14px;
+            padding: 11px 4px 10px;
+            text-align: center;
+            box-shadow: 0 4px 14px rgba(183,88,0,.22);
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::before {
+            content:'';
+            position:absolute;
+            top:0;left:0;right:0;height:4px;
+            background: linear-gradient(90deg, var(--brand-light), var(--brand), var(--brand-dark));
+        }
+        .stat-icon { font-size:1.25rem; line-height:1; margin-bottom:4px; }
+        .stat-value {
+            font-family: 'Metal Mania', cursive;
+            font-size: 1.55rem;
+            color: var(--brand);
+            line-height: 1;
+            margin-bottom: 4px;
+            text-shadow: 1px 1px 0 rgba(183,88,0,.25), 0 2px 6px rgba(183,88,0,.15);
+        }
+        .stat-label {
+            font-size: 0.62rem;
+            color: var(--brand-dark);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+        }
+
+        /* TOPUP ROW */
+        .topup-row {
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 3px 10px rgba(0,0,0,.08);
+            border: 2px solid #a7f3d0;
+            padding: 9px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .topup-info { font-size:.72rem; color:var(--brand-dark); font-weight:600; }
+        .topup-info span { display:block; font-size:.6rem; color:#9ca3af; font-weight:400; margin-top:1px; }
+        .btn-topup {
+            background: linear-gradient(135deg,#10b981,#059669);
+            color: white; font-family:'Metal Mania',cursive;
+            font-size:.8rem; padding:8px 16px;
+            border:none; border-radius:10px; cursor:pointer;
+            white-space:nowrap;
+            box-shadow:0 3px 10px rgba(16,185,129,.35);
+            transition:transform .15s, box-shadow .15s;
+        }
+        .btn-topup:hover { transform:scale(1.05); box-shadow:0 5px 16px rgba(16,185,129,.5); }
+
+        /* ── MENU ── */
+        .section-title {
+            font-family: 'Metal Mania', cursive;
+            font-size: 1rem;
+            color: var(--brand);
+            margin-bottom: 10px;
+            padding-bottom: 7px;
+            border-bottom: 2px solid var(--brand-light);
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .menu-btn {
+            background: linear-gradient(135deg, var(--brand-pale) 0%, var(--brand-light) 100%);
+            border: 2px solid var(--brand);
+            border-radius: 15px;
+            padding: 12px 5px 11px;
+            cursor: pointer;
+            transition: all .22s ease;
+            text-align: center;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,.09);
+            /* JEDNAKA VISINA za sve gumbe */
+            min-height: 108px;
+        }
+        .menu-btn::before {
+            content:'';
+            position:absolute;inset:0;
+            background:linear-gradient(135deg,var(--brand-light) 0%,var(--brand) 100%);
+            opacity:0; transition:opacity .22s; border-radius:13px;
+        }
+        .menu-btn:hover::before { opacity:1; }
+        .menu-btn:hover { transform:translateY(-4px); box-shadow:0 10px 28px rgba(183,88,0,.4); }
+        .menu-btn:hover .btn-label,
+        .menu-btn:hover .btn-sub  { color:white !important; opacity:1 !important; }
+        .menu-btn:hover .btn-img  { filter:brightness(10) saturate(0); }
+        .menu-btn > * { position:relative; z-index:1; }
+
+        .btn-img   { width:44px;height:44px;object-fit:contain;transition:filter .22s;flex-shrink:0; }
+        .btn-label { font-family:'Metal Mania',cursive;font-size:.85rem;color:var(--brand);line-height:1.15;word-break:break-word; }
+        .btn-sub   { font-size:.65rem;color:var(--brand-dark);opacity:.85;line-height:1.3; }
+
+        /* ── QUIZ CARDS ── */
+        .quiz-entry {
+            border-radius: 13px;
+            margin-bottom: 9px;
+            overflow: hidden;
+            border: 1.5px solid var(--brand-light);
+            box-shadow: 0 2px 8px rgba(0,0,0,.07);
+            transition: transform .18s, box-shadow .18s;
+            cursor: pointer;
+        }
+        .quiz-entry:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(183,88,0,.2); }
+
+        .quiz-entry-head {
+            padding: 10px 13px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .quiz-entry-foot {
+            padding: 7px 13px;
+            display: grid;
+            grid-template-columns: repeat(3,1fr);
+            gap: 4px;
+            border-top: 1px solid var(--brand-light);
+            background: var(--brand-pale);
+        }
+        .quiz-pill { font-size:.7rem; font-weight:700; color:var(--brand-dark); display:flex; align-items:center; gap:3px; }
+
+        /* LIVE */
+        .quiz-entry.is-live {
+            border-color:#10b981;
+            box-shadow:0 0 0 3px rgba(16,185,129,.15), 0 4px 14px rgba(16,185,129,.18);
+        }
+        .quiz-entry.is-live .quiz-entry-head { background:linear-gradient(135deg,#064e3b,#10b981); }
+        .quiz-entry.is-live .quiz-entry-foot { background:#f0fdf4; border-top-color:#a7f3d0; }
+        .quiz-entry.is-live .quiz-pill { color:#065f46; }
+
+        /* SCHEDULED */
+        .quiz-entry.is-scheduled .quiz-entry-head { background:linear-gradient(135deg,var(--brand-pale),#fff8e6); }
+
+        /* FINISHED */
+        .quiz-entry.is-finished { opacity:.65; }
+        .quiz-entry.is-finished .quiz-entry-head { background:#f9fafb; }
+
+        .badge { display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:20px;font-size:.66rem;font-weight:700;white-space:nowrap; }
+        .badge-live      { background:#10b981;color:white; }
+        .badge-scheduled { background:#3b82f6;color:white; }
+        .badge-finished  { background:#9ca3af;color:white; }
+
+        @keyframes livePulse {0%,100%{opacity:1;transform:scale(1);}50%{opacity:.3;transform:scale(1.5);}}
+        .live-dot { width:7px;height:7px;background:#ef4444;border-radius:50%;display:inline-block;animation:livePulse 1.4s infinite; }
+
+        /* ── LIVE BANNER ── */
+        @keyframes bannerGlow {0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.6);}50%{box-shadow:0 0 20px 6px rgba(16,185,129,0);}}
+        .live-banner {
+            background:linear-gradient(135deg,#064e3b,#10b981);
+            border-radius:13px; padding:13px; color:white;
+            animation:bannerGlow 2.5s infinite;
+            cursor:pointer; transition:transform .18s; margin-bottom:8px;
+        }
+        .live-banner:hover { transform:scale(1.02); }
+
+        /* ── NOTIF / RESULTS ── */
+        .notif-item { padding:9px 12px;border-radius:10px;background:var(--brand-pale);border-left:3px solid var(--brand);font-size:.78rem;color:var(--brand-dark);margin-bottom:6px; }
+        .notif-item.unread { background:#fef3c7;border-left-color:#f59e0b; }
+        .result-row { background:var(--brand-pale);border:1px solid var(--brand-light);border-radius:10px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;transition:background .15s; }
+        .result-row:hover { background:var(--brand-light); }
+
+        /* ── MODALS ── */
+        .modal-backdrop { position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:16px; }
+        .modal-backdrop.open { display:flex; }
+        .modal-card { background:white;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:24px;width:100%;max-width:360px;animation:modalIn .22s ease; }
+        @keyframes modalIn{from{transform:scale(.9) translateY(14px);opacity:0;}to{transform:scale(1) translateY(0);opacity:1;}}
+        .modal-input { border:2px solid var(--brand-light);border-radius:10px;padding:11px 14px;width:100%;font-family:'Tillana',cursive;font-size:1.1rem;text-align:center;letter-spacing:.15em;transition:border-color .2s; }
+        .modal-input:focus { border-color:var(--brand);outline:none; }
+        .btn-primary { background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:white;font-family:'Metal Mania',cursive;font-size:.95rem;padding:12px 24px;border:none;border-radius:12px;cursor:pointer;width:100%;transition:transform .15s,box-shadow .15s; }
+        .btn-primary:hover { transform:scale(1.03);box-shadow:0 6px 18px rgba(183,88,0,.4); }
+        .btn-cancel { background:transparent;border:1.5px solid var(--brand-light);color:#9ca3af;font-family:'Tillana',cursive;padding:9px 18px;border-radius:10px;cursor:pointer;width:100%;margin-top:7px;transition:border-color .2s; }
+        .btn-cancel:hover { border-color:var(--brand);color:var(--brand); }
+
+        /* Token pkgs */
+        .token-pkg { border:2px solid var(--brand-light);border-radius:12px;padding:10px 4px;text-align:center;cursor:pointer;transition:all .18s; }
+        .token-pkg:hover { border-color:var(--brand);background:linear-gradient(135deg,var(--brand-pale),#fff8e6); }
+        .token-pkg.selected { border-color:var(--brand);background:linear-gradient(135deg,var(--brand-pale),#fff8e6); }
+
+        /* ── ANIMATIONS ── */
+        @keyframes fadeUp{from{opacity:0;transform:translateY(13px);}to{opacity:1;transform:translateY(0);}}
+        .fu  {animation:fadeUp .4s ease forwards;}
+        .fu1 {animation-delay:.04s;opacity:0;}
+        .fu2 {animation-delay:.09s;opacity:0;}
+        .fu3 {animation-delay:.14s;opacity:0;}
+        .fu4 {animation-delay:.19s;opacity:0;}
+        .fu5 {animation-delay:.24s;opacity:0;}
+
+        @keyframes spin{to{transform:rotate(360deg);}}
+
+        .logout-btn { background:transparent;border:1.5px solid var(--brand-light);color:var(--brand);font-family:'Tillana',cursive;font-size:.7rem;padding:4px 11px;border-radius:8px;cursor:pointer;transition:all .2s; }
+        .logout-btn:hover { background:var(--brand);color:white;border-color:var(--brand); }
+    </style>
+</head>
+
+<body class="p-2 pb-10">
+
+    <!-- ════════ HEADER ════════ -->
+    <div class="top-headbar fu fu1">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <img src="cunning_logo_lukavac.png" alt="Logo" style="width:36px;height:36px;">
+                <div>
+                    <div class="hallock" style="font-size:1.2rem;color:var(--brand);line-height:1;">CUNNING</div>
+                    <div style="font-size:.56rem;color:var(--brand-dark);font-weight:600;">Igra znanja i lukavosti</div>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:9px;">
+                <div style="text-align:right;">
+                    <div style="font-size:.62rem;color:#9ca3af;">Dobrodošao,</div>
+                    <div class="hallock" style="font-size:.88rem;color:var(--brand);" id="headerPlayerName">—</div>
+                </div>
+                <img id="headerPlayerPhoto"
+                     src="https://ui-avatars.com/api/?background=ffd995&color=b75800&name=P&bold=true&size=48"
+                     class="profile-ring" alt="Profil" onclick="goToProfile()">
+                <button class="logout-btn" onclick="logout()">Odjava</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-2xl mx-auto">
+
+        <!-- ════════ LIVE BANNER ════════ -->
+        <div id="activeGameBanner" class="live-banner hidden fu fu1" onclick="joinActiveGame()">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:11px;">
+                    <img src="cunning_logo_lukavac.png" alt="" style="width:36px;height:36px;filter:brightness(10) saturate(0);">
+                    <div>
+                        <div class="hallock" style="font-size:1rem;">🔴 KVIZ UŽIVO!</div>
+                        <div style="font-size:.76rem;opacity:.9;" id="activeBannerText">Igra je u tijeku — klikni za ulaz</div>
+                    </div>
+                </div>
+                <div style="background:rgba(255,255,255,.2);border-radius:9px;padding:7px 13px;font-family:'Metal Mania',cursive;font-size:.82rem;">
+                    ULAZ →
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════ STATS — 2 reda × 4 kartice ════════ -->
+
+        <!-- Red 1: Saldo · Rang · Ocjena · Pobjede -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px;" class="fu fu2">
+            <div class="stat-card">
+                <div class="stat-icon">💳</div>
+                <div class="stat-value" style="color:#10b981;" id="statSaldo">0€</div>
+                <div class="stat-label">Saldo</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-value" style="color:#3b82f6;" id="statRank">#—</div>
+                <div class="stat-label">Rang</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⭐</div>
+                <div class="stat-value" style="color:#f59e0b;" id="statRating">—</div>
+                <div class="stat-label">Ocjena</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🥇</div>
+                <div class="stat-value" id="statWins">0</div>
+                <div class="stat-label">Pobjede</div>
+            </div>
+        </div>
+
+        <!-- Red 2: Uk.Zarada · Prosjek · Uk.Igara · Finala -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px;" class="fu fu2">
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-value" style="color:#10b981;" id="statEarnings">0€</div>
+                <div class="stat-label">Uk. Zarada</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📈</div>
+                <div class="stat-value" id="statAvg">0€</div>
+                <div class="stat-label">Prosjek €</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎮</div>
+                <div class="stat-value" id="statGames">0</div>
+                <div class="stat-label">Uk. Igara</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-value" id="statFinals">0</div>
+                <div class="stat-label">Finala</div>
+            </div>
+        </div>
+
+        <!-- Topup row -->
+        <div class="topup-row fu fu2">
+            <div class="topup-info">
+                💳 Nadoplati tokene
+                <span>Svaki kviz troši tokene · Trial: 30 dana besplatno</span>
+            </div>
+            <button class="btn-topup" onclick="openTopup()">+ NADOPLATI</button>
+        </div>
+
+        <!-- ════════ IZBORNIK 4 reda × 3 stupca ════════ -->
+        <div class="card p-3 mb-3 fu fu3">
+            <div class="section-title">
+                <img src="cunning_logo_lukavac.png" alt="" style="width:16px;height:16px;">
+                IZBORNIK
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+
+                <div class="menu-btn" onclick="goTo('quizzes.html')">
+                    <img class="btn-img" src="Lukavac_nudi_eure.png" alt="">
+                    <div class="btn-label">KVIZOVI</div>
+                    <div class="btn-sub">Pridruži se kvizu</div>
+                </div>
+
+                <div class="menu-btn" onclick="goTo('results.html')">
+                    <img class="btn-img" src="Lukavac_statistika.png" alt="">
+                    <div class="btn-label">REZULTATI</div>
+                    <div class="btn-sub">Prošli kvizovi</div>
+                </div>
+
+                <div class="menu-btn" onclick="goTo('rankings.html')">
+                    <img class="btn-img" src="Lukavac_pobjednik.png" alt="">
+                    <div class="btn-label">RANG LISTA</div>
+                    <div class="btn-sub">Svi igrači</div>
+                </div>
+
+                <div class="menu-btn" onclick="goToProfile()">
+                    <img class="btn-img" src="Lukavac_godine.png" alt="">
+                    <div class="btn-label">MOJ PROFIL</div>
+                    <div class="btn-sub">Uredi podatke</div>
+                </div>
+
+                <div class="menu-btn" onclick="goTo('prizes.html')">
+                    <img class="btn-img" src="Lukavac_plese.png" alt="">
+                    <div class="btn-label">NAGRADE</div>
+                    <div class="btn-sub">Nagradni fond</div>
+                </div>
+
+                <div class="menu-btn" onclick="goTo('private-quiz.html')">
+                    <img class="btn-img" src="Lukavac_double_dealing.png" alt="">
+                    <div class="btn-label">PRIVATNI KVIZ</div>
+                    <div class="btn-sub">Stvori vlastiti</div>
+                </div>
+
+                <div class="menu-btn" onclick="goTo('add-question.html')">
+                    <img class="btn-img" src="Lukavac_informacije.png" alt="">
+                    <div class="btn-label">DODAJ PITANJE</div>
+                    <div class="btn-sub">Baza pitanja</div>
+                </div>
+
+                <div class="menu-btn" onclick="goTo('display.html')">
+                    <img class="btn-img" src="Lukavac_double_trouble.png" alt="">
+                    <div class="btn-label">DISPLAY TV</div>
+                    <div class="btn-sub">TV prikaz uživo</div>
+                </div>
+
+                <div class="menu-btn" onclick="goTo('rules.html')">
+                    <img class="btn-img" src="Lukavac_informacije.png" alt="">
+                    <div class="btn-label">PRAVILA</div>
+                    <div class="btn-sub">Kako se igra</div>
+                </div>
+
+                <div class="menu-btn" onclick="goTo('news.html')">
+                    <img class="btn-img" src="Lukavac_slavi_točan_odgovor.png" alt="">
+                    <div class="btn-label">NOVOSTI</div>
+                    <div class="btn-sub">Najnovije vijesti</div>
+                </div>
+
+                <div class="menu-btn" onclick="goTo('donations.html')">
+                    <img class="btn-img" src="Lukavac_plese.png" alt="">
+                    <div class="btn-label">DONACIJE</div>
+                    <div class="btn-sub">Podrži projekt</div>
+                </div>
+
+                <div class="menu-btn" onclick="goTo('contact.html')">
+                    <img class="btn-img" src="Lukavac_slavi_točan_odgovor.png" alt="">
+                    <div class="btn-label">KONTAKT</div>
+                    <div class="btn-sub">Pišite nam</div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ════════ LIVE & UPCOMING ════════ -->
+        <div class="card p-4 mb-3 fu fu4">
+            <div class="section-title">
+                <span class="live-dot"></span>
+                UŽIVO &amp; NADOLAZEĆI
+            </div>
+            <div id="liveQuizzes">
+                <div style="text-align:center;padding:18px 0;">
+                    <div style="width:26px;height:26px;border:3px solid var(--brand-light);border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 8px;"></div>
+                    <div style="font-size:.76rem;color:#9ca3af;">Učitavam kvizove...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════ MY QUIZZES ════════ -->
+        <div class="card p-4 mb-3 fu fu4">
+            <div class="section-title">
+                <img src="cunning_logo_lukavac.png" alt="" style="width:14px;height:14px;">
+                MOJI PRIJAVLJENI KVIZOVI
+            </div>
+            <div id="myQuizzes">
+                <p style="color:#9ca3af;font-size:.8rem;text-align:center;padding:10px 0;">Nisi prijavljen ni na jedan kviz</p>
+            </div>
+        </div>
+
+        <!-- ════════ NOTIFICATIONS ════════ -->
+        <div class="card p-4 mb-3 fu fu5">
+            <div class="section-title">🔔 NOTIFIKACIJE</div>
+            <div id="notifications">
+                <p style="color:#9ca3af;font-size:.8rem;text-align:center;padding:10px 0;">Nema notifikacija</p>
+            </div>
+        </div>
+
+        <!-- ════════ RECENT RESULTS ════════ -->
+        <div class="card p-4 mb-3 fu fu5">
+            <div class="section-title">
+                <img src="Lukavac_statistika.png" alt="" style="width:17px;height:17px;">
+                NEDAVNI REZULTATI
+            </div>
+            <div id="recentResults">
+                <p style="color:#9ca3af;font-size:.8rem;text-align:center;padding:10px 0;">Nema rezultata</p>
+            </div>
+        </div>
+
+        <div style="text-align:center;padding:6px 0;opacity:.4;">
+            <div class="hallock" style="font-size:.72rem;color:var(--brand);">CUNNING</div>
+            <div style="font-size:.56rem;color:#6b7280;">® Zaštićeno autorsko djelo · v2.1</div>
+        </div>
+
+    </div><!-- /max-w -->
+
+
+    <!-- ════════ JOIN MODAL ════════ -->
+    <div id="joinModal" class="modal-backdrop">
+        <div class="modal-card">
+            <div style="text-align:center;margin-bottom:16px;">
+                <img src="cunning_logo_lukavac.png" alt="" style="width:42px;height:42px;margin:0 auto 6px;">
+                <div class="hallock" style="font-size:1.15rem;color:var(--brand);" id="modalQuizName">Kviz</div>
+                <div style="font-size:.72rem;color:#9ca3af;">Unesi šifru za prijavu</div>
+            </div>
+            <input type="text" id="modalPasswordInput" class="modal-input"
+                   placeholder="••••••" style="margin-bottom:10px;"
+                   onkeypress="if(event.key==='Enter') confirmJoinQuiz()">
+            <button class="btn-primary" onclick="confirmJoinQuiz()">PRIJAVI SE NA KVIZ</button>
+            <button class="btn-cancel"  onclick="closeJoinModal()">Odustani</button>
+            <div id="modalError" class="hidden"
+                 style="margin-top:9px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:7px 12px;text-align:center;font-size:.78rem;color:#ef4444;"></div>
+        </div>
+    </div>
+
+    <!-- ════════ TOPUP MODAL ════════ -->
+    <div id="topupModal" class="modal-backdrop">
+        <div class="modal-card">
+            <div style="text-align:center;margin-bottom:14px;">
+                <div style="font-size:2rem;margin-bottom:4px;">💳</div>
+                <div class="hallock" style="font-size:1.15rem;color:var(--brand);">NADOPLATI TOKENE</div>
+                <div style="font-size:.7rem;color:#9ca3af;margin-top:3px;">Odaberi paket tokena</div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+                <div class="token-pkg" onclick="selectPkg(this,50)">
+                    <div style="font-family:'Metal Mania',cursive;font-size:1.15rem;color:var(--brand);">50</div>
+                    <div style="font-size:.6rem;color:#9ca3af;font-weight:600;">TOKENA</div>
+                    <div style="font-size:.82rem;font-weight:700;color:#10b981;margin-top:4px;">5€</div>
+                </div>
+                <div class="token-pkg selected" onclick="selectPkg(this,120)" style="border-color:var(--brand);background:linear-gradient(135deg,var(--brand-pale),#fff8e6);position:relative;">
+                    <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--brand);color:white;font-size:.56rem;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;">POPULAR</div>
+                    <div style="font-family:'Metal Mania',cursive;font-size:1.15rem;color:var(--brand);">120</div>
+                    <div style="font-size:.6rem;color:#9ca3af;font-weight:600;">TOKENA</div>
+                    <div style="font-size:.82rem;font-weight:700;color:#10b981;margin-top:4px;">10€</div>
+                </div>
+                <div class="token-pkg" onclick="selectPkg(this,300)">
+                    <div style="font-family:'Metal Mania',cursive;font-size:1.15rem;color:var(--brand);">300</div>
+                    <div style="font-size:.6rem;color:#9ca3af;font-weight:600;">TOKENA</div>
+                    <div style="font-size:.82rem;font-weight:700;color:#10b981;margin-top:4px;">20€</div>
+                </div>
+            </div>
+
+            <button class="btn-primary" style="background:linear-gradient(135deg,#10b981,#059669);" onclick="processTopup()">NASTAVI NA PLAĆANJE</button>
+            <button class="btn-cancel" onclick="closeTopup()">Odustani</button>
+        </div>
+    </div>
+
+
+    <script>
+        // ─── GLOBALS ─────────────────────────────────
+        let playerProfile     = null;
+        let playerProfileId   = null;
+        let pendingJoinQuizId = null;
+        let selectedTokenPkg  = 120;
+
+        // ─── INIT ─────────────────────────────────────
+        window.onload = function () {
+            playerProfileId = sessionStorage.getItem('playerProfileId');
+            if (!playerProfileId) { window.location.href = 'login.html'; return; }
+
+            const raw = sessionStorage.getItem('playerProfile');
+            if (raw) {
+                playerProfile = JSON.parse(raw);
+                renderHeader();
+                renderStats();
+            }
+
+            loadLiveGame();
+            loadQuizzes();
+            loadMyQuizzes();
+            loadNotifications();
+            loadRecentResults();
+        };
+
+        // ─── HEADER ───────────────────────────────────
+        function renderHeader() {
+            const name = playerProfile.nickname || playerProfile.firstName || 'Igrač';
+            document.getElementById('headerPlayerName').textContent = name;
+            const initial = name.charAt(0).toUpperCase();
+            document.getElementById('headerPlayerPhoto').src = playerProfile.profilePhoto ||
+                `https://ui-avatars.com/api/?background=ffd995&color=b75800&name=${initial}&bold=true&size=48`;
+        }
+
+        // ─── STATS ────────────────────────────────────
+        function renderStats() {
+            const s = playerProfile.stats || {};
+            const games    = s.quizzesPlayed  || 0;
+            const earnings = s.totalEarnings  || 0;
+
+            document.getElementById('statSaldo').textContent    = (s.tokenBalance  || 0) + '€';
+            document.getElementById('statRank').textContent     = '#' + (s.currentRank  || '—');
+            document.getElementById('statRating').textContent   = s.averageRating ? parseFloat(s.averageRating).toFixed(1) : '—';
+            document.getElementById('statWins').textContent     = s.wins           || 0;
+            document.getElementById('statEarnings').textContent = earnings + '€';
+            document.getElementById('statAvg').textContent      = (games > 0 ? Math.round(earnings / games) : 0) + '€';
+            document.getElementById('statGames').textContent    = games;
+            document.getElementById('statFinals').textContent   = s.finals          || 0;
+        }
+
+        // ─── LIVE GAME ────────────────────────────────
+        function loadLiveGame() {
+            database.ref('gameState').on('value', snap => {
+                const gs = snap.val();
+                const banner = document.getElementById('activeGameBanner');
+                if (gs && gs.isActive && gs.phase !== 'waiting' && gs.phase !== 'gameEnd') {
+                    banner.classList.remove('hidden');
+                    document.getElementById('activeBannerText').textContent =
+                        gs.phase === 'answering' ? 'Pitanje je aktivno — ulazi odmah!'
+                        : gs.phase === 'pause'   ? 'Pauza između pitanja — još nije kasno!'
+                        : 'Igra je u tijeku — klikni za ulaz';
+                } else {
+                    banner.classList.add('hidden');
+                }
+            });
+        }
+        function joinActiveGame() { window.location.href = 'player.html'; }
+
+        // ─── QUIZZES ──────────────────────────────────
+        function loadQuizzes() {
+            database.ref('scheduledQuizzes').orderByChild('startTime').once('value').then(snap => {
+                const quizzes = snap.val();
+                const el = document.getElementById('liveQuizzes');
+                if (!quizzes) { el.innerHTML = emptyMsg('Nema zakazanih kvizova'); return; }
+
+                const now = Date.now();
+                const arr = Object.entries(quizzes).map(([id,d])=>({id,...d}));
+                arr.sort((a,b)=>a.startTime-b.startTime);
+
+                let html = '';
+                arr.forEach(quiz => {
+                    const isLive  = quiz.status === 'live';
+                    const isFuture= quiz.startTime > now;
+                    const dt = new Date(quiz.startTime).toLocaleString('hr-HR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+
+                    let timeUntil = '';
+                    if (!isLive && isFuture) {
+                        const mins = Math.floor((quiz.startTime - now)/60000);
+                        timeUntil = mins<60 ? `Za ${mins} min` : mins<1440 ? `Za ${Math.floor(mins/60)}h` : `Za ${Math.floor(mins/1440)} dan(a)`;
+                    }
+
+                    const varCls  = isLive ? 'is-live' : isFuture ? 'is-scheduled' : 'is-finished';
+                    const nameCol = isLive ? 'white' : '#111';
+                    const subCol  = isLive ? 'rgba(255,255,255,.65)' : '#9ca3af';
+
+                    const badgeHtml = isLive
+                        ? `<span class="badge badge-live"><span class="live-dot" style="width:6px;height:6px;margin-right:1px;"></span>UŽIVO</span>`
+                        : isFuture
+                        ? `<span class="badge badge-scheduled">📅 ${timeUntil||'ZAKAZANO'}</span>`
+                        : `<span class="badge badge-finished">✓ ZAVRŠENO</span>`;
+
+                    const prizeCol = isLive ? 'rgba(255,255,255,.9)' : '#10b981';
+                    const prizeHtml = quiz.prizePool
+                        ? `<span style="font-family:'Metal Mania',cursive;font-size:.82rem;color:${prizeCol};">💰 ${quiz.prizePool}€</span>`
+                        : '';
+
+                    const footerAction = isLive
+                        ? `<span style="color:#10b981;font-weight:700;font-size:.7rem;">⚡ Ulaz otvoren</span>`
+                        : isFuture
+                        ? `<span style="color:#3b82f6;font-size:.7rem;">Prijava →</span>`
+                        : `<span style="color:#9ca3af;font-size:.7rem;">Završeno</span>`;
+
+                    html += `
+                    <div class="quiz-entry ${varCls}" onclick="openJoinModal('${quiz.id}','${(quiz.name||'Kviz').replace(/'/g,"\\'")}')">
+                        <div class="quiz-entry-head">
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-weight:700;font-size:.9rem;color:${nameCol};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${quiz.name||'Kviz'}</div>
+                                <div style="font-size:.66rem;color:${subCol};margin-top:1px;">🕐 ${dt}</div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+                                ${badgeHtml}
+                                ${prizeHtml}
+                            </div>
+                        </div>
+                        <div class="quiz-entry-foot">
+                            <div class="quiz-pill">👥 ${quiz.playerCount||0} igrača</div>
+                            <div class="quiz-pill">❓ ${quiz.questionCount||10} pit.</div>
+                            <div class="quiz-pill" style="justify-content:flex-end;">${footerAction}</div>
+                        </div>
+                    </div>`;
+                });
+
+                el.innerHTML = html;
+            }).catch(() => {
+                document.getElementById('liveQuizzes').innerHTML = emptyMsg('Nema zakazanih kvizova');
+            });
+        }
+
+        // ─── MY QUIZZES ───────────────────────────────
+        function loadMyQuizzes() {
+            database.ref(`playerProfiles/${playerProfileId}/registeredQuizzes`).on('value', snap => {
+                const reg = snap.val();
+                if (!reg) { document.getElementById('myQuizzes').innerHTML = emptyMsg('Nisi prijavljen ni na jedan kviz'); return; }
+                const ids = Object.keys(reg);
+                let html=''; let loaded=0;
+                ids.forEach(qid => {
+                    database.ref(`scheduledQuizzes/${qid}`).once('value').then(qs => {
+                        const quiz = qs.val();
+                        if (!quiz) { loaded++; return; }
+                        const dt   = new Date(quiz.startTime).toLocaleString('hr-HR');
+                        const ms   = quiz.startTime - Date.now();
+                        const mins = Math.floor(ms/60000);
+                        const status = mins<1
+                            ? '<span style="color:#ef4444;font-weight:700;font-size:.76rem;">🔴 POČINJE ODMAH!</span>'
+                            : mins<60
+                            ? `<span style="color:#f97316;font-weight:700;font-size:.76rem;">⏰ Za ${mins} min</span>`
+                            : '<span style="color:#10b981;font-size:.76rem;">✅ Prijavljen</span>';
+                        const btn = mins<1
+                            ? `<button onclick="enterQuiz('${qid}')" style="background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;padding:5px 12px;border-radius:8px;font-weight:700;cursor:pointer;font-size:.76rem;">🎮 IGRAJ!</button>`
+                            : `<button onclick="withdrawFromQuiz('${qid}')" style="background:transparent;border:1.5px solid #fca5a5;color:#ef4444;padding:4px 11px;border-radius:8px;cursor:pointer;font-size:.72rem;">❌ Odustani</button>`;
+
+                        html += `<div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #10b981;border-radius:12px;padding:9px 12px;margin-bottom:7px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                                <div>
+                                    <div style="font-weight:700;font-size:.86rem;color:#064e3b;">${quiz.name}</div>
+                                    <div style="font-size:.66rem;color:#6b7280;">🕐 ${dt}</div>
+                                </div>
+                                ${status}
+                            </div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div style="font-size:.68rem;color:#374151;font-weight:600;">💰 ${quiz.prizePool||0}€ · ❓ ${quiz.questionCount||0} pit.</div>
+                                ${btn}
+                            </div>
+                        </div>`;
+                        loaded++;
+                        if (loaded===ids.length) document.getElementById('myQuizzes').innerHTML = html||emptyMsg('Nema');
+                    });
+                });
+            });
+        }
+
+        // ─── NOTIFICATIONS ────────────────────────────
+        function loadNotifications() {
+            database.ref(`notifications/${playerProfileId}`).orderByChild('timestamp').limitToLast(10).on('value', snap => {
+                const notifs = snap.val();
+                if (!notifs) { document.getElementById('notifications').innerHTML = emptyMsg('Nema notifikacija'); return; }
+                let html='';
+                Object.entries(notifs).reverse().forEach(([id,n]) => {
+                    const dt = new Date(n.timestamp).toLocaleString('hr-HR');
+                    html += `<div class="notif-item ${n.read?'':'unread'}" onclick="markRead('${id}')">
+                        <div style="font-weight:600;">${n.message}</div>
+                        <div style="font-size:.63rem;color:#9ca3af;margin-top:2px;">${dt}</div>
+                    </div>`;
+                });
+                document.getElementById('notifications').innerHTML = html;
+            });
+        }
+        function markRead(nid) { database.ref(`notifications/${playerProfileId}/${nid}/read`).set(true); }
+
+        // ─── RECENT RESULTS ───────────────────────────
+        function loadRecentResults() {
+            database.ref(`playerResults/${playerProfileId}`).limitToLast(5).once('value').then(snap => {
+                const res = snap.val();
+                if (!res) { document.getElementById('recentResults').innerHTML = emptyMsg('Nema rezultata'); return; }
+                let html='';
+                Object.entries(res).reverse().forEach(([,r]) => {
+                    const dt    = new Date(r.timestamp).toLocaleDateString('hr-HR');
+                    const rc    = r.rank===1?'#10b981':r.rank<=3?'#f59e0b':'#6b7280';
+                    const medal = r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':'';
+                    html += `<div class="result-row">
+                        <div>
+                            <div style="font-weight:700;font-size:.84rem;">${r.quizName||'Kviz'}</div>
+                            <div style="font-size:.63rem;color:#9ca3af;">${dt}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-family:'Metal Mania',cursive;font-size:.98rem;color:${rc};">${medal}#${r.rank}</div>
+                            <div style="font-size:.7rem;color:#10b981;font-weight:700;">+${r.earnings||0}€</div>
+                            <div style="font-size:.6rem;color:#f59e0b;">⭐ ${r.rating||0}/10</div>
+                        </div>
+                    </div>`;
+                });
+                document.getElementById('recentResults').innerHTML = html;
+            }).catch(() => {
+                document.getElementById('recentResults').innerHTML = emptyMsg('Nema rezultata');
+            });
+        }
+
+        // ─── HELPERS ──────────────────────────────────
+        function emptyMsg(txt) {
+            return `<p style="color:#9ca3af;font-size:.8rem;text-align:center;padding:10px 0;">${txt}</p>`;
+        }
+
+        // ─── JOIN MODAL ───────────────────────────────
+        function openJoinModal(qid, name) {
+            pendingJoinQuizId = qid;
+            document.getElementById('modalQuizName').textContent = name;
+            document.getElementById('modalPasswordInput').value  = '';
+            document.getElementById('modalError').classList.add('hidden');
+            document.getElementById('joinModal').classList.add('open');
+            setTimeout(() => document.getElementById('modalPasswordInput').focus(), 150);
+        }
+        function closeJoinModal() { document.getElementById('joinModal').classList.remove('open'); pendingJoinQuizId=null; }
+        function showModalError(msg) { const el=document.getElementById('modalError'); el.textContent=msg; el.classList.remove('hidden'); }
+
+        function confirmJoinQuiz() {
+            const pw = document.getElementById('modalPasswordInput').value.trim();
+            if (!pw) { showModalError('Unesi šifru!'); return; }
+            if (!pendingJoinQuizId) { closeJoinModal(); return; }
+            const qid = pendingJoinQuizId;
+            database.ref('settings/password').once('value').then(snap => {
+                if (pw !== snap.val()) { showModalError('❌ Pogrešna šifra!'); return; }
+                database.ref(`scheduledQuizzes/${qid}/registeredPlayers`).once('value').then(s2 => {
+                    const reg = s2.val()||[];
+                    if (reg.includes(playerProfileId)) { showModalError('Već si prijavljen!'); return; }
+                    database.ref(`scheduledQuizzes/${qid}/registeredPlayers`).transaction(arr => {
+                        if (!arr) arr=[];
+                        if (!arr.includes(playerProfileId)) arr.push(playerProfileId);
+                        return arr;
+                    }).then(() => {
+                        database.ref(`playerProfiles/${playerProfileId}/registeredQuizzes/${qid}`).set({quizId:qid,registeredAt:Date.now(),status:'registered'});
+                        closeJoinModal(); loadQuizzes();
+                    });
+                });
+            });
+        }
+        document.getElementById('joinModal').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeJoinModal(); });
+
+        // ─── TOPUP MODAL ──────────────────────────────
+        function openTopup()  { document.getElementById('topupModal').classList.add('open'); }
+        function closeTopup() { document.getElementById('topupModal').classList.remove('open'); }
+        function selectPkg(el, tokens) {
+            selectedTokenPkg = tokens;
+            document.querySelectorAll('.token-pkg').forEach(p => { p.classList.remove('selected'); p.style.borderColor=''; p.style.background=''; });
+            el.classList.add('selected');
+            el.style.borderColor = 'var(--brand)';
+            el.style.background  = 'linear-gradient(135deg,var(--brand-pale),#fff8e6)';
+        }
+        function processTopup() {
+            alert(`Odabrao si ${selectedTokenPkg} tokena.\n\nOvdje će biti integracija s payment sustavom.`);
+            closeTopup();
+        }
+        document.getElementById('topupModal').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeTopup(); });
+
+        // ─── NAVIGATION ───────────────────────────────
+        function goTo(page)     { window.location.href = page; }
+        function goToProfile()  { window.location.href = 'profile.html'; }
+        function joinActiveGame(){ window.location.href = 'player.html'; }
+        function enterQuiz(qid) { sessionStorage.setItem('currentQuizId',qid); window.location.href='player.html'; }
+        function withdrawFromQuiz(qid) {
+            if (!confirm('Odjaviš li se?')) return;
+            database.ref(`scheduledQuizzes/${qid}/registeredPlayers`).transaction(arr => {
+                if (!arr) return arr; const i=arr.indexOf(playerProfileId); if(i>-1)arr.splice(i,1); return arr;
+            }).then(()=>{ database.ref(`playerProfiles/${playerProfileId}/registeredQuizzes/${qid}`).remove(); loadQuizzes(); });
+        }
+        function logout() {
+            sessionStorage.removeItem('playerProfileId');
+            sessionStorage.removeItem('playerProfile');
+            window.location.href='login.html';
+        }
+    </script>
+</body>
+</html>
