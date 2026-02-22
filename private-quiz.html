@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<!-- Private Quiz Creator - Lukavac v1.0 -->
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privatni Kviz - Lukavac</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Metal+Mania&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand:      #b75800;
+            --brand-dark: #632705;
+            --brand-mid:  #d97706;
+            --brand-light:#ffd995;
+            --brand-pale: #fffff1;
+            --green:      #10b981;
+            --blue:       #3b82f6;
+            --red:        #ef4444;
+            --card-shadow:0 4px 20px rgba(183,88,0,.13);
+        }
+        * { box-sizing:border-box; margin:0; padding:0; }
+
+        body {
+            background: linear-gradient(135deg, #e8c99a 0%, #b87333 50%, #e8c99a 100%);
+            font-family: 'Nunito', 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            padding-bottom: 40px;
+        }
+        .hallock { font-family:'Metal Mania',cursive; }
+
+        /* ── TOP BAR ── */
+        .topbar {
+            background:white;
+            box-shadow:0 2px 12px rgba(0,0,0,.12);
+            padding:10px 16px;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            position:sticky; top:0; z-index:100;
+        }
+        .topbar-logo { font-family:'Metal Mania',cursive; font-size:1.3rem; color:var(--brand); }
+        .topbar-back { background:var(--brand-pale); border:1.5px solid var(--brand-light); border-radius:10px; padding:6px 14px; font-size:.82rem; font-weight:700; color:var(--brand); cursor:pointer; text-decoration:none; }
+
+        /* ── STEPS NAV ── */
+        .steps-nav {
+            display:flex;
+            gap:0;
+            background:white;
+            border-radius:16px;
+            box-shadow:var(--card-shadow);
+            padding:6px;
+            margin:14px 16px;
+            overflow-x:auto;
+        }
+        .step-btn {
+            flex:1;
+            padding:9px 6px;
+            border:none;
+            border-radius:12px;
+            background:transparent;
+            font-family:'Metal Mania',cursive;
+            font-size:.78rem;
+            color:var(--brand-dark);
+            cursor:pointer;
+            transition:all .2s;
+            white-space:nowrap;
+            min-width:0;
+            text-align:center;
+        }
+        .step-btn.active {
+            background:linear-gradient(135deg,var(--brand-light),var(--brand));
+            color:white;
+            box-shadow:0 4px 12px rgba(183,88,0,.3);
+        }
+        .step-btn .step-num {
+            display:block;
+            font-family:'Nunito',sans-serif;
+            font-size:.62rem;
+            font-weight:800;
+            opacity:.7;
+            margin-bottom:1px;
+        }
+
+        /* ── MAIN CONTENT ── */
+        .max-w { max-width:600px; margin:0 auto; padding:0 16px; }
+        .card { background:white; border-radius:16px; box-shadow:var(--card-shadow); padding:18px; margin-bottom:14px; }
+        .card-title { font-family:'Metal Mania',cursive; font-size:1.05rem; color:var(--brand); margin-bottom:14px; padding-bottom:9px; border-bottom:3px solid var(--brand); display:flex; align-items:center; gap:7px; }
+        .section { display:none; }
+        .section.active { display:block; }
+
+        /* ── FORMS ── */
+        .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        .form-row.single { grid-template-columns:1fr; }
+        .form-group { margin-bottom:12px; }
+        .form-label { display:block; font-weight:800; font-size:.8rem; color:var(--brand-dark); margin-bottom:5px; text-transform:uppercase; letter-spacing:.04em; }
+        .form-input {
+            width:100%; border:2px solid var(--brand-light); border-radius:10px;
+            padding:9px 13px; font-family:'Nunito',sans-serif; font-size:.88rem;
+            color:#1f2937; transition:border-color .2s; background:var(--brand-pale);
+        }
+        .form-input:focus { border-color:var(--brand); outline:none; background:white; }
+        select.form-input { cursor:pointer; }
+        textarea.form-input { min-height:90px; resize:vertical; }
+
+        /* ── BUTTONS ── */
+        .btn { border:none; border-radius:12px; padding:10px 18px; font-family:'Metal Mania',cursive; font-size:.9rem; cursor:pointer; transition:all .2s; display:inline-flex; align-items:center; gap:6px; }
+        .btn:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,.18); }
+        .btn-brand { background:linear-gradient(135deg,var(--brand-light),var(--brand)); color:white; }
+        .btn-green { background:linear-gradient(135deg,#a7f3d0,var(--green)); color:white; }
+        .btn-blue  { background:linear-gradient(135deg,#bfdbfe,var(--blue)); color:white; }
+        .btn-red   { background:linear-gradient(135deg,#fecaca,var(--red)); color:white; }
+        .btn-ghost { background:white; border:1.5px solid var(--brand-light); color:var(--brand); }
+        .btn-full  { width:100%; justify-content:center; padding:13px; }
+        .btn-sm    { padding:5px 12px; font-size:.78rem; border-radius:8px; }
+
+        /* ── QUESTIONS TABLE ── */
+        .q-row {
+            background:var(--brand-pale);
+            border:1.5px solid var(--brand-light);
+            border-radius:12px;
+            padding:12px 14px;
+            margin-bottom:10px;
+            position:relative;
+        }
+        .q-row-header {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:10px;
+        }
+        .q-num { font-family:'Metal Mania',cursive; font-size:1rem; color:var(--brand); }
+        .answers-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+        .answer-opt {
+            display:flex; gap:6px; align-items:center;
+            background:white; border:1.5px solid #e5e7eb; border-radius:8px; padding:6px 8px;
+        }
+        .answer-opt.correct { border-color:var(--green); background:#f0fdf4; }
+        .answer-opt input[type=radio] { accent-color:var(--green); width:16px; height:16px; flex-shrink:0; cursor:pointer; }
+        .answer-opt input[type=text] { flex:1; border:none; background:transparent; font-size:.82rem; font-family:'Nunito',sans-serif; outline:none; }
+
+        /* ── PLAYERS INVITE ── */
+        .player-chip {
+            display:inline-flex; align-items:center; gap:5px;
+            background:var(--brand-pale); border:1.5px solid var(--brand-light);
+            border-radius:20px; padding:4px 10px 4px 7px;
+            font-size:.8rem; font-weight:700; color:var(--brand-dark);
+            margin:3px;
+        }
+        .player-chip button { background:none; border:none; cursor:pointer; color:#9ca3af; font-size:.9rem; line-height:1; padding:0; }
+        .player-chip button:hover { color:var(--red); }
+
+        /* ── NOTIF SETTINGS ── */
+        .notif-row {
+            display:flex; align-items:center; gap:10px;
+            padding:9px 12px; border:1.5px solid var(--brand-light);
+            border-radius:10px; margin-bottom:7px;
+            background:var(--brand-pale);
+        }
+        .notif-row input[type=checkbox] { width:17px; height:17px; accent-color:var(--brand); flex-shrink:0; }
+
+        /* ── REVIEW TABLE ── */
+        .review-row { display:flex; justify-content:space-between; align-items:flex-start; padding:9px 0; border-bottom:1px solid #f3f4f6; font-size:.86rem; }
+        .review-label { color:#6b7280; font-weight:700; font-size:.76rem; text-transform:uppercase; }
+        .review-val   { color:#1f2937; font-weight:700; text-align:right; }
+
+        /* ── MODAL ── */
+        .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; align-items:center; justify-content:center; padding:16px; }
+        .modal-backdrop.open { display:flex; }
+        .modal-card { background:white; border-radius:20px; padding:22px; max-width:440px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+
+        /* ── DISPLAY MODE ── */
+        #display-mode {
+            display:none;
+            position:fixed; inset:0;
+            background:#0f0f0f;
+            z-index:9999;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+        }
+        #display-mode.active { display:flex; }
+
+        /* ── MISC ── */
+        .badge { display:inline-flex; align-items:center; gap:4px; padding:2px 10px; border-radius:20px; font-size:.7rem; font-weight:800; text-transform:uppercase; }
+        .badge-green { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
+        .badge-orange { background:var(--brand-pale); color:var(--brand); border:1px solid var(--brand-light); }
+        .badge-blue { background:#dbeafe; color:#1d4ed8; border:1px solid #93c5fd; }
+
+        .tag-info { background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:10px; padding:10px 14px; font-size:.8rem; color:#1d4ed8; margin-bottom:12px; }
+
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .spinner { width:24px; height:24px; border:3px solid var(--brand-light); border-top-color:var(--brand); border-radius:50%; animation:spin .7s linear infinite; margin:0 auto; }
+
+        @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        .fade-up { animation:fadeUp .3s ease; }
+
+        /* ── PROGRESS BAR ── */
+        .prog-bar { background:#e5e7eb; border-radius:99px; height:8px; overflow:hidden; }
+        .prog-fill { background:linear-gradient(90deg,var(--brand-light),var(--brand)); height:100%; border-radius:99px; transition:width .4s ease; }
+
+        /* CSV download link */
+        a.csv-link { color:var(--blue); font-weight:700; text-decoration:underline; cursor:pointer; font-size:.82rem; }
+    </style>
+</head>
+<body>
+
+<!-- ════════ TOP BAR ════════ -->
+<div class="topbar">
+    <div class="topbar-logo">🦊 PRIVATNI KVIZ</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+        <div style="font-size:.8rem;color:#6b7280;" id="topbar-name">—</div>
+        <a href="dashboard.html" class="topbar-back">← Dashboard</a>
+    </div>
+</div>
+
+<!-- ════════ STEPS NAV ════════ -->
+<div class="steps-nav">
+    <button class="step-btn active" onclick="goStep(0)" id="step-btn-0">
+        <span class="step-num">KORAK 1</span>Osnove
+    </button>
+    <button class="step-btn" onclick="goStep(1)" id="step-btn-1">
+        <span class="step-num">KORAK 2</span>Pitanja
+    </button>
+    <button class="step-btn" onclick="goStep(2)" id="step-btn-2">
+        <span class="step-num">KORAK 3</span>Postavke
+    </button>
+    <button class="step-btn" onclick="goStep(3)" id="step-btn-3">
+        <span class="step-num">KORAK 4</span>Igrači
+    </button>
+    <button class="step-btn" onclick="goStep(4)" id="step-btn-4">
+        <span class="step-num">KORAK 5</span>Pregled
+    </button>
+</div>
+
+<div class="max-w">
+
+<!-- ══════════════════════════════════════
+     KORAK 1 — OSNOVE
+══════════════════════════════════════ -->
+<div id="section-0" class="section active fade-up">
+
+    <div class="card">
+        <div class="card-title">📋 Naziv i Tip Kviza</div>
+        <div class="form-group">
+            <label class="form-label">Naziv kviza (dodaje se uz "Lukavac")</label>
+            <input type="text" class="form-input" id="pq-title" placeholder="npr. Maturalno Slavlje, Obiteljski Kviz...">
+            <div style="font-size:.74rem;color:#9ca3af;margin-top:4px;">Prikazivat će se kao: <strong id="name-preview" style="color:var(--brand);">LUKAVAC ...</strong></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Datum i Vrijeme</label>
+                <input type="datetime-local" class="form-input" id="pq-start">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Lozinka za ulaz</label>
+                <input type="text" class="form-input" id="pq-password" value="1234">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Min. Igrača</label>
+                <input type="number" class="form-input" id="pq-min" value="2" min="2">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Max. Igrača</label>
+                <input type="number" class="form-input" id="pq-max" value="20" min="2">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Opis / Napomena za igrače (opcionalno)</label>
+            <textarea class="form-input" id="pq-desc" placeholder="Kratki opis, pravila, ugođaj..."></textarea>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">🔒 Vidljivost Kviza</div>
+        <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:10px;background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:12px;margin-bottom:10px;">
+            <input type="radio" name="pq-visibility" id="vis-private" value="private" checked style="width:18px;height:18px;accent-color:var(--brand);margin-top:2px;flex-shrink:0;">
+            <div>
+                <div style="font-weight:800;font-size:.88rem;color:var(--brand-dark);">🔒 Privatan — samo pozvani igrači</div>
+                <div style="font-size:.75rem;color:#6b7280;margin-top:2px;">Nema odobrenja admina, odmah aktivan. Samo osobe koje pozivaš iz imenika mogu sudjelovati.</div>
+            </div>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:10px;background:#f0fdf4;border:1.5px solid #a7f3d0;border-radius:12px;">
+            <input type="radio" name="pq-visibility" id="vis-public" value="public" style="width:18px;height:18px;accent-color:var(--green);margin-top:2px;flex-shrink:0;">
+            <div>
+                <div style="font-weight:800;font-size:.88rem;color:#065f46;">🌐 Javan — zahtijeva odobrenje admina</div>
+                <div style="font-size:.75rem;color:#6b7280;margin-top:2px;">Kviz ide na pregled adminu. Nakon odobrenja pojavljuje se svim igračima. Tvoje ime kao autora bit će vidljivo.</div>
+            </div>
+        </label>
+    </div>
+
+    <button onclick="goStep(1)" class="btn btn-brand btn-full">Dalje: Pitanja →</button>
+</div>
+
+<!-- ══════════════════════════════════════
+     KORAK 2 — PITANJA
+══════════════════════════════════════ -->
+<div id="section-1" class="section fade-up">
+
+    <div class="card">
+        <div class="card-title">❓ Pitanja Kviza</div>
+
+        <!-- Import/Export CSV -->
+        <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:12px 14px;margin-bottom:14px;">
+            <div style="font-weight:800;font-size:.85rem;color:#1d4ed8;margin-bottom:6px;">📥 Uvoz / Izvoz pitanja</div>
+            <div style="font-size:.78rem;color:#3b82f6;margin-bottom:8px;">
+                Preuzmi CSV predložak, popuni u Excelu, pa uvezi. Ili izvezi trenutna pitanja u CSV.
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button onclick="downloadCSVTemplate()" class="btn btn-blue btn-sm">⬇️ Preuzmi CSV predložak</button>
+                <label class="btn btn-ghost btn-sm" style="cursor:pointer;">
+                    📂 Uvezi CSV
+                    <input type="file" accept=".csv" onchange="importCSV(this)" style="display:none;">
+                </label>
+                <button onclick="exportQuestionsCSV()" class="btn btn-ghost btn-sm">⬆️ Izvezi CSV</button>
+                <button onclick="sendCSVByEmail()" class="btn btn-ghost btn-sm">📧 Pošalji na mail</button>
+            </div>
+        </div>
+
+        <!-- Questions list -->
+        <div id="questions-list"></div>
+
+        <button onclick="addQuestion()" class="btn btn-brand btn-full" style="margin-top:4px;">
+            ➕ Dodaj Pitanje
+        </button>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+        <button onclick="goStep(0)" class="btn btn-ghost" style="flex:1;">← Natrag</button>
+        <button onclick="goStep(2)" class="btn btn-brand" style="flex:2;">Dalje: Postavke →</button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     KORAK 3 — POSTAVKE KVIZA
+══════════════════════════════════════ -->
+<div id="section-2" class="section fade-up">
+
+    <div class="card">
+        <div class="card-title">⏱️ Timeri i Krugovi</div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Broj Krugova</label>
+                <input type="number" class="form-input" id="pq-rounds" value="3" min="1" max="10" oninput="buildRoundsUI()">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Pitanja po Krugu</label>
+                <input type="number" class="form-input" id="pq-qpr" value="5" min="1" oninput="syncQCount()">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Timer Odgovora (sek)</label>
+                <input type="number" class="form-input" id="pq-timer-ans" value="30" min="5">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Timer Pauze (sek)</label>
+                <input type="number" class="form-input" id="pq-timer-pause" value="5" min="1">
+            </div>
+        </div>
+        <div id="rounds-ui"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">💰 Nagrade i Tokeni</div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Nagradni Fond (€)</label>
+                <input type="number" class="form-input" id="pq-prize" value="0" min="0">
+                <small style="color:#9ca3af;font-size:.72rem;">Za privatni kviz može biti 0€ — čisto zabavno</small>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Cijena Ulaza (tokeni)</label>
+                <input type="number" class="form-input" id="pq-tokens" value="0" min="0">
+                <small style="color:#9ca3af;font-size:.72rem;">0 = besplatan ulaz za pozvane</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">🔔 Automatske Notifikacije</div>
+        <p style="font-size:.8rem;color:#6b7280;margin-bottom:12px;">Pozvani igrači automatski dobivaju ove obavijesti:</p>
+        <div id="pq-notif-list">
+            <!-- Built by buildNotifCheckboxes() -->
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">🖥️ Display Postavke</div>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px;background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:12px;">
+            <input type="checkbox" id="pq-author-display" checked style="width:18px;height:18px;accent-color:var(--brand);">
+            <div>
+                <div style="font-weight:800;font-size:.88rem;color:var(--brand-dark);">📺 Prati kviz uživo kao autor</div>
+                <div style="font-size:.75rem;color:#6b7280;margin-top:2px;">Kad kviz startava, automatski se otvara display prikaz u tvojem browseru — gledaš odgovore igrača u realnom vremenu.</div>
+            </div>
+        </label>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+        <button onclick="goStep(1)" class="btn btn-ghost" style="flex:1;">← Natrag</button>
+        <button onclick="goStep(3)" class="btn btn-brand" style="flex:2;">Dalje: Igrači →</button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     KORAK 4 — IGRAČI (IMENIK)
+══════════════════════════════════════ -->
+<div id="section-3" class="section fade-up">
+
+    <!-- ── SHARE LINK ── -->
+    <div class="card">
+        <div class="card-title">🔗 Dijeli Kviz</div>
+        <div style="font-size:.82rem;color:#6b7280;margin-bottom:12px;">
+            Generiraj link za prijavu i podijeli ga gdje god želiš — WhatsApp, Instagram, Facebook, email, SMS...
+            Svako tko ima link može se sam prijaviti na kviz, bez da ga ručno dodaš.
+        </div>
+
+        <!-- Link box (appears after quiz is saved as draft) -->
+        <div id="share-link-box" style="display:none;margin-bottom:14px;">
+            <div style="display:flex;gap:7px;align-items:center;background:var(--brand-pale);border:2px solid var(--brand);border-radius:12px;padding:10px 13px;">
+                <span style="font-size:.82rem;font-weight:700;color:var(--brand-dark);flex:1;word-break:break-all;font-family:monospace;" id="share-link-text">—</span>
+                <button onclick="copyShareLink()" style="background:var(--brand);border:none;border-radius:8px;padding:6px 12px;color:white;font-weight:700;cursor:pointer;font-size:.78rem;white-space:nowrap;" id="copy-btn">📋 Kopiraj</button>
+            </div>
+        </div>
+
+        <!-- Generate link button -->
+        <div id="share-generate-area">
+            <button onclick="generateShareLink()" class="btn btn-brand btn-full" style="margin-bottom:12px;">
+                🔗 Generiraj Link za Pozivnicu
+            </button>
+        </div>
+
+        <!-- Social share buttons (shown after link generated) -->
+        <div id="share-buttons" style="display:none;">
+            <div style="font-weight:800;font-size:.76rem;color:var(--brand-dark);text-transform:uppercase;letter-spacing:.05em;margin-bottom:9px;">Podijeli na:</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <button onclick="shareToWhatsApp()" class="btn btn-sm" style="background:#25d366;color:white;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white" style="flex-shrink:0;"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                    WhatsApp
+                </button>
+                <button onclick="shareToViber()" class="btn btn-sm" style="background:#7360f2;color:white;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;">
+                    📱 Viber
+                </button>
+                <button onclick="shareToTelegram()" class="btn btn-sm" style="background:#229ed9;color:white;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;">
+                    ✈️ Telegram
+                </button>
+                <button onclick="shareToFacebook()" class="btn btn-sm" style="background:#1877f2;color:white;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;">
+                    📘 Facebook
+                </button>
+                <button onclick="shareToInstagram()" class="btn btn-sm" style="background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:white;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;">
+                    📸 Instagram
+                </button>
+                <button onclick="shareViaEmail()" class="btn btn-sm" style="background:#6b7280;color:white;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;">
+                    📧 Email
+                </button>
+                <button onclick="shareViaSMS()" class="btn btn-sm" style="background:#059669;color:white;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;">
+                    💬 SMS
+                </button>
+                <button onclick="nativeShare()" id="native-share-btn" class="btn btn-sm" style="display:none;background:var(--brand);color:white;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;">
+                    ↗️ Dijeli...
+                </button>
+            </div>
+
+            <!-- QR code placeholder -->
+            <div style="margin-top:14px;padding:12px;background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:12px;display:flex;align-items:center;gap:12px;">
+                <canvas id="qr-canvas" width="80" height="80" style="border-radius:8px;flex-shrink:0;"></canvas>
+                <div>
+                    <div style="font-weight:800;font-size:.82rem;color:var(--brand-dark);">📱 QR Kod</div>
+                    <div style="font-size:.74rem;color:#9ca3af;margin-top:2px;">Skeniraju mobitelom za direktnu prijavu</div>
+                    <button onclick="downloadQR()" style="margin-top:6px;background:none;border:1.5px solid var(--brand-light);border-radius:8px;padding:4px 10px;font-size:.72rem;font-weight:700;color:var(--brand);cursor:pointer;">⬇️ Preuzmi QR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── IN-APP INVITE ── -->
+    <div class="card">
+        <div class="card-title">👥 Pozovi Igrače Unutar Aplikacije</div>
+
+        <div style="background:#f0fdf4;border:1.5px solid #a7f3d0;border-radius:10px;padding:10px 13px;font-size:.78rem;color:#065f46;margin-bottom:12px;">
+            💡 <strong>Nije obavezno</strong> — možeš objaviti kviz i bez prijavljenih igrača. Doći će sami putem linka!
+        </div>
+
+        <div style="position:relative;margin-bottom:12px;">
+            <input type="text" class="form-input" id="player-search"
+                   placeholder="🔍 Traži igrača po nadimku ili imenu..."
+                   oninput="searchPlayers(this.value)">
+        </div>
+        <div id="player-results" style="max-height:200px;overflow-y:auto;margin-bottom:12px;"></div>
+
+        <div style="font-weight:800;font-size:.78rem;color:var(--brand-dark);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;">Pozvani igrači:</div>
+        <div id="invited-chips" style="min-height:40px;display:flex;flex-wrap:wrap;gap:3px;padding:8px;background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:12px;">
+            <span style="font-size:.78rem;color:#9ca3af;align-self:center;" id="no-invited-msg">Još nisi pozvao nikog — koristi link gore ili traži igrača</span>
+        </div>
+        <div style="font-size:.74rem;color:#9ca3af;margin-top:5px;" id="invited-count">0 pozvanih igrača unutar aplikacije</div>
+
+        <div style="margin-top:14px;">
+            <div style="font-weight:800;font-size:.78rem;color:var(--brand-dark);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">⭐ Moji Poznanici</div>
+            <div id="friends-list">
+                <div class="spinner" style="margin:10px auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+        <button onclick="goStep(2)" class="btn btn-ghost" style="flex:1;">← Natrag</button>
+        <button onclick="goStep(4)" class="btn btn-brand" style="flex:2;">Dalje: Pregled →</button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     KORAK 5 — PREGLED I OBJAVA
+══════════════════════════════════════ -->
+<div id="section-4" class="section fade-up">
+
+    <div class="card">
+        <div class="card-title">✅ Pregled Kviza</div>
+        <div style="margin-bottom:4px;font-size:.8rem;font-weight:700;color:var(--brand);">CUNNING</div>
+        <div class="hallock" style="font-size:1.6rem;color:var(--brand-dark);margin-bottom:14px;" id="review-title">—</div>
+        <div id="review-details"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">🚀 Objavi Kviz</div>
+
+        <!-- Progress indicator -->
+        <div id="publish-checklist" style="margin-bottom:16px;"></div>
+
+        <div id="publish-error" style="display:none;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:10px 14px;font-size:.82rem;color:#ef4444;margin-bottom:12px;"></div>
+
+        <button onclick="publishQuiz()" class="btn btn-brand btn-full" style="padding:15px;font-size:1rem;" id="publish-btn">
+            🚀 Objavi Privatni Kviz
+        </button>
+
+        <div style="text-align:center;margin-top:10px;">
+            <span style="font-size:.74rem;color:#9ca3af;">Kviz će biti odmah aktivan i pozvani igrači bit će obaviješteni.</span>
+        </div>
+    </div>
+
+    <button onclick="goStep(3)" class="btn btn-ghost btn-full">← Natrag</button>
+</div>
+
+</div><!-- /max-w -->
+
+<!-- ════════ DISPLAY MODE (fullscreen author view) ════════ -->
+<div id="display-mode">
+    <div style="text-align:center;color:white;padding:20px;width:100%;max-width:800px;">
+        <div class="hallock" style="font-size:2rem;color:var(--brand-light);margin-bottom:6px;" id="dm-quiz-name">KVIZ</div>
+        <div style="font-size:.85rem;color:#9ca3af;margin-bottom:30px;">👁️ Autorski Prikaz — gledaš odgovore igrača u realnom vremenu</div>
+
+        <!-- Current question -->
+        <div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:24px;margin-bottom:20px;">
+            <div style="font-size:.72rem;color:var(--brand-light);font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;" id="dm-phase">Čekanje na start...</div>
+            <div style="font-size:1.3rem;font-weight:800;color:white;line-height:1.4;margin-bottom:16px;" id="dm-question">—</div>
+            <div id="dm-answers" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
+        </div>
+
+        <!-- Players live grid -->
+        <div>
+            <div style="font-size:.75rem;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Igrači <span id="dm-player-count" style="color:var(--brand-light);">0</span></div>
+            <div id="dm-players-grid" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
+        </div>
+
+        <button onclick="exitDisplay()" style="margin-top:24px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:white;border-radius:12px;padding:8px 20px;cursor:pointer;font-size:.82rem;">
+            ✕ Zatvori prikaz
+        </button>
+    </div>
+</div>
+
+<!-- ════════ SUCCESS MODAL ════════ -->
+<div id="success-modal" class="modal-backdrop">
+    <div class="modal-card" style="text-align:center;">
+        <div style="font-size:3rem;margin-bottom:8px;">🎉</div>
+        <div class="hallock" style="font-size:1.4rem;color:var(--brand);margin-bottom:6px;">Kviz Objavljen!</div>
+        <div style="font-size:.85rem;color:#6b7280;margin-bottom:4px;" id="success-msg">Uspješno kreiran privatni kviz.</div>
+        <div style="font-size:.8rem;color:var(--brand);font-weight:700;margin-bottom:18px;" id="success-submsg"></div>
+        <div style="display:flex;gap:10px;flex-direction:column;">
+            <button onclick="window.location.href='dashboard.html'" class="btn btn-brand btn-full">← Na Dashboard</button>
+            <button onclick="resetForm()" class="btn btn-ghost btn-full">➕ Napravi Novi Kviz</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ─── GLOBALS ──────────────────────────────────────────────────
+let playerProfileId = sessionStorage.getItem('playerProfileId');
+let playerProfile   = null;
+let allPlayers      = [];
+let invitedIds      = new Set();
+let questions       = []; // array of { text, answers:[{text,correct}], difficulty }
+let currentStep     = 0;
+
+const NOTIF_TEMPLATES = [
+    { id:'n2h',   label:'2 sata prije',    offset:-2*3600000, msg:'🎮 Za 2h startava {name}! Pripremi se.', type:'warning' },
+    { id:'n30m',  label:'30 minuta prije', offset:-30*60000,  msg:'⏰ Za 30min startava {name}!', type:'warning' },
+    { id:'n10m',  label:'10 minuta prije', offset:-10*60000,  msg:'🚨 Za 10min startava {name}! Uđi odmah.', type:'warning' },
+    { id:'n2m',   label:'2 minute prije',  offset:-2*60000,   msg:'🔴 {name} za 2 MINUTE! Idi na aplikaciju!', type:'quiz' },
+    { id:'nstart',label:'Na startu',        offset:0,          msg:'🎮 {name} je počeo! Klikni i igraj!', type:'quiz' },
+];
+
+// ─── INIT ──────────────────────────────────────────────────────
+window.onload = function() {
+    if (!playerProfileId) { window.location.href = 'login.html'; return; }
+    const raw = sessionStorage.getItem('playerProfile');
+    if (raw) { playerProfile = JSON.parse(raw); }
+
+    // Refresh from Firebase
+    database.ref(`playerProfiles/${playerProfileId}`).once('value').then(snap => {
+        playerProfile = { id: playerProfileId, ...snap.val() };
+        sessionStorage.setItem('playerProfile', JSON.stringify(playerProfile));
+        const nick = playerProfile.nickname || playerProfile.firstName || '—';
+        document.getElementById('topbar-name').textContent = nick;
+    });
+
+    // Load all players for search + friends
+    database.ref('playerProfiles').once('value').then(snap => {
+        const data = snap.val() || {};
+        allPlayers = Object.entries(data)
+            .map(([id, p]) => ({ id, ...p }))
+            .filter(p => p.id !== playerProfileId);
+        loadFriendsList();
+    });
+
+    // Set default start time to tomorrow at 20:00
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(20, 0, 0, 0);
+    document.getElementById('pq-start').value = tomorrow.toISOString().slice(0, 16);
+
+    // Init UI
+    addQuestion(); addQuestion(); addQuestion(); // start with 3 blank
+    buildRoundsUI();
+    buildNotifCheckboxes();
+    updateNamePreview();
+    buildReview();
+
+    document.getElementById('pq-title').addEventListener('input', updateNamePreview);
+};
+
+// ─── STEPS ─────────────────────────────────────────────────────
+function goStep(n) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.step-btn').forEach((b,i) => b.classList.toggle('active', i===n));
+    document.getElementById(`section-${n}`).classList.add('active');
+    currentStep = n;
+    if (n === 3) loadFriendsList();
+    if (n === 4) buildReview();
+    window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ─── NAME PREVIEW ───────────────────────────────────────────────
+function updateNamePreview() {
+    const v = document.getElementById('pq-title').value.trim().toUpperCase() || '...';
+    document.getElementById('name-preview').textContent = `LUKAVAC ${v}`;
+}
+
+// ─── QUESTIONS ─────────────────────────────────────────────────
+let qCount = 0;
+function addQuestion(data) {
+    qCount++;
+    const id = qCount;
+    const el = document.getElementById('questions-list');
+    const div = document.createElement('div');
+    div.className = 'q-row fade-up';
+    div.id = `q-row-${id}`;
+    div.innerHTML = `
+        <div class="q-row-header">
+            <span class="q-num">❓ Pitanje ${id}</span>
+            <div style="display:flex;gap:6px;align-items:center;">
+                <select id="q-diff-${id}" style="border:1.5px solid var(--brand-light);border-radius:8px;padding:4px 8px;font-size:.75rem;color:var(--brand-dark);background:var(--brand-pale);">
+                    <option value="easy">🟢 Lako</option>
+                    <option value="medium" selected>🟡 Srednje</option>
+                    <option value="hard">🔴 Teško</option>
+                </select>
+                <button onclick="removeQuestion(${id})" style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;padding:4px 9px;cursor:pointer;color:#ef4444;font-size:.78rem;font-weight:700;">✕</button>
+            </div>
+        </div>
+        <input type="text" class="form-input" id="q-text-${id}"
+               placeholder="Upiši tekst pitanja..."
+               value="${data?.text||''}"
+               style="margin-bottom:10px;">
+        <div style="font-size:.74rem;font-weight:800;color:var(--brand-dark);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Odgovori (označi točan):</div>
+        <div class="answers-grid">
+            ${[0,1,2,3].map(i => {
+                const ans = data?.answers?.[i] || {};
+                return `<label class="answer-opt ${ans.correct?'correct':''}" id="ans-label-${id}-${i}">
+                    <input type="radio" name="correct-${id}" value="${i}" ${ans.correct?'checked':''} onchange="markCorrect(${id},${i})">
+                    <input type="text" id="ans-${id}-${i}" placeholder="${['A','B','C','D'][i]}) ..." value="${ans.text||''}" style="width:100%;">
+                </label>`;
+            }).join('')}
+        </div>
+    `;
+    el.appendChild(div);
+}
+
+function markCorrect(qid, ansIdx) {
+    for (let i=0;i<4;i++) {
+        const lbl = document.getElementById(`ans-label-${qid}-${i}`);
+        if (lbl) lbl.classList.toggle('correct', i===ansIdx);
+    }
+}
+
+function removeQuestion(id) {
+    const el = document.getElementById(`q-row-${id}`);
+    if (el) el.remove();
+}
+
+function collectQuestions() {
+    const rows = document.querySelectorAll('.q-row');
+    const result = [];
+    rows.forEach(row => {
+        const id  = row.id.replace('q-row-','');
+        const txt = document.getElementById(`q-text-${id}`)?.value?.trim();
+        if (!txt) return;
+        const answers = [0,1,2,3].map(i => ({
+            text:    document.getElementById(`ans-${id}-${i}`)?.value?.trim() || '',
+            correct: document.querySelector(`input[name="correct-${id}"]:checked`)?.value == i
+        }));
+        const difficulty = document.getElementById(`q-diff-${id}`)?.value || 'medium';
+        result.push({ text: txt, answers, difficulty });
+    });
+    return result;
+}
+
+// ─── CSV ────────────────────────────────────────────────────────
+function downloadCSVTemplate() {
+    const header = 'pitanje,odgovor_a,odgovor_b,odgovor_c,odgovor_d,tocno(a/b/c/d),tezina(easy/medium/hard)';
+    const example = [
+        'Koji je glavni grad Hrvatske?,Zagreb,Split,Rijeka,Osijek,a,easy',
+        'Koliko noga ima hobotnica?,4,6,8,10,c,medium',
+        '"Tko je napisao ""Hamlet""?",Shakespeare,Dickens,Tolkien,Goethe,a,hard',
+    ].join('\n');
+    const csv = header + '\n' + example;
+    const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'lukavac_pitanja_predlozak.csv';
+    a.click(); URL.revokeObjectURL(url);
+}
+
+function importCSV(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const text = e.target.result.replace(/^\uFEFF/,'');
+        const lines = text.split('\n').filter(l=>l.trim());
+        let imported = 0;
+        // Skip header
+        for (let i=1;i<lines.length;i++) {
+            const cols = parseCSVLine(lines[i]);
+            if (cols.length < 5) continue;
+            const [qtxt, a, b, c, d, correct, diff] = cols;
+            if (!qtxt) continue;
+            const correctIdx = {'a':0,'b':1,'c':2,'d':3}[correct?.toLowerCase()?.trim()] ?? 0;
+            const answers = [a,b,c,d].map((t,idx) => ({text:t.trim(), correct: idx===correctIdx}));
+            addQuestion({ text: qtxt.trim(), answers, difficulty: diff?.trim()||'medium' });
+            imported++;
+        }
+        alert(`✅ Uvezeno ${imported} pitanja!`);
+        input.value = '';
+    };
+    reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSVLine(line) {
+    const result = []; let cur = ''; let inQ = false;
+    for (let i=0;i<line.length;i++) {
+        const ch = line[i];
+        if (ch==='"' && !inQ) { inQ=true; }
+        else if (ch==='"' && inQ && line[i+1]==='"') { cur+='"'; i++; }
+        else if (ch==='"' && inQ) { inQ=false; }
+        else if (ch===',' && !inQ) { result.push(cur); cur=''; }
+        else cur+=ch;
+    }
+    result.push(cur);
+    return result;
+}
+
+function exportQuestionsCSV() {
+    const qs = collectQuestions();
+    if (!qs.length) { alert('Nema pitanja za izvoz!'); return; }
+    const header = 'pitanje,odgovor_a,odgovor_b,odgovor_c,odgovor_d,tocno(a/b/c/d),tezina';
+    const rows = qs.map(q => {
+        const ci = q.answers.findIndex(a=>a.correct);
+        const lbl = ['a','b','c','d'][ci] || 'a';
+        return [q.text,...q.answers.map(a=>a.text),lbl,q.difficulty].map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(',');
+    });
+    const csv = header + '\n' + rows.join('\n');
+    const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href=url; a.download='lukavac_pitanja.csv'; a.click(); URL.revokeObjectURL(url);
+}
+
+function sendCSVByEmail() {
+    const qs = collectQuestions();
+    if (!qs.length) { alert('Nema pitanja za slanje!'); return; }
+    const email = playerProfile?.email || prompt('Unesi email adresu:');
+    if (!email) return;
+
+    const header = 'pitanje,odgovor_a,odgovor_b,odgovor_c,odgovor_d,tocno,tezina\n';
+    const rows = qs.map(q => {
+        const ci = q.answers.findIndex(a=>a.correct);
+        return [q.text,...q.answers.map(a=>a.text),['a','b','c','d'][ci]||'a',q.difficulty].join(',');
+    });
+    const body = encodeURIComponent(header + rows.join('\n'));
+    const subject = encodeURIComponent(`Lukavac pitanja — ${document.getElementById('pq-title').value||'Kviz'}`);
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`);
+}
+
+// ─── ROUNDS UI ─────────────────────────────────────────────────
+function buildRoundsUI() {
+    const n = parseInt(document.getElementById('pq-rounds').value) || 3;
+    const qpr = parseInt(document.getElementById('pq-qpr').value) || 5;
+    let html = `<div style="margin-top:12px;font-size:.78rem;font-weight:800;color:var(--brand-dark);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">Eliminacija po krugovima:</div>`;
+    for (let i=0;i<n;i++) {
+        html += `
+        <div style="background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:10px;padding:10px 12px;margin-bottom:7px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="font-family:'Metal Mania',cursive;font-size:.95rem;color:var(--brand);min-width:70px;">Krug ${i+1}</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <label style="font-size:.74rem;font-weight:700;color:#6b7280;">Ostaje:</label>
+                <input type="number" id="pq-remain-${i}" value="${i===n-1?1:50}" min="1"
+                       style="width:60px;border:1.5px solid var(--brand-light);border-radius:7px;padding:4px 7px;font-size:.82rem;">
+                <select id="pq-remain-type-${i}" style="border:1.5px solid var(--brand-light);border-radius:7px;padding:4px 7px;font-size:.78rem;">
+                    <option value="percent">%</option>
+                    <option value="number" ${i===n-1?'selected':''}>igrača</option>
+                </select>
+            </div>
+        </div>`;
+    }
+    document.getElementById('rounds-ui').innerHTML = html;
+}
+
+function syncQCount() { buildRoundsUI(); }
+
+// ─── NOTIF CHECKBOXES ──────────────────────────────────────────
+function buildNotifCheckboxes() {
+    let html = '';
+    NOTIF_TEMPLATES.forEach(t => {
+        html += `
+        <div class="notif-row">
+            <input type="checkbox" id="notif-${t.id}" checked>
+            <div style="flex:1;">
+                <div style="font-weight:700;font-size:.83rem;color:var(--brand-dark);">${t.label}</div>
+                <input type="text" id="notif-msg-${t.id}" value="${t.msg}"
+                       style="width:100%;border:1px solid #e5e7eb;border-radius:7px;padding:4px 8px;font-size:.75rem;margin-top:3px;background:white;font-family:'Nunito',sans-serif;">
+            </div>
+        </div>`;
+    });
+    document.getElementById('pq-notif-list').innerHTML = html;
+}
+
+// ─── PLAYERS SEARCH ────────────────────────────────────────────
+function searchPlayers(q) {
+    const el = document.getElementById('player-results');
+    if (!q.trim()) { el.innerHTML=''; return; }
+    const lower = q.toLowerCase();
+    const matches = allPlayers.filter(p =>
+        (p.nickname||'').toLowerCase().includes(lower) ||
+        (p.firstName||'').toLowerCase().includes(lower) ||
+        (p.lastName||'').toLowerCase().includes(lower)
+    ).slice(0, 8);
+
+    if (!matches.length) { el.innerHTML='<div style="font-size:.8rem;color:#9ca3af;padding:8px;">Nema rezultata</div>'; return; }
+    el.innerHTML = matches.map(p => {
+        const name = p.nickname || `${p.firstName||''} ${p.lastName||''}`.trim() || '—';
+        const invited = invitedIds.has(p.id);
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1.5px solid ${invited?'var(--brand-light)':'#e5e7eb'};border-radius:10px;margin-bottom:5px;background:${invited?'var(--brand-pale)':'white'};">
+            <div style="flex:1;">
+                <div style="font-weight:700;font-size:.86rem;">${name}</div>
+                <div style="font-size:.7rem;color:#9ca3af;">🥇 ${p.stats?.wins||0} pobj. · ⭐ ${p.stats?.averageRating?parseFloat(p.stats.averageRating).toFixed(1):'—'}</div>
+            </div>
+            ${invited
+                ? `<button onclick="uninvite('${p.id}')" class="btn btn-ghost btn-sm" style="font-family:'Nunito',sans-serif;font-size:.75rem;">✓ Pozvan</button>`
+                : `<button onclick="invite('${p.id}','${name.replace(/'/g,' ')}')" class="btn btn-green btn-sm" style="font-family:'Nunito',sans-serif;font-size:.75rem;">+ Pozovi</button>`}
+        </div>`;
+    }).join('');
+}
+
+function invite(id, name) {
+    if (invitedIds.has(id)) return;
+    invitedIds.add(id);
+    renderInvitedChips();
+    const q = document.getElementById('player-search').value;
+    if (q) searchPlayers(q);
+}
+
+function uninvite(id) {
+    invitedIds.delete(id);
+    renderInvitedChips();
+    const q = document.getElementById('player-search').value;
+    if (q) searchPlayers(q);
+}
+
+function renderInvitedChips() {
+    const el = document.getElementById('invited-chips');
+    const noMsg = document.getElementById('no-invited-msg');
+    if (!invitedIds.size) {
+        el.innerHTML = ''; el.appendChild(noMsg); noMsg.style.display='';
+        document.getElementById('invited-count').textContent = '0 pozvanih igrača';
+        return;
+    }
+    noMsg.style.display = 'none';
+    let html = '';
+    invitedIds.forEach(id => {
+        const p = allPlayers.find(x=>x.id===id);
+        const name = p ? (p.nickname||p.firstName||'—') : id;
+        html += `<span class="player-chip">${name} <button onclick="uninvite('${id}')">✕</button></span>`;
+    });
+    el.innerHTML = html;
+    document.getElementById('invited-count').textContent = `${invitedIds.size} pozvanih igrača`;
+}
+
+function loadFriendsList() {
+    const el = document.getElementById('friends-list');
+    database.ref(`playerProfiles/${playerProfileId}/friends`).once('value').then(snap => {
+        const friends = snap.val();
+        if (!friends || !Object.keys(friends).length) {
+            el.innerHTML = '<div style="font-size:.8rem;color:#9ca3af;text-align:center;padding:12px;">Nemaš dodanih poznanika. Dodaj ih iz popisa igrača kviza.</div>';
+            return;
+        }
+        let html = '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+        Object.entries(friends).forEach(([fid, f]) => {
+            const name = f.name || fid;
+            const inv  = invitedIds.has(fid);
+            html += `<div style="display:inline-flex;align-items:center;gap:7px;padding:7px 12px;
+                         background:${inv?'var(--brand-pale)':'white'};border:1.5px solid ${inv?'var(--brand)':'var(--brand-light)'};
+                         border-radius:20px;font-size:.82rem;font-weight:700;color:var(--brand-dark);">
+                ${name}
+                ${inv
+                    ? `<button onclick="uninvite('${fid}')" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:.85rem;font-weight:900;">✕</button>`
+                    : `<button onclick="invite('${fid}','${name.replace(/'/g,' ')}')" style="background:none;border:none;cursor:pointer;color:var(--green);font-size:.85rem;font-weight:900;">+</button>`}
+            </div>`;
+        });
+        html += '</div>';
+        el.innerHTML = html;
+    });
+}
+
+// ─── REVIEW ────────────────────────────────────────────────────
+function buildReview() {
+    const title = document.getElementById('pq-title')?.value?.trim() || '—';
+    const start = document.getElementById('pq-start')?.value;
+    const vis   = document.querySelector('input[name="pq-visibility"]:checked')?.value || 'private';
+    const qs    = collectQuestions();
+    const rounds= document.getElementById('pq-rounds')?.value || 3;
+
+    document.getElementById('review-title').textContent = `LUKAVAC ${title.toUpperCase()}`;
+
+    const details = [
+        ['📅 Datum i Vrijeme', start ? new Date(start).toLocaleString('hr-HR') : '—'],
+        ['❓ Broj Pitanja', `${qs.length} pitanja`],
+        ['🔄 Krugovi', `${rounds} krugova`],
+        ['💰 Nagradni Fond', `${document.getElementById('pq-prize')?.value||0}€`],
+        ['🪙 Cijena Ulaza', `${document.getElementById('pq-tokens')?.value||0} tokena`],
+        ['👥 Pozvani Igrači', `${invitedIds.size} igrača`],
+        ['🔒 Vidljivost', vis==='public' ? '🌐 Javan (čeka odobrenje)' : '🔒 Privatan'],
+        ['✍️ Autor', playerProfile?.nickname || playerProfile?.firstName || '—'],
+    ];
+    document.getElementById('review-details').innerHTML = details.map(([l,v]) =>
+        `<div class="review-row"><span class="review-label">${l}</span><span class="review-val">${v}</span></div>`
+    ).join('');
+
+    // Checklist
+    const checks = [
+        { ok: !!title,        label: 'Naziv kviza' },
+        { ok: !!start,        label: 'Datum i vrijeme' },
+        { ok: qs.length >= 1, label: `Pitanja (${qs.length}/1+)` },
+        { ok: true,           label: `Igrači: ${invitedIds.size} pozvano + link dijeljenje`, note: true },
+    ];
+    document.getElementById('publish-checklist').innerHTML = checks.map(c =>
+        `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;">
+            <span style="font-size:1rem;">${c.ok?'✅':'⬜'}</span>
+            <span style="font-size:.83rem;color:${c.ok?'#065f46':'#9ca3af'};font-weight:${c.ok?700:600};">${c.label}</span>
+        </div>`
+    ).join('');
+}
+
+// ─── PUBLISH ───────────────────────────────────────────────────
+function publishQuiz() {
+    const title   = document.getElementById('pq-title').value.trim();
+    const startVal= document.getElementById('pq-start').value;
+    const vis     = document.querySelector('input[name="pq-visibility"]:checked').value;
+    const qs      = collectQuestions();
+    const authorName = playerProfile?.nickname || playerProfile?.firstName || 'Nepoznat';
+
+    // Validate
+    const errors = [];
+    if (!title)          errors.push('Unesi naziv kviza.');
+    if (!startVal)       errors.push('Odaberi datum i vrijeme.');
+    if (qs.length < 1)   errors.push('Dodaj barem 1 pitanje.');
+    if (invitedIds.size < 1) {
+        // OK — players can join via share link
+    }
+
+    const errEl = document.getElementById('publish-error');
+    if (errors.length) {
+        errEl.style.display=''; errEl.textContent = errors.join(' • ');
+        return;
+    }
+    errEl.style.display = 'none';
+
+    const startTime = new Date(startVal).getTime();
+    const quizName  = `LUKAVAC ${title.toUpperCase()}`;
+    const numRounds = parseInt(document.getElementById('pq-rounds').value)||3;
+    const qpr       = parseInt(document.getElementById('pq-qpr').value)||5;
+
+    // Build rounds array
+    const rounds = [];
+    for (let i=0;i<numRounds;i++) {
+        rounds.push({
+            questions:      qpr,
+            remainingType:  document.getElementById(`pq-remain-type-${i}`)?.value||'percent',
+            remainingValue: parseInt(document.getElementById(`pq-remain-${i}`)?.value)||50,
+            timeAnswer:     parseInt(document.getElementById('pq-timer-ans').value)||30,
+            timePause:      parseInt(document.getElementById('pq-timer-pause').value)||5,
+            autoKickPlayers:true, autoNextRound:true, earlyContinue:true,
+            values:[200,100,-50,-100,-200]
+        });
+    }
+
+    // Collect notif configs
+    const notifConfigs = NOTIF_TEMPLATES
+        .filter(t => document.getElementById(`notif-${t.id}`)?.checked)
+        .map(t => ({
+            offsetMs: t.offset,
+            msg: (document.getElementById(`notif-msg-${t.id}`)?.value || t.msg)
+                .replace(/{name}/g, quizName)
+                .replace(/{time}/g, new Date(startTime).toLocaleTimeString('hr-HR',{hour:'2-digit',minute:'2-digit'})),
+            type: t.type
+        }));
+
+    const quizData = {
+        name:       quizName,
+        nameSuffix: title.toUpperCase(),
+        type:       'private',
+        isPrivate:  vis === 'private',
+        visibility: vis,
+        authorId:   playerProfileId,
+        authorName: vis === 'public' ? authorName : null,
+        startTime,
+        prizePool:  parseInt(document.getElementById('pq-prize').value)||0,
+        tokenCost:  parseInt(document.getElementById('pq-tokens').value)||0,
+        minPlayers: parseInt(document.getElementById('pq-min').value)||2,
+        maxPlayers: parseInt(document.getElementById('pq-max').value)||20,
+        description:document.getElementById('pq-desc').value,
+        questionCount: qs.length,
+        numRounds,
+        questions:  qs,
+        registeredPlayers: [...invitedIds],
+        playerCount: invitedIds.size,
+        status:      vis === 'public' ? 'pending_review' : 'scheduled',
+        createdAt:   Date.now(),
+        settings: {
+            password:   document.getElementById('pq-password').value||'1234',
+            minPlayers: parseInt(document.getElementById('pq-min').value)||2,
+            maxPlayers: parseInt(document.getElementById('pq-max').value)||20,
+            numRounds, roundEndTimer:10, noviKrugTimer:5,
+            showHeaderBar:true, leaderboardPosition:'bottom',
+            rounds
+        }
+    };
+
+    const btn = document.getElementById('publish-btn');
+    btn.textContent = '⏳ Objavljujem...'; btn.disabled = true;
+
+    // Reuse draft ref if link was already generated
+    const quizRef = currentDraftId
+        ? database.ref(`scheduledQuizzes/${currentDraftId}`)
+        : database.ref('scheduledQuizzes').push();
+
+    quizRef.set(quizData).then(refResult => {
+        const qid = currentDraftId || quizRef.key;
+
+        // Register author
+        database.ref(`playerProfiles/${playerProfileId}/registeredQuizzes/${qid}`).set({
+            quizId: qid, registeredAt: Date.now(), status:'registered', tokensPaid:0
+        });
+
+        // Send invite notifications to all invited players
+        const inviteMsg = `📩 ${authorName} te poziva na kviz: "${quizName}" koji startava ${new Date(startTime).toLocaleString('hr-HR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}. Provjeri Moje Kvizove!`;
+        const invitePromises = [...invitedIds].map(pid =>
+            database.ref(`notifications/${pid}`).push({
+                message: inviteMsg, type:'quiz', quizId: qid,
+                timestamp: Date.now(), read: false, from: playerProfileId
+            })
+        );
+
+        // Schedule timed notifications
+        const snBatch = {};
+        notifConfigs.forEach(n => {
+            const sendAt = startTime + n.offsetMs;
+            if (sendAt < Date.now() - 30000) return;
+            const key = database.ref('scheduledNotifications').push().key;
+            snBatch[key] = {
+                quizId: qid, quizName, sendAt, message: n.msg, type: n.type,
+                players: [...invitedIds, playerProfileId], sent: false, createdAt: Date.now()
+            };
+        });
+        if (Object.keys(snBatch).length) database.ref('scheduledNotifications').update(snBatch);
+
+        // If public — notify admin
+        if (vis === 'public') {
+            database.ref('adminNotifLog').push({
+                message: `🌐 Novi javni privatni kviz na pregled: "${quizName}" od ${authorName}`,
+                quizId: qid, type:'info', timestamp: Date.now(), read: false
+            });
+        }
+
+        // Setup display mode listener if author wants to watch
+        if (document.getElementById('pq-author-display').checked) {
+            setupDisplayMode(qid, quizName);
+        }
+
+        Promise.all(invitePromises).then(() => {
+            document.getElementById('success-msg').textContent =
+                vis === 'private'
+                    ? `Kviz "${quizName}" je zakazan! ${invitedIds.size} igrača je pozvano.`
+                    : `Kviz "${quizName}" je poslan na pregled adminu.`;
+            document.getElementById('success-submsg').textContent =
+                vis === 'public' ? '📬 Dobit ćeš notifikaciju kad admin odobri ili odbije kviz.' : '';
+            document.getElementById('success-modal').classList.add('open');
+        });
+
+        btn.textContent = '🚀 Objavi Privatni Kviz'; btn.disabled = false;
+    }).catch(e => {
+        alert('❌ Greška: ' + e.message);
+        btn.textContent = '🚀 Objavi Privatni Kviz'; btn.disabled = false;
+    });
+}
+
+// ─── DISPLAY MODE (author live view) ───────────────────────────
+function setupDisplayMode(qid, quizName) {
+    document.getElementById('dm-quiz-name').textContent = quizName;
+
+    // Listen for quiz state
+    database.ref('gameState').on('value', snap => {
+        const gs = snap.val();
+        if (!gs) return;
+        if (gs.quizId && gs.quizId !== qid) return; // different quiz
+
+        const phase = gs.phase || 'waiting';
+        document.getElementById('dm-phase').textContent =
+            phase==='answering' ? `⏱️ Pitanje ${gs.questionIndex||1} — Odgovaranje` :
+            phase==='revealing' ? '🔍 Otkrivanje odgovora' :
+            phase==='leaderboard' ? '🏆 Ljestvica' :
+            phase==='waiting'   ? '⏳ Čekanje na start...' :
+            phase==='gameEnd'   ? '🏁 Kviz završen!' : phase;
+
+        if (gs.currentQuestion) {
+            document.getElementById('dm-question').textContent = gs.currentQuestion.text || '—';
+            const opts = gs.currentQuestion.answers || [];
+            document.getElementById('dm-answers').innerHTML = opts.map((a,i) =>
+                `<div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:10px 14px;text-align:left;font-size:.88rem;color:white;font-weight:600;">
+                    <span style="opacity:.6;font-size:.75rem;">${['A','B','C','D'][i]}) </span>${a.text}
+                    ${a.correct?'<span style="float:right;color:#a7f3d0;font-weight:800;">✓</span>':''}
+                </div>`
+            ).join('');
+        }
+
+        // Show players
+        if (gs.players) {
+            const pArr = Object.values(gs.players);
+            document.getElementById('dm-player-count').textContent = pArr.length;
+            document.getElementById('dm-players-grid').innerHTML = pArr.map(p => {
+                const answered = p.hasAnswered;
+                const score    = p.score || 0;
+                return `<div style="background:rgba(255,255,255,${answered?'.18':'.07'});border:1px solid rgba(255,255,255,${answered?'.35':'.12'});border-radius:10px;padding:8px 12px;min-width:100px;text-align:center;transition:all .3s;">
+                    <div style="font-size:.82rem;font-weight:800;color:${answered?'#a7f3d0':'white'};margin-bottom:2px;">${p.name||'—'}</div>
+                    <div style="font-size:.7rem;color:rgba(255,255,255,.6);">${score}€ ${answered?'✓':''}</div>
+                </div>`;
+            }).join('');
+        }
+
+        // Auto-open display when quiz goes live
+        if (phase !== 'waiting' && phase !== 'gameEnd') {
+            document.getElementById('display-mode').classList.add('active');
+        }
+    });
+}
+
+function exitDisplay() {
+    document.getElementById('display-mode').classList.remove('active');
+}
+
+// ─── SHARE LINK SYSTEM ─────────────────────────────────────────
+let currentDraftId  = null;
+let currentShareURL = null;
+
+function generateShareLink() {
+    const title = document.getElementById('pq-title').value.trim();
+    if (!title) { alert('Najprije unesi naziv kviza (Korak 1)!'); goStep(0); return; }
+
+    const btn = document.querySelector('#share-generate-area button');
+    btn.textContent = '⏳ Generiram...'; btn.disabled = true;
+
+    const startVal   = document.getElementById('pq-start').value;
+    const quizName   = `LUKAVAC ${title.toUpperCase()}`;
+    const startTime  = startVal ? new Date(startVal).getTime() : Date.now() + 86400000;
+    const authorName = playerProfile?.nickname || playerProfile?.firstName || 'Nepoznat';
+
+    // Save a draft to Firebase to get an ID
+    const draftData = {
+        name:        quizName,
+        nameSuffix:  title.toUpperCase(),
+        type:        'private',
+        isPrivate:   true,
+        visibility:  document.querySelector('input[name="pq-visibility"]:checked')?.value || 'private',
+        authorId:    playerProfileId,
+        authorName:  authorName,
+        startTime,
+        status:      'draft',
+        openInvite:  true,   // anyone with link can join
+        prizePool:   parseInt(document.getElementById('pq-prize')?.value)||0,
+        tokenCost:   parseInt(document.getElementById('pq-tokens')?.value)||0,
+        minPlayers:  parseInt(document.getElementById('pq-min')?.value)||2,
+        maxPlayers:  parseInt(document.getElementById('pq-max')?.value)||20,
+        playerCount: 0,
+        registeredPlayers: [],
+        createdAt:   Date.now()
+    };
+
+    const ref = currentDraftId
+        ? database.ref(`scheduledQuizzes/${currentDraftId}`)
+        : database.ref('scheduledQuizzes').push();
+
+    ref.set(draftData).then(() => {
+        currentDraftId = ref.key || currentDraftId;
+        const base = window.location.origin + window.location.pathname.replace('private-quiz.html','');
+        currentShareURL = `${base}join.html?quiz=${currentDraftId}&ref=share`;
+
+        // Show link + social buttons
+        document.getElementById('share-link-text').textContent = currentShareURL;
+        document.getElementById('share-link-box').style.display = '';
+        document.getElementById('share-buttons').style.display = '';
+        document.getElementById('share-generate-area').innerHTML =
+            `<button onclick="generateShareLink()" class="btn btn-ghost btn-sm" style="margin-bottom:10px;">🔄 Regeneriraj Link</button>`;
+
+        // Native share API
+        if (navigator.share) document.getElementById('native-share-btn').style.display='';
+
+        // Generate QR
+        generateQR(currentShareURL);
+
+        btn.textContent = '🔗 Generiraj Link za Pozivnicu'; btn.disabled = false;
+    });
+}
+
+function copyShareLink() {
+    if (!currentShareURL) return;
+    navigator.clipboard.writeText(currentShareURL).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = '✓ Kopirano!';
+        btn.style.background = '#059669';
+        setTimeout(() => { btn.textContent = '📋 Kopiraj'; btn.style.background = 'var(--brand)'; }, 2200);
+    }).catch(() => {
+        // Fallback
+        const ta = document.createElement('textarea');
+        ta.value = currentShareURL; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        alert('✓ Link kopiran!');
+    });
+}
+
+function getShareText() {
+    const title = document.getElementById('pq-title').value.trim() || 'Kviz';
+    const startVal = document.getElementById('pq-start').value;
+    const dt = startVal ? new Date(startVal).toLocaleString('hr-HR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    return `🦊 Pozivam te na LUKAVAC ${title.toUpperCase()}!${dt?' Startava '+dt+'.':''} Klikni i prijavi se: `;
+}
+
+function shareToWhatsApp() {
+    if (!currentShareURL) { generateShareLink(); return; }
+    const text = encodeURIComponent(getShareText() + currentShareURL);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+}
+
+function shareToViber() {
+    if (!currentShareURL) { generateShareLink(); return; }
+    const text = encodeURIComponent(getShareText() + currentShareURL);
+    window.open(`viber://forward?text=${text}`, '_blank');
+}
+
+function shareToTelegram() {
+    if (!currentShareURL) { generateShareLink(); return; }
+    const text = encodeURIComponent(getShareText());
+    const url  = encodeURIComponent(currentShareURL);
+    window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank');
+}
+
+function shareToFacebook() {
+    if (!currentShareURL) { generateShareLink(); return; }
+    const url = encodeURIComponent(currentShareURL);
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+}
+
+function shareToInstagram() {
+    // Instagram doesn't allow direct link share — copy link and guide
+    if (!currentShareURL) { generateShareLink(); return; }
+    copyShareLink();
+    setTimeout(() => alert('📸 Link je kopiran!\nNa Instagramu: otvori Stories → Nalijepiti link u Sticker ili u bio, ili ga pošalji u DM prijatelju.'), 300);
+}
+
+function shareViaEmail() {
+    if (!currentShareURL) { generateShareLink(); return; }
+    const title   = document.getElementById('pq-title').value.trim() || 'Kviz';
+    const subject = encodeURIComponent(`Pozivnica na LUKAVAC ${title.toUpperCase()}`);
+    const body    = encodeURIComponent(`${getShareText()}${currentShareURL}\n\nVidimo se! 🦊`);
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+}
+
+function shareViaSMS() {
+    if (!currentShareURL) { generateShareLink(); return; }
+    const text = encodeURIComponent(getShareText() + currentShareURL);
+    window.open(`sms:?body=${text}`);
+}
+
+function nativeShare() {
+    if (!navigator.share || !currentShareURL) return;
+    const title = document.getElementById('pq-title').value.trim() || 'Kviz';
+    navigator.share({
+        title: `LUKAVAC ${title.toUpperCase()}`,
+        text:  getShareText(),
+        url:   currentShareURL
+    }).catch(() => {});
+}
+
+// ─── QR CODE (pure JS, no lib) ─────────────────────────────────
+function generateQR(url) {
+    // Lightweight QR via goqr.me API image (no library needed)
+    const canvas  = document.getElementById('qr-canvas');
+    const ctx     = canvas.getContext('2d');
+    const img     = new Image();
+    // Use a public QR API
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+        ctx.clearRect(0,0,80,80);
+        ctx.drawImage(img,0,0,80,80);
+    };
+    img.onerror = () => {
+        // Fallback: draw a placeholder pattern
+        ctx.fillStyle = '#f3f4f6';
+        ctx.fillRect(0,0,80,80);
+        ctx.fillStyle = '#b75800';
+        ctx.font = '9px sans-serif';
+        ctx.textAlign='center';
+        ctx.fillText('QR', 40, 42);
+        ctx.fillText('nedostupan', 40, 54);
+    };
+    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(url)}`;
+}
+
+function downloadQR() {
+    const canvas = document.getElementById('qr-canvas');
+    const title  = document.getElementById('pq-title').value.trim() || 'kviz';
+    const a = document.createElement('a');
+    a.href     = canvas.toDataURL('image/png');
+    a.download = `lukavac-${title.toLowerCase().replace(/\s+/g,'-')}-qr.png`;
+    a.click();
+}
+
+// Update publishQuiz to use existing draft ID if present
+const _origPublish = publishQuiz;
+function publishQuiz() {
+    // If we have a draft, update it instead of creating new
+    if (currentDraftId) {
+        // Mark it no longer a draft — publishQuiz will do the rest
+        database.ref(`scheduledQuizzes/${currentDraftId}/status`).set('publishing');
+    }
+    _origPublish();
+}
+
+function resetForm() {
+    document.getElementById('success-modal').classList.remove('open');
+    document.getElementById('pq-title').value = '';
+    document.getElementById('questions-list').innerHTML = '';
+    invitedIds.clear();
+    qCount = 0;
+    addQuestion(); addQuestion(); addQuestion();
+    renderInvitedChips();
+    updateNamePreview();
+    goStep(0);
+}
+</script>
+</body>
+</html>
