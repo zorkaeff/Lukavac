@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<!-- Quizzes List v2.0 -->
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kvizovi - Lukavac</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tillana:wght@400;500;600;700;800&family=Metal+Mania&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand:      #b75800;
+            --brand-dark: #632705;
+            --brand-mid:  #d97706;
+            --brand-light:#ffd995;
+            --brand-pale: #fffff1;
+            --green:      #10b981;
+            --green-dark: #059669;
+            --green-pale: #f0fdf4;
+            --red:        #ef4444;
+            --card-shadow:0 4px 15px rgba(0,0,0,.13);
+        }
+        * { box-sizing:border-box; margin:0; padding:0; }
+
+        body {
+            background: linear-gradient(135deg, #e8c99a 0%, #b87333 50%, #e8c99a 100%);
+            font-family: 'Tillana','Segoe UI',sans-serif;
+            min-height: 100vh;
+        }
+        .hallock { font-family:'Metal Mania',cursive; }
+
+        /* ── TOP BAR ── */
+        .topbar {
+            background: white;
+            box-shadow: 0 2px 12px rgba(0,0,0,.12);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky; top: 0; z-index: 100;
+            gap: 10px;
+        }
+        .topbar-title { font-family:'Metal Mania',cursive; font-size:1.3rem; color:var(--brand); }
+        .topbar-back {
+            background:var(--brand-pale); border:1.5px solid var(--brand-light);
+            border-radius:10px; padding:6px 14px; font-size:.82rem; font-weight:700;
+            color:var(--brand); cursor:pointer; text-decoration:none; white-space:nowrap;
+        }
+
+        /* ── LAYOUT ── */
+        .page-wrap { max-width: 900px; margin: 0 auto; padding: 14px 12px 40px; }
+
+        /* ── STATS BAR ── */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .stat-box {
+            background: white;
+            border-radius: 12px;
+            padding: 10px 12px;
+            box-shadow: var(--card-shadow);
+            text-align: center;
+        }
+        .stat-box .sv { font-family:'Metal Mania',cursive; font-size:1.3rem; color:var(--brand); }
+        .stat-box .sl { font-size:.65rem; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:.04em; margin-top:1px; }
+
+        /* ── SEARCH & FILTERS ── */
+        .filter-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            padding: 14px 16px;
+            margin-bottom: 14px;
+        }
+        .search-wrap { position:relative; margin-bottom:12px; }
+        .search-input {
+            width: 100%; border: 2px solid var(--brand-light); border-radius: 12px;
+            padding: 10px 14px 10px 38px; font-family:'Tillana',sans-serif; font-size:.9rem;
+            color: #1f2937; background: var(--brand-pale); transition: border-color .2s;
+        }
+        .search-input:focus { border-color:var(--brand); outline:none; background:white; }
+        .search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:1rem; pointer-events:none; }
+
+        .filters-row { display:flex; flex-wrap:wrap; gap:6px; }
+        .filter-chip {
+            padding: 5px 14px; border-radius: 20px; border: 1.5px solid var(--brand-light);
+            background: var(--brand-pale); font-family:'Metal Mania',cursive; font-size:.72rem;
+            color: var(--brand-dark); cursor: pointer; transition: all .18s; white-space:nowrap;
+        }
+        .filter-chip:hover { border-color:var(--brand); background:var(--brand-light); }
+        .filter-chip.active {
+            background: linear-gradient(135deg, var(--brand-light), var(--brand));
+            color: white; border-color: var(--brand);
+            box-shadow: 0 3px 10px rgba(183,88,0,.3);
+        }
+        .filter-chip.live-chip.active { background:linear-gradient(135deg,#a7f3d0,var(--green)); border-color:var(--green); }
+        .filter-chip.finished-chip.active { background:linear-gradient(135deg,#e5e7eb,#6b7280); border-color:#6b7280; }
+
+        .sort-row { display:flex; align-items:center; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid var(--brand-light); }
+        .sort-label { font-size:.72rem; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
+        .sort-select {
+            border: 1.5px solid var(--brand-light); border-radius: 8px; padding: 4px 10px;
+            font-family:'Tillana',sans-serif; font-size:.8rem; color:var(--brand-dark);
+            background:var(--brand-pale); cursor:pointer;
+        }
+        .results-count { margin-left:auto; font-size:.75rem; color:#9ca3af; font-weight:700; }
+
+        /* ── SECTION TITLE ── */
+        .section-title {
+            font-family:'Metal Mania',cursive; font-size:1.05rem; color:var(--brand);
+            margin-bottom:10px; padding-bottom:7px; border-bottom:3px solid var(--brand);
+            display:flex; align-items:center; gap:7px;
+        }
+        .section-title .count-badge {
+            background:var(--brand); color:white; border-radius:20px;
+            padding:0 8px; font-size:.65rem; margin-left:auto;
+        }
+
+        /* ── QUIZ CARD ── */
+        .quiz-card {
+            border-radius: 14px; margin-bottom: 10px; overflow: hidden;
+            border: 2px solid var(--brand-light);
+            box-shadow: 0 2px 8px rgba(0,0,0,.07);
+            transition: transform .18s, box-shadow .18s;
+            cursor: pointer; background: white;
+        }
+        .quiz-card:hover { transform:translateY(-3px); box-shadow:0 8px 22px rgba(183,88,0,.22); }
+
+        .qc-head {
+            padding: 11px 14px;
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            background: linear-gradient(135deg, var(--brand-pale), #fff8e6);
+        }
+        .qc-name { font-family:'Metal Mania',cursive; font-size:1.05rem; color:var(--brand); }
+        .qc-body { padding: 10px 14px; display:flex; flex-direction:column; gap:7px; }
+        .qc-meta { display:flex; flex-wrap:wrap; gap:10px; }
+        .qc-pill { font-size:.75rem; font-weight:700; color:var(--brand-dark); display:flex; align-items:center; gap:3px; }
+        .qc-foot {
+            padding: 8px 14px;
+            background: var(--brand-pale);
+            border-top: 1px solid var(--brand-light);
+            display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap:wrap;
+        }
+        .qc-desc { font-size:.76rem; color:#6b7280; font-style:italic; }
+
+        /* STATE VARIANTS */
+        /* LIVE */
+        .quiz-card.is-live {
+            border-color: var(--green);
+            box-shadow: 0 0 0 3px rgba(16,185,129,.15), 0 4px 14px rgba(16,185,129,.18);
+        }
+        .quiz-card.is-live .qc-head { background:linear-gradient(135deg,#064e3b,#10b981); }
+        .quiz-card.is-live .qc-name { color:white; }
+        .quiz-card.is-live .qc-foot { background:#f0fdf4; border-top-color:#a7f3d0; }
+        .quiz-card.is-live .qc-pill { color:#065f46; }
+        .quiz-card.is-live:hover { box-shadow:0 0 0 3px rgba(16,185,129,.25), 0 10px 28px rgba(16,185,129,.3); }
+
+        /* REGISTERED (upcoming, player joined) */
+        .quiz-card.is-registered {
+            border-color: var(--green);
+            box-shadow: 0 0 0 2px rgba(16,185,129,.2), 0 3px 12px rgba(16,185,129,.15);
+        }
+        .quiz-card.is-registered .qc-head { background:linear-gradient(135deg,#f0fdf4,#d1fae5); }
+        .quiz-card.is-registered .qc-name { color:#065f46; }
+        .quiz-card.is-registered .qc-foot { background:#f0fdf4; border-top-color:#a7f3d0; }
+        .quiz-card.is-registered .qc-pill { color:#065f46; }
+
+        /* FINISHED */
+        .quiz-card.is-finished { opacity:.7; }
+        .quiz-card.is-finished .qc-head { background:#f3f4f6; }
+        .quiz-card.is-finished .qc-name { color:#6b7280; }
+
+        /* ── BADGES ── */
+        .badge { display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:20px;font-size:.66rem;font-weight:700;white-space:nowrap; }
+        .badge-live      { background:#10b981; color:white; }
+        .badge-soon      { background:#fef3c7; color:#d97706; border:1px solid #fcd34d; }
+        .badge-scheduled { background:#dbeafe; color:#1d4ed8; border:1px solid #93c5fd; }
+        .badge-finished  { background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; }
+        .badge-registered { background:#d1fae5; color:#065f46; border:1.5px solid #10b981; }
+        .badge-author    { background:var(--brand-pale); color:var(--brand); border:1px solid var(--brand-light); }
+
+        /* ── BUTTONS ── */
+        .btn { border:none; border-radius:10px; padding:7px 16px; font-family:'Metal Mania',cursive; font-size:.82rem; cursor:pointer; transition:all .18s; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
+        .btn:hover { transform:translateY(-1px); }
+        .btn-brand { background:linear-gradient(135deg,var(--brand-light),var(--brand)); color:white; }
+        .btn-green { background:linear-gradient(135deg,#a7f3d0,var(--green)); color:white; }
+        .btn-ghost { background:white; border:1.5px solid var(--brand-light); color:var(--brand); }
+        .btn-sm    { padding:4px 11px; font-size:.72rem; border-radius:8px; }
+
+        /* ── LIVE DOT ── */
+        .live-dot { width:7px;height:7px;background:#ef4444;border-radius:50%;display:inline-block;animation:livePulse 1.4s infinite;flex-shrink:0; }
+        @keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)} }
+
+        /* ── TOKEN PILL ── */
+        .token-pill {
+            background:var(--brand); color:var(--brand-light);
+            border-radius:8px; padding:4px 11px;
+            font-family:'Metal Mania',cursive; font-size:.82rem; white-space:nowrap;
+        }
+        .token-pill.free { background:linear-gradient(135deg,#a7f3d0,var(--green)); color:white; }
+
+        /* ── MODAL (reuse from dashboard) ── */
+        .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; align-items:center; justify-content:center; padding:16px; }
+        .modal-backdrop.open { display:flex; }
+        .modal-card { background:white; border-radius:20px; padding:22px; max-width:420px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+        .modal-title { font-family:'Metal Mania',cursive; font-size:1.2rem; color:var(--brand); margin-bottom:14px; }
+        .form-input {
+            width:100%; border:2px solid var(--brand-light); border-radius:10px;
+            padding:9px 13px; font-family:'Tillana',sans-serif; font-size:.9rem;
+            background:var(--brand-pale); transition:border-color .2s;
+        }
+        .form-input:focus { border-color:var(--brand); outline:none; background:white; }
+        .form-label { display:block; font-weight:700; font-size:.74rem; color:var(--brand-dark); margin-bottom:5px; text-transform:uppercase; letter-spacing:.04em; }
+        .error-box { background:#fef2f2; border:1.5px solid #fca5a5; border-radius:10px; padding:9px 13px; font-size:.82rem; color:#ef4444; margin-top:10px; }
+        .hidden { display:none !important; }
+
+        /* ── COUNTDOWN ── */
+        .countdown-badge {
+            background:var(--brand-pale); color:var(--brand); border:1.5px solid var(--brand);
+            border-radius:20px; padding:2px 10px;
+            font-family:'Metal Mania',cursive; font-size:.72rem;
+        }
+        .countdown-badge.urgent { background:#fef2f2; color:#ef4444; border-color:#fca5a5; }
+
+        /* ── EMPTY ── */
+        .empty-msg { text-align:center; color:#9ca3af; padding:30px 10px; font-size:.88rem; }
+
+        /* ── SPINNER ── */
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .spinner { width:28px;height:28px;border:3px solid var(--brand-light);border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px; }
+
+        @keyframes fadeUp { from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)} }
+        .fade-up { animation:fadeUp .28s ease; }
+
+        @media(max-width:500px) {
+            .stats-bar { grid-template-columns:repeat(2,1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── TOP BAR ── -->
+<div class="topbar">
+    <div class="topbar-title">🎮 KVIZOVI</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:.78rem;color:#9ca3af;" id="topbar-player">—</span>
+        <a href="dashboard.html" class="topbar-back">← Dashboard</a>
+    </div>
+</div>
+
+<div class="page-wrap">
+
+    <!-- ── STATS BAR ── -->
+    <div class="stats-bar">
+        <div class="stat-box">
+            <div class="sv" id="stat-live">—</div>
+            <div class="sl">🔴 Uživo</div>
+        </div>
+        <div class="stat-box">
+            <div class="sv" id="stat-upcoming">—</div>
+            <div class="sl">📅 Uskoro</div>
+        </div>
+        <div class="stat-box">
+            <div class="sv" id="stat-my">—</div>
+            <div class="sl">✅ Prijavljeni</div>
+        </div>
+        <div class="stat-box">
+            <div class="sv" id="stat-total">—</div>
+            <div class="sl">📋 Ukupno</div>
+        </div>
+    </div>
+
+    <!-- ── FILTERS ── -->
+    <div class="filter-card">
+        <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" id="search-input"
+                   placeholder="Pretraži kviz po nazivu..."
+                   oninput="applyFilters()">
+        </div>
+
+        <div class="filters-row" id="filter-chips">
+            <button class="filter-chip active" data-filter="all"        onclick="setFilter('all',this)">📋 Svi</button>
+            <button class="filter-chip live-chip" data-filter="live"    onclick="setFilter('live',this)">🔴 Uživo</button>
+            <button class="filter-chip" data-filter="registered"        onclick="setFilter('registered',this)">✅ Prijavljeni</button>
+            <button class="filter-chip" data-filter="upcoming"          onclick="setFilter('upcoming',this)">⏳ Uskoro</button>
+            <button class="filter-chip" data-filter="sata"              onclick="setFilter('sata',this)">🕐 Sata</button>
+            <button class="filter-chip" data-filter="dana"              onclick="setFilter('dana',this)">🌙 Dana</button>
+            <button class="filter-chip" data-filter="tjedna"            onclick="setFilter('tjedna',this)">📅 Tjedna</button>
+            <button class="filter-chip" data-filter="mjeseca"           onclick="setFilter('mjeseca',this)">📆 Mjeseca</button>
+            <button class="filter-chip" data-filter="premium"           onclick="setFilter('premium',this)">💎 Premium</button>
+            <button class="filter-chip" data-filter="poseban"           onclick="setFilter('poseban',this)">⭐ Poseban</button>
+            <button class="filter-chip" data-filter="private"           onclick="setFilter('private',this)">🔒 Privatni</button>
+            <button class="filter-chip finished-chip" data-filter="finished" onclick="setFilter('finished',this)">✔️ Završeni</button>
+        </div>
+
+        <div class="sort-row">
+            <span class="sort-label">Sortiraj:</span>
+            <select class="sort-select" id="sort-select" onchange="applyFilters()">
+                <option value="time-asc">⏰ Datum ↑</option>
+                <option value="time-desc">⏰ Datum ↓</option>
+                <option value="prize-desc">💰 Nagrada ↓</option>
+                <option value="players-desc">👥 Igrači ↓</option>
+            </select>
+            <span class="results-count" id="results-count">0 kvizova</span>
+        </div>
+    </div>
+
+    <!-- ── RESULTS ── -->
+    <div id="quizzes-list">
+        <div style="text-align:center;padding:40px;">
+            <div class="spinner"></div>
+            <div style="color:#9ca3af;font-size:.85rem;">Učitavam kvizove...</div>
+        </div>
+    </div>
+
+</div><!-- /page-wrap -->
+
+<!-- ════════ JOIN MODAL ════════ -->
+<div id="joinModal" class="modal-backdrop">
+    <div class="modal-card">
+        <div class="modal-title">🎮 Prijava na kviz</div>
+        <div style="font-size:.82rem;color:#6b7280;margin-bottom:14px;">
+            Prijavit ćeš se na: <strong id="modalQuizName" style="color:var(--brand);">—</strong>
+        </div>
+        <div style="margin-bottom:12px;">
+            <label class="form-label">🔐 Lozinka kviza</label>
+            <input type="password" class="form-input" id="modalPassword" placeholder="Unesi lozinku...">
+        </div>
+        <div style="background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:10px;padding:10px 14px;margin-bottom:12px;">
+            <div style="font-size:.72rem;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Cijena ulaza</div>
+            <div style="font-family:'Metal Mania',cursive;font-size:1rem;color:var(--brand);">🪙 <span id="modalTokenCost">0</span> tokena</div>
+        </div>
+        <div id="modalError" class="error-box hidden"></div>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+            <button onclick="closeJoinModal()" class="btn btn-ghost" style="flex:1;">Odustani</button>
+            <button onclick="confirmJoinQuiz()" class="btn btn-brand" style="flex:2;">✅ Potvrdi Prijavu</button>
+        </div>
+        <!-- Invite link -->
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--brand-light);">
+            <div style="font-size:.72rem;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:5px;">🔗 Pozovite prijatelje</div>
+            <div style="display:flex;gap:6px;">
+                <input type="text" id="inviteLinkInput" class="form-input" style="font-size:.72rem;" readonly>
+                <button onclick="copyInviteLink()" class="btn btn-ghost btn-sm">Kopiraj 📋</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ─── GLOBALS ───────────────────────────────────────────────────
+const playerProfileId = sessionStorage.getItem('playerProfileId');
+const playerProfile   = JSON.parse(sessionStorage.getItem('playerProfile') || 'null');
+let   allQuizzes      = [];
+let   myRegisteredIds = new Set();
+let   currentFilter   = 'all';
+let   countdownTimers = {};
+let   pendingJoinId   = null;
+let   pendingTokenCost = 0;
+
+// TYPE LABELS
+const TYPE_LABELS = {
+    sata:'🕐 Sata', dana:'🌙 Dana', tjedna:'📅 Tjedna', mjeseca:'📆 Mjeseca',
+    premium:'💎 Premium', poseban:'⭐ Poseban', private:'🔒 Privatni',
+    noci:'🌃 Noći', qualifikacija:'🏆 Kvalifikacija'
+};
+
+// ─── INIT ──────────────────────────────────────────────────────
+window.onload = function() {
+    if (playerProfile) {
+        const nick = playerProfile.nickname || playerProfile.firstName || '—';
+        document.getElementById('topbar-player').textContent = nick;
+    }
+
+    // Load player's registered quizzes
+    if (playerProfileId) {
+        database.ref(`playerProfiles/${playerProfileId}/registeredQuizzes`).once('value').then(snap => {
+            const reg = snap.val() || {};
+            Object.keys(reg).forEach(id => myRegisteredIds.add(id));
+        });
+    }
+
+    // Also check registeredPlayers arrays
+    loadQuizzes();
+};
+
+function loadQuizzes() {
+    database.ref('scheduledQuizzes').orderByChild('startTime').on('value', snap => {
+        const data = snap.val() || {};
+        allQuizzes = Object.entries(data).map(([id, d]) => ({id, ...d}));
+
+        // Mark registered from registeredPlayers arrays
+        allQuizzes.forEach(q => {
+            if (Array.isArray(q.registeredPlayers) && q.registeredPlayers.includes(playerProfileId)) {
+                myRegisteredIds.add(q.id);
+            }
+        });
+
+        updateStats();
+        applyFilters();
+    });
+}
+
+// ─── STATS ─────────────────────────────────────────────────────
+function updateStats() {
+    const now = Date.now();
+    const live     = allQuizzes.filter(q => q.status === 'live').length;
+    const upcoming = allQuizzes.filter(q => q.startTime > now && q.status !== 'live' && q.status !== 'finished').length;
+    const myReg    = allQuizzes.filter(q => myRegisteredIds.has(q.id)).length;
+    const total    = allQuizzes.length;
+
+    document.getElementById('stat-live').textContent     = live;
+    document.getElementById('stat-upcoming').textContent = upcoming;
+    document.getElementById('stat-my').textContent       = myReg;
+    document.getElementById('stat-total').textContent    = total;
+}
+
+// ─── FILTERS ───────────────────────────────────────────────────
+function setFilter(f, el) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    applyFilters();
+}
+
+function applyFilters() {
+    const search = document.getElementById('search-input').value.trim().toLowerCase();
+    const sort   = document.getElementById('sort-select').value;
+    const now    = Date.now();
+
+    let filtered = allQuizzes.filter(q => {
+        // Hide private quizzes from public list unless player is registered or it's their own
+        if (q.isPrivate && q.visibility === 'private' && !myRegisteredIds.has(q.id) && q.authorId !== playerProfileId) return false;
+
+        // Status filter
+        switch (currentFilter) {
+            case 'live':       return q.status === 'live';
+            case 'upcoming':   return q.startTime > now && q.status !== 'live' && q.status !== 'finished';
+            case 'registered': return myRegisteredIds.has(q.id);
+            case 'finished':   return q.status === 'finished' || (q.startTime < now && q.status !== 'live');
+            case 'all':        return q.status !== 'finished' && !(q.startTime < now && q.status !== 'live');
+            default:           return q.type === currentFilter;
+        }
+    });
+
+    // Search
+    if (search) {
+        filtered = filtered.filter(q =>
+            (q.name||'').toLowerCase().includes(search) ||
+            (q.type||'').toLowerCase().includes(search) ||
+            (q.authorName||'').toLowerCase().includes(search)
+        );
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+        switch (sort) {
+            case 'time-desc':    return b.startTime - a.startTime;
+            case 'prize-desc':   return (b.prizePool||0) - (a.prizePool||0);
+            case 'players-desc': return (b.playerCount||0) - (a.playerCount||0);
+            default:             return a.startTime - b.startTime;
+        }
+    });
+
+    document.getElementById('results-count').textContent = filtered.length + ' kvizova';
+
+    // Clear old countdowns
+    Object.values(countdownTimers).forEach(clearInterval);
+    countdownTimers = {};
+
+    renderQuizzes(filtered);
+}
+
+// ─── RENDER ────────────────────────────────────────────────────
+function renderQuizzes(list) {
+    const el  = document.getElementById('quizzes-list');
+    const now = Date.now();
+
+    if (!list.length) {
+        el.innerHTML = `<div class="empty-msg">😕 Nema kvizova za ovaj filter</div>`;
+        return;
+    }
+
+    // Group: live first, then upcoming, then finished
+    const live     = list.filter(q => q.status === 'live');
+    const upcoming = list.filter(q => q.status !== 'live' && q.status !== 'finished' && (q.startTime >= now || currentFilter === 'registered'));
+    const finished = list.filter(q => q.status === 'finished' || (q.startTime < now && q.status !== 'live'));
+
+    let html = '';
+
+    if (live.length) {
+        html += sectionHeader('🔴 Uživo', live.length, true);
+        live.forEach(q => html += buildCard(q, now));
+    }
+    if (upcoming.length) {
+        html += sectionHeader('⏳ Nadolazeći', upcoming.length);
+        upcoming.forEach(q => html += buildCard(q, now));
+    }
+    if (finished.length && currentFilter === 'finished') {
+        html += sectionHeader('✔️ Završeni', finished.length);
+        finished.forEach(q => html += buildCard(q, now));
+    }
+
+    el.innerHTML = html;
+    el.classList.add('fade-up');
+    setTimeout(() => el.classList.remove('fade-up'), 300);
+
+    // Start countdowns
+    upcoming.forEach(q => startCountdown(q));
+}
+
+function sectionHeader(label, count, isLive) {
+    return `<div class="section-title" style="${isLive ? 'color:#10b981;border-bottom-color:#10b981;' : ''}">
+        ${label}
+        <span class="count-badge" style="${isLive ? 'background:#10b981;' : ''}">${count}</span>
+    </div>`;
+}
+
+function buildCard(q, now) {
+    const isLive       = q.status === 'live';
+    const isFinished   = q.status === 'finished' || (q.startTime < now && !isLive);
+    const isRegistered = myRegisteredIds.has(q.id);
+    const isAuthor     = q.authorId === playerProfileId;
+
+    let stateClass = '';
+    if      (isLive)                              stateClass = 'is-live';
+    else if (isFinished)                          stateClass = 'is-finished';
+    else if (isRegistered)                        stateClass = 'is-registered';
+
+    // Badge
+    let badge = '';
+    if (isLive) {
+        badge = `<span class="badge badge-live"><span class="live-dot" style="width:5px;height:5px;"></span> UŽIVO</span>`;
+    } else if (isRegistered && !isFinished) {
+        badge = `<span class="badge badge-registered">✅ PRIJAVLJEN</span>`;
+    } else if (isFinished) {
+        badge = `<span class="badge badge-finished">✔️ Završeno</span>`;
+    } else {
+        const ms   = q.startTime - now;
+        const mins = Math.floor(ms / 60000);
+        const h    = Math.floor(mins / 60);
+        const days = Math.floor(h / 24);
+        const label = days > 0 ? `Za ${days}d` : h > 0 ? `Za ${h}h ${mins%60}m` : `Za ${mins}m`;
+        badge = `<span class="countdown-badge" id="cdg-${q.id}">${label}</span>`;
+    }
+
+    // Type pill
+    const typePill = TYPE_LABELS[q.type] || q.type || '';
+
+    // Token / action
+    const tokenCost = q.tokenCost || 0;
+    const tokenHtml = tokenCost > 0
+        ? `<span class="token-pill">UPAD 🪙 ${tokenCost}</span>`
+        : `<span class="token-pill free">BESPLATAN ULAZ</span>`;
+
+    // Author badge (public private quizzes)
+    const authorHtml = (q.authorName && q.visibility === 'public')
+        ? `<span class="badge badge-author">✍️ ${q.authorName}</span>`
+        : '';
+
+    // Description
+    const descHtml = q.description
+        ? `<div class="qc-desc">${q.description.slice(0,80)}${q.description.length>80?'…':''}</div>`
+        : '';
+
+    const dt = new Date(q.startTime).toLocaleString('hr-HR',{
+        weekday:'short', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'
+    });
+
+    // Action button
+    let actionBtn = '';
+    if (isLive) {
+        actionBtn = `<button onclick="event.stopPropagation();joinQuiz('${q.id}','${esc(q.name)}',${tokenCost})" class="btn btn-green">⚡ IGRAJ!</button>`;
+    } else if (isFinished) {
+        actionBtn = `<button onclick="event.stopPropagation();window.location.href='quiz-results.html?id=${q.id}'" class="btn btn-ghost btn-sm">📊 Rezultati</button>`;
+    } else if (isRegistered) {
+        actionBtn = `<span style="font-size:.75rem;color:#065f46;font-weight:700;">✅ Čekaš kviz</span>`;
+    } else {
+        actionBtn = `<button onclick="event.stopPropagation();joinQuiz('${q.id}','${esc(q.name)}',${tokenCost})" class="btn btn-brand btn-sm">➕ Prijavi se</button>`;
+    }
+
+    return `
+    <div class="quiz-card ${stateClass}" onclick="handleCardClick('${q.id}','${esc(q.name)}',${tokenCost},${isFinished},${isRegistered},${isLive})">
+        <div class="qc-head">
+            <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                ${isLive ? '<span class="live-dot"></span>' : ''}
+                <span class="qc-name">${q.name || 'Kviz'}</span>
+                ${authorHtml}
+            </div>
+            ${badge}
+        </div>
+        <div class="qc-body">
+            ${descHtml}
+            <div class="qc-meta">
+                <span class="qc-pill">📅 ${dt}</span>
+                ${typePill ? `<span class="qc-pill">${typePill}</span>` : ''}
+                ${isAuthor ? `<span class="qc-pill" style="color:var(--brand);">✍️ Moj kviz</span>` : ''}
+            </div>
+        </div>
+        <div class="qc-foot">
+            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                <span class="qc-pill">💰 <strong>${q.prizePool||0}€</strong></span>
+                <span class="qc-pill" onclick="event.stopPropagation();" style="cursor:default;">👥 ${q.playerCount||0}${q.maxPlayers?'/'+q.maxPlayers:''}</span>
+                <span class="qc-pill">❓ ${q.questionCount||q.settings?.numRounds*5||'?'} pit.</span>
+                <span class="qc-pill">🔄 ${q.numRounds||q.settings?.numRounds||'?'} krugova</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+                ${tokenHtml}
+                ${actionBtn}
+            </div>
+        </div>
+    </div>`;
+}
+
+function esc(s) { return (s||'').replace(/['"` ]/g, ' '); }
+
+// ─── COUNTDOWN ─────────────────────────────────────────────────
+function startCountdown(quiz) {
+    const el = document.getElementById(`cdg-${quiz.id}`);
+    if (!el) return;
+    countdownTimers[quiz.id] = setInterval(() => {
+        const left = quiz.startTime - Date.now();
+        if (left <= 0) {
+            clearInterval(countdownTimers[quiz.id]);
+            el.textContent = '🟢 USKORO!';
+            el.className = 'countdown-badge';
+            el.style.background = '#d1fae5'; el.style.color = '#065f46'; el.style.borderColor = '#10b981';
+            return;
+        }
+        const h  = Math.floor(left / 3600000);
+        const m  = Math.floor((left % 3600000) / 60000);
+        const s  = Math.floor((left % 60000) / 1000);
+        el.textContent = h > 0 ? `⏳ ${h}h ${m}m` : m > 0 ? `⏳ ${m}m ${s}s` : `⏳ ${s}s`;
+        if (left < 60000) el.classList.add('urgent');
+        else el.classList.remove('urgent');
+    }, 1000);
+}
+
+// ─── CARD CLICK ────────────────────────────────────────────────
+function handleCardClick(qid, name, tokenCost, isFinished, isRegistered, isLive) {
+    if (isFinished) { window.location.href = `quiz-results.html?id=${qid}`; return; }
+    if (!isRegistered) joinQuiz(qid, name, tokenCost);
+    // If registered + not live — do nothing (just visual)
+}
+
+// ─── JOIN ──────────────────────────────────────────────────────
+function joinQuiz(qid, name, tokenCost) {
+    if (!playerProfileId) { window.location.href = 'login.html'; return; }
+    pendingJoinId    = qid;
+    pendingTokenCost = tokenCost || 0;
+    document.getElementById('modalQuizName').textContent  = name;
+    document.getElementById('modalTokenCost').textContent = tokenCost || 0;
+    document.getElementById('modalError').classList.add('hidden');
+    document.getElementById('modalPassword').value = '';
+    const inviteUrl = `${location.origin}${location.pathname.replace('quizzes.html','player.html')}?quiz=${qid}`;
+    document.getElementById('inviteLinkInput').value = inviteUrl;
+    document.getElementById('joinModal').classList.add('open');
+    setTimeout(() => document.getElementById('modalPassword').focus(), 100);
+}
+
+function closeJoinModal() {
+    document.getElementById('joinModal').classList.remove('open');
+    pendingJoinId = null; pendingTokenCost = 0;
+}
+
+function copyInviteLink() {
+    const inp = document.getElementById('inviteLinkInput');
+    inp.select(); inp.setSelectionRange(0,99999);
+    try { document.execCommand('copy'); } catch(e) { navigator.clipboard?.writeText(inp.value); }
+    const btn = inp.nextElementSibling;
+    btn.textContent = '✅ Kopirano!';
+    setTimeout(() => btn.textContent = 'Kopiraj 📋', 2000);
+}
+
+function showModalError(msg) {
+    const el = document.getElementById('modalError');
+    el.textContent = msg; el.classList.remove('hidden');
+}
+
+function confirmJoinQuiz() {
+    if (!pendingJoinId) { closeJoinModal(); return; }
+    const qid  = pendingJoinId;
+    const cost = pendingTokenCost;
+    const pw   = document.getElementById('modalPassword').value.trim();
+
+    // Get quiz password
+    database.ref(`scheduledQuizzes/${qid}/settings/password`).once('value').then(snap => {
+        const correctPw = snap.val() || '';
+
+        if (correctPw && pw !== correctPw) {
+            // Fall back to global settings password
+            database.ref('settings/password').once('value').then(gs => {
+                if (pw !== gs.val()) {
+                    showModalError('❌ Pogrešna lozinka kviza!'); return;
+                }
+                proceedJoin(qid, cost);
+            });
+            return;
+        }
+        proceedJoin(qid, cost);
+    });
+}
+
+function proceedJoin(qid, cost) {
+    database.ref(`playerProfiles/${playerProfileId}/stats/tokenBalance`).once('value').then(snap => {
+        const balance = snap.val() || 0;
+        if (balance < cost) {
+            showModalError(`❌ Nedovoljno tokena! Imaš ${balance}, treba ${cost}.`); return;
+        }
+        database.ref(`scheduledQuizzes/${qid}/registeredPlayers`).once('value').then(s2 => {
+            const reg = s2.val() || [];
+            if (reg.includes(playerProfileId)) {
+                showModalError('Već si prijavljen na ovaj kviz!'); return;
+            }
+
+            const newBalance = balance - cost;
+            const quizName   = document.getElementById('modalQuizName').textContent;
+
+            // Deduct tokens
+            database.ref(`playerProfiles/${playerProfileId}/stats/tokenBalance`).set(newBalance);
+
+            // Log transaction
+            if (cost > 0) {
+                database.ref('tokenTransactions').push({
+                    playerId: playerProfileId,
+                    playerName: playerProfile?.nickname || playerProfile?.firstName || '',
+                    amount: -cost,
+                    reason: `Ulaz u kviz: ${quizName}`,
+                    newBalance, timestamp: Date.now()
+                });
+            }
+
+            // Register player
+            const updates = {};
+            updates[`scheduledQuizzes/${qid}/registeredPlayers`] = [...reg, playerProfileId];
+            updates[`scheduledQuizzes/${qid}/playerCount`]       = reg.length + 1;
+            updates[`playerProfiles/${playerProfileId}/registeredQuizzes/${qid}`] = {
+                quizId: qid, registeredAt: Date.now(), status:'registered', tokensPaid: cost
+            };
+            database.ref().update(updates).then(() => {
+                myRegisteredIds.add(qid);
+                closeJoinModal();
+                applyFilters(); // refresh view
+                updateStats();
+
+                // Add player to game if live
+                database.ref(`scheduledQuizzes/${qid}/status`).once('value').then(s => {
+                    if (s.val() === 'live') {
+                        const displayName = playerProfile?.nickname || playerProfile?.firstName || 'Igrač';
+                        database.ref(`players/${playerProfileId}`).set({
+                            name: displayName, score: 0, lukavacCount:0,
+                            exclamationCount:0, totalTime:0, joinedAt:Date.now(),
+                            profileId: playerProfileId,
+                            rating: playerProfile?.stats?.averageRating || 0
+                        }).then(() => {
+                            sessionStorage.setItem('currentQuizId', qid);
+                            window.location.href = 'player.html';
+                        });
+                    }
+                });
+            });
+        });
+    });
+}
+
+// Close on backdrop click
+document.getElementById('joinModal').addEventListener('click', function(e) {
+    if (e.target === this) closeJoinModal();
+});
+
+// Enter key in password
+document.getElementById('modalPassword').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') confirmJoinQuiz();
+});
+</script>
+</body>
+</html>
