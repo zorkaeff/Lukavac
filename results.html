@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<!-- Results v3.0 -->
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rezultati - Lukavac</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tillana:wght@400;500;600;700;800&family=Metal+Mania&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand:      #b75800;
+            --brand-dark: #632705;
+            --brand-mid:  #d97706;
+            --brand-light:#ffd995;
+            --brand-pale: #fffff1;
+            --green:      #10b981;
+            --green-dark: #059669;
+            --green-pale: #f0fdf4;
+            --red:        #ef4444;
+            --card-shadow:0 4px 15px rgba(0,0,0,.13);
+        }
+        * { box-sizing:border-box; margin:0; padding:0; }
+
+        body {
+            background: linear-gradient(135deg,#e8c99a 0%,#b87333 50%,#e8c99a 100%);
+            font-family:'Tillana','Segoe UI',sans-serif;
+            min-height:100vh;
+        }
+
+        /* ── TOP BAR ── */
+        .topbar {
+            background:white; box-shadow:0 2px 12px rgba(0,0,0,.12);
+            padding:10px 16px; display:flex; align-items:center; justify-content:space-between;
+            position:sticky; top:0; z-index:100; gap:10px;
+        }
+        .topbar-title { font-family:'Metal Mania',cursive; font-size:1.3rem; color:var(--brand); }
+        .topbar-back {
+            background:var(--brand-pale); border:1.5px solid var(--brand-light);
+            border-radius:10px; padding:6px 14px; font-size:.82rem; font-weight:700;
+            color:var(--brand); cursor:pointer; text-decoration:none; white-space:nowrap;
+        }
+        .topbar-back:hover { background:var(--brand-light); }
+
+        /* ── LAYOUT ── */
+        .page-wrap { max-width:900px; margin:0 auto; padding:14px 12px 50px; }
+
+        /* ── PROFILE CARD ── */
+        .profile-card {
+            background:white; border-radius:18px; box-shadow:var(--card-shadow);
+            padding:18px 16px; margin-bottom:12px;
+        }
+        .profile-top {
+            display:flex; align-items:center; gap:14px; margin-bottom:16px;
+            padding-bottom:14px; border-bottom:2px solid var(--brand-light);
+        }
+        .profile-avatar {
+            width:64px; height:64px; border-radius:50%;
+            border:3px solid var(--brand); object-fit:cover; flex-shrink:0;
+        }
+        .profile-name { font-family:'Metal Mania',cursive; font-size:1.3rem; color:var(--brand); line-height:1.1; }
+        .profile-sub  { font-size:.72rem; color:#9ca3af; margin-top:3px; }
+        .profile-location { font-size:.75rem; color:var(--brand-dark); margin-top:2px; }
+
+        /* 8 stat cards — identical to dashboard */
+        .stats-grid {
+            display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:10px;
+        }
+        .stat-card {
+            background:linear-gradient(135deg,var(--brand-pale) 0%,var(--brand-light) 100%);
+            border:1px solid var(--brand); border-radius:12px;
+            padding:8px 4px 10px; text-align:center;
+            box-shadow:0 2px 8px rgba(0,0,0,.07); position:relative; overflow:hidden;
+        }
+        .stat-card::after {
+            content:''; position:absolute; bottom:0; left:0; right:0; height:3px;
+            background:linear-gradient(90deg,var(--brand-light),var(--brand),var(--brand-dark));
+        }
+        .stat-icon  { font-size:.82rem; line-height:1; margin-bottom:2px; }
+        .stat-value { font-family:'Metal Mania',cursive; font-size:1.25rem; color:var(--brand); line-height:1; margin-bottom:1px; }
+        .stat-label { font-family:'Metal Mania',cursive; font-size:.62rem; color:var(--brand-dark); letter-spacing:.02em; line-height:1.1; }
+
+        /* ── QUALIFICATIONS ── */
+        .qual-card {
+            background:white; border-radius:18px; box-shadow:var(--card-shadow);
+            padding:16px; margin-bottom:12px;
+        }
+        .section-title {
+            font-family:'Metal Mania',cursive; font-size:1.05rem; color:var(--brand);
+            margin-bottom:10px; padding-bottom:7px; border-bottom:3px solid var(--brand);
+            display:flex; align-items:center; gap:7px;
+        }
+        .section-title .count-badge {
+            background:var(--brand); color:white; border-radius:20px;
+            padding:0 8px; font-size:.65rem; margin-left:auto;
+        }
+        .qual-item {
+            border-radius:14px; padding:13px 15px; margin-bottom:9px;
+            box-shadow:0 3px 10px rgba(0,0,0,.07);
+        }
+        .qual-item.qualified   { background:linear-gradient(135deg,#d1fae5,#a7f3d0); border:2px solid #10b981; }
+        .qual-item.unqualified { background:linear-gradient(135deg,#fff1f2,#fee2e2); border:2px solid #ef4444; }
+        .qual-head {
+            display:flex; justify-content:space-between; align-items:center;
+            margin-bottom:8px; padding-bottom:8px;
+        }
+        .qual-head.qualified   { border-bottom:2px solid #10b981; }
+        .qual-head.unqualified { border-bottom:2px solid #ef4444; }
+        .qual-name   { font-family:'Metal Mania',cursive; font-size:1rem; }
+        .qual-badge  { border-radius:20px; padding:3px 12px; font-family:'Metal Mania',cursive; font-size:.75rem; white-space:nowrap; }
+
+        /* ── CHART ── */
+        .chart-card {
+            background:white; border-radius:16px; box-shadow:var(--card-shadow);
+            padding:16px 18px; margin-bottom:12px;
+        }
+
+        /* ── FILTERS ── */
+        .filter-card {
+            background:white; border-radius:16px; box-shadow:var(--card-shadow);
+            padding:12px 14px; margin-bottom:12px;
+            display:flex; flex-wrap:wrap; gap:7px; align-items:center;
+        }
+        .filter-chip {
+            padding:4px 13px; border-radius:20px; border:1.5px solid var(--brand-light);
+            background:var(--brand-pale); font-family:'Metal Mania',cursive; font-size:.7rem;
+            color:var(--brand-dark); cursor:pointer; transition:all .16s; white-space:nowrap;
+        }
+        .filter-chip:hover  { border-color:var(--brand); background:var(--brand-light); }
+        .filter-chip.active { background:linear-gradient(135deg,var(--brand-light),var(--brand)); color:white; border-color:var(--brand); }
+        .sort-select {
+            border:1.5px solid var(--brand-light); border-radius:9px; padding:4px 10px;
+            font-family:'Tillana',sans-serif; font-size:.8rem; color:var(--brand-dark);
+            background:var(--brand-pale); cursor:pointer; margin-left:auto;
+        }
+
+        /* ── RESULT CARDS ── */
+        .result-card {
+            background:linear-gradient(135deg,var(--brand-pale) 0%,var(--brand-light) 100%);
+            border:1.5px solid var(--brand); border-radius:14px; margin-bottom:9px;
+            box-shadow:0 2px 8px rgba(0,0,0,.07); overflow:hidden;
+            transition:transform .18s, box-shadow .18s;
+        }
+        .result-card:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(183,88,0,.22); }
+        .result-card.rank-1 { background:linear-gradient(135deg,#fefce8,#fef3c7); border-color:#d97706; box-shadow:0 0 0 2px rgba(217,119,6,.12),0 3px 12px rgba(217,119,6,.18); }
+        .result-card.rank-2 { background:linear-gradient(135deg,#f8fafc,#e2e8f0); border-color:#94a3b8; }
+        .result-card.rank-3 { background:linear-gradient(135deg,#fff7ed,#fed7aa); border-color:#c2410c; }
+
+        .rc-main { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 15px 10px; }
+        .rc-left  { display:flex; flex-direction:column; gap:4px; min-width:0; }
+        .rc-quiz  { font-family:'Metal Mania',cursive; font-size:.95rem; color:var(--brand); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:210px; }
+        .rc-date  { font-size:.7rem; color:#9ca3af; }
+        .rc-pills { display:flex; gap:6px; flex-wrap:wrap; }
+        .rc-pill  { font-size:.65rem; font-weight:700; color:var(--brand-dark); display:flex; align-items:center; gap:2px; }
+        .rc-right { display:flex; flex-direction:column; align-items:flex-end; gap:3px; flex-shrink:0; }
+        .rc-rank  { font-family:'Metal Mania',cursive; font-size:1.8rem; line-height:1; }
+        .rc-rank.gold   { color:#d97706; }
+        .rc-rank.silver { color:#64748b; }
+        .rc-rank.bronze { color:#c2410c; }
+        .rc-rank.normal { color:var(--brand); }
+        .rc-earn  { font-family:'Metal Mania',cursive; font-size:.78rem; color:var(--green); }
+        .rc-earn.zero { color:#9ca3af; }
+        .rc-stars { font-size:.7rem; color:#d97706; }
+        .rc-type-badge { font-size:.6rem; font-weight:800; border-radius:8px; padding:1px 6px; background:var(--brand-pale); border:1px solid var(--brand-light); color:var(--brand-dark); }
+
+        /* share footer */
+        .rc-footer {
+            border-top:1px solid rgba(183,88,0,.15);
+            padding:8px 15px;
+            display:flex; align-items:center; justify-content:space-between; gap:8px;
+        }
+        .rc-footer-info { font-size:.67rem; color:#9ca3af; }
+        .btn-share {
+            display:flex; align-items:center; gap:5px;
+            padding:5px 13px; border-radius:20px;
+            border:1.5px solid var(--brand-light);
+            background:white; color:var(--brand-dark);
+            font-family:'Metal Mania',cursive; font-size:.68rem;
+            cursor:pointer; transition:all .18s; white-space:nowrap; flex-shrink:0;
+        }
+        .btn-share:hover { background:var(--brand); color:white; border-color:var(--brand); }
+        .share-icon { font-size:.82rem; }
+
+        /* share options panel */
+        .share-panel {
+            display:none; padding:10px 15px 12px;
+            border-top:1px dashed var(--brand-light);
+            background:rgba(255,255,255,.6);
+        }
+        .share-panel.open { display:block; }
+        .share-label  { font-size:.65rem; color:#9ca3af; font-weight:800; text-transform:uppercase; letter-spacing:.07em; margin-bottom:7px; }
+        .share-btns   { display:flex; gap:6px; flex-wrap:wrap; }
+        .share-btn {
+            display:flex; align-items:center; gap:4px;
+            padding:5px 11px; border-radius:10px; border:1.5px solid transparent;
+            font-family:'Tillana',sans-serif; font-size:.75rem; font-weight:700;
+            cursor:pointer; transition:all .16s; white-space:nowrap;
+        }
+        .share-btn:hover { opacity:.85; transform:translateY(-1px); }
+        .share-btn.whatsapp { background:#25d366; color:white; }
+        .share-btn.telegram { background:#0088cc; color:white; }
+        .share-btn.viber    { background:#7360f2; color:white; }
+        .share-btn.facebook { background:#1877f2; color:white; }
+        .share-btn.copy     { background:white; border-color:var(--brand-light); color:var(--brand-dark); }
+        .share-btn.native   { background:linear-gradient(135deg,var(--brand-light),var(--brand)); color:white; }
+        .share-text {
+            font-size:.72rem; color:#6b7280; background:var(--brand-pale);
+            border:1px solid var(--brand-light); border-radius:8px;
+            padding:6px 10px; margin-bottom:8px; line-height:1.4; font-style:italic;
+        }
+
+        /* ── EMPTY / SPINNER ── */
+        .empty-msg { text-align:center; color:#9ca3af; padding:30px 10px; font-size:.88rem; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        .spinner { width:26px; height:26px; border:3px solid var(--brand-light); border-top-color:var(--brand); border-radius:50%; animation:spin .7s linear infinite; margin:0 auto 8px; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .fade-up { animation:fadeUp .22s ease; }
+
+        /* toast */
+        #toast {
+            position:fixed; bottom:24px; right:16px; z-index:999;
+            background:#1f2937; color:white; border-radius:12px; padding:10px 16px;
+            font-size:.82rem; font-family:'Tillana',sans-serif; font-weight:700;
+            display:none; box-shadow:0 8px 24px rgba(0,0,0,.25);
+        }
+
+        @media(max-width:500px) {
+            .stats-grid { grid-template-columns:repeat(4,1fr); }
+            .rc-quiz    { max-width:150px; }
+        }
+        @media(max-width:380px) {
+            .stats-grid { grid-template-columns:repeat(2,1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+    <div class="topbar-title">📊 REZULTATI</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+        <a href="dashboard.html" class="topbar-back">← Dashboard</a>
+    </div>
+</div>
+
+<div class="page-wrap">
+
+    <!-- ════════ PROFILE CARD ════════ -->
+    <div class="profile-card">
+        <div class="profile-top">
+            <img id="profileAvatar"
+                 src="https://ui-avatars.com/api/?background=ffd995&color=b75800&name=P&bold=true&size=96"
+                 class="profile-avatar" alt="Avatar">
+            <div style="flex:1;min-width:0;">
+                <div class="profile-name" id="profileName">—</div>
+                <div class="profile-sub" id="profileSub">Lukavac igrač</div>
+                <div class="profile-location" id="profileLocation"></div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+                <div style="font-family:'Metal Mania',cursive;font-size:.65rem;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Rang</div>
+                <div style="font-family:'Metal Mania',cursive;font-size:1.5rem;color:#3b82f6;" id="profileRank">#—</div>
+            </div>
+        </div>
+
+        <!-- 8 stat cards (2 rows × 4) -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">💳</div>
+                <div class="stat-value" style="color:#10b981;" id="statSaldo">0€</div>
+                <div class="stat-label">Tokeni</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⭐</div>
+                <div class="stat-value" style="color:#f59e0b;" id="statRating">—</div>
+                <div class="stat-label">Ocjena</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🥇</div>
+                <div class="stat-value" id="statWins">0</div>
+                <div class="stat-label">Pobjede</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-value" id="statFinals">0</div>
+                <div class="stat-label">Finala</div>
+            </div>
+        </div>
+        <div class="stats-grid" style="margin-bottom:0;">
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-value" style="color:#10b981;" id="statEarnings">0€</div>
+                <div class="stat-label">Uk. Zarada</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📈</div>
+                <div class="stat-value" id="statAvg">0€</div>
+                <div class="stat-label">Prosjek €</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎮</div>
+                <div class="stat-value" id="statGames">0</div>
+                <div class="stat-label">Uk. Igara</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🦊</div>
+                <div class="stat-value" id="statCunning">0</div>
+                <div class="stat-label">Lukavac</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════ KVALIFIKACIJE ════════ -->
+    <div class="qual-card">
+        <div class="section-title">🏆 KVALIFIKACIJE</div>
+        <div id="qualifications">
+            <div style="text-align:center;padding:14px;">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════ CHART ════════ -->
+    <div class="chart-card">
+        <div class="section-title">📈 Zarada po Igrama</div>
+        <canvas id="earningsChart" height="80"></canvas>
+    </div>
+
+    <!-- ════════ FILTERS ════════ -->
+    <div class="filter-card">
+        <button class="filter-chip active" onclick="setFilter('all',this)">📋 Svi</button>
+        <button class="filter-chip" onclick="setFilter('win',this)">🥇 Pobjede</button>
+        <button class="filter-chip" onclick="setFilter('top3',this)">🏅 Top 3</button>
+        <button class="filter-chip" onclick="setFilter('earn',this)">💰 S nagradom</button>
+        <select class="sort-select" id="sort-sel" onchange="renderResults()">
+            <option value="date-desc">📅 Najnovije</option>
+            <option value="date-asc">📅 Najstarije</option>
+            <option value="rank-asc">🏆 Rang ↑</option>
+            <option value="earn-desc">💰 Zarada ↓</option>
+            <option value="rating-desc">⭐ Ocjena ↓</option>
+        </select>
+    </div>
+
+    <!-- ════════ RESULTS LIST ════════ -->
+    <div class="section-title">
+        🎯 Moje Igre
+        <span class="count-badge" id="results-count">0</span>
+    </div>
+    <div id="results-list">
+        <div style="text-align:center;padding:30px;">
+            <div class="spinner"></div>
+            <div style="color:#9ca3af;font-size:.85rem;">Učitavam rezultate...</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- SHARE MODAL (for small share panel fallback) -->
+<div id="toast"></div>
+
+<script>
+const playerProfileId = sessionStorage.getItem('playerProfileId');
+const playerProfile   = JSON.parse(sessionStorage.getItem('playerProfile') || 'null');
+
+let allResults    = [];
+let currentFilter = 'all';
+let chartInstance = null;
+
+const QUAL_CHAIN = [
+    { key:'sata',    name:'Lukavac Sata',    emoji:'🕐', next:'dana'    },
+    { key:'dana',    name:'Lukavac Dana',    emoji:'🌙', next:'tjedna'  },
+    { key:'tjedna',  name:'Lukavac Tjedna',  emoji:'📅', next:'mjeseca' },
+    { key:'mjeseca', name:'Lukavac Mjeseca', emoji:'📆', next:'sezone'  },
+    { key:'sezone',  name:'Lukavac Sezone',  emoji:'🏆', next:null      }
+];
+
+function getUpcomingDate(offsetDays, hour=20) {
+    const d = new Date(Date.now() + offsetDays*86400000);
+    d.setHours(hour,0,0,0); return d;
+}
+const QUAL_DATES = {
+    dana:    getUpcomingDate(1,21),
+    tjedna:  getUpcomingDate(6,20),
+    mjeseca: getUpcomingDate(22,20),
+    sezone:  getUpcomingDate(85,19)
+};
+
+const TYPE_LABELS = {
+    sata:'🕐 Sata', dana:'🌙 Dana', tjedna:'📅 Tjedna', mjeseca:'📆 Mjeseca',
+    premium:'💎 Premium', poseban:'⭐ Poseban', private:'🔒 Privatni'
+};
+
+// ── INIT ─────────────────────────────────────────────
+window.onload = function() {
+    if (!playerProfileId) { window.location.href='login.html'; return; }
+    renderProfile();
+    loadQualifications();
+    database.ref('playerResults/' + playerProfileId).on('value', snap => {
+        const raw = snap.val() || {};
+        allResults = Object.entries(raw).map(([id,d])=>({id,...d})).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+        updateStats();
+        updateChart();
+        renderResults();
+    });
+};
+
+// ── PROFILE ───────────────────────────────────────────
+function renderProfile() {
+    if (!playerProfile) return;
+    const s    = playerProfile.stats || {};
+    const name = playerProfile.nickname || playerProfile.firstName || 'Igrač';
+    const init = name.charAt(0).toUpperCase();
+
+    document.getElementById('profileAvatar').src = playerProfile.profilePhoto ||
+        'https://ui-avatars.com/api/?background=ffd995&color=b75800&name='+init+'&bold=true&size=96';
+    document.getElementById('profileName').textContent = name;
+    document.getElementById('profileRank').textContent = '#' + (s.currentRank || '—');
+
+    const joined = playerProfile.createdAt
+        ? 'Pridružio/la se ' + new Date(playerProfile.createdAt).toLocaleDateString('hr-HR',{month:'long',year:'numeric'})
+        : 'Lukavac igrač';
+    document.getElementById('profileSub').textContent = joined;
+
+    if (playerProfile.location) {
+        document.getElementById('profileLocation').textContent = '📍 ' + playerProfile.location;
+    }
+
+    const games    = s.quizzesPlayed  || 0;
+    const earnings = s.totalEarnings  || 0;
+    document.getElementById('statSaldo').textContent    = (s.tokenBalance   || 0) + '€';
+    document.getElementById('statRating').textContent   = s.averageRating ? parseFloat(s.averageRating).toFixed(1) : '—';
+    document.getElementById('statWins').textContent     = s.wins    || 0;
+    document.getElementById('statFinals').textContent   = s.finals  || 0;
+    document.getElementById('statEarnings').textContent = earnings  + '€';
+    document.getElementById('statAvg').textContent      = (games>0 ? Math.round(earnings/games):0) + '€';
+    document.getElementById('statGames').textContent    = games;
+    document.getElementById('statCunning').textContent  = s.cunningWins || 0;
+}
+
+// live stats refresh from Firebase
+function updateStats() {
+    const wins   = allResults.filter(r=>r.rank===1).length;
+    const total  = allResults.length;
+    const earn   = allResults.reduce((s,r)=>s+(r.earnings||0),0);
+    const avg    = total ? Math.round(earn/total) : 0;
+    const avgRat = total ? (allResults.reduce((s,r)=>s+(r.rating||0),0)/total).toFixed(1) : '—';
+
+    document.getElementById('statWins').textContent     = wins;
+    document.getElementById('statGames').textContent    = total;
+    document.getElementById('statEarnings').textContent = earn + '€';
+    document.getElementById('statAvg').textContent      = avg + '€';
+    document.getElementById('statRating').textContent   = avgRat;
+}
+
+// ── QUALIFICATIONS ────────────────────────────────────
+function loadQualifications() {
+    database.ref('playerProfiles/' + playerProfileId + '/qualifications').once('value').then(snap => {
+        const quals = snap.val() || {};
+        let html = '';
+        QUAL_CHAIN.slice(1).forEach(level => {
+            const isQual  = quals[level.key] === true;
+            const dt      = QUAL_DATES[level.key];
+            const dtStr   = dt ? dt.toLocaleString('hr-HR',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+            const msTill  = dt ? dt.getTime()-Date.now() : 0;
+            const days    = Math.floor(msTill/86400000);
+            const tillStr = days>1?'Za '+days+' dana':days===1?'Sutra':msTill>0?'Danas!':'Prošlo';
+            const prevLevel = QUAL_CHAIN.find(c=>c.next===level.key);
+            const prevName  = prevLevel ? prevLevel.name : '—';
+            const cls = isQual ? 'qualified' : 'unqualified';
+            const nameColor = isQual ? '#065f46' : '#991b1b';
+            html += '<div class="qual-item '+cls+'">'
+                +'<div class="qual-head '+cls+'" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:8px;">'
+                +'<span class="qual-name" style="color:'+nameColor+';">'+level.emoji+' '+level.name+'</span>'
+                +(isQual
+                    ? '<span class="qual-badge" style="background:#10b981;color:white;">✅ KVALIFICIRAN</span>'
+                    : '<span class="qual-badge" style="background:#fee2e2;color:#991b1b;border:1.5px solid #fca5a5;">❌ JOŠ NISI</span>')
+                +'</div>'
+                +'<div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:6px;">'
+                +'<div style="display:flex;flex-direction:column;gap:3px;">'
+                +'<span style="font-size:.8rem;color:'+nameColor+';font-weight:600;">🗓️ '+dtStr+'</span>'
+                +'<span style="font-size:.74rem;color:#6b7280;">Via: '+prevName+'</span>'
+                +'</div>'
+                +'<div style="text-align:right;">'
+                +'<span style="font-size:.76rem;font-weight:700;color:'+(msTill>86400000?'var(--brand)':msTill>0?'#d97706':'#9ca3af')+';">'+tillStr+'</span>'
+                +(isQual?'<div style="font-size:.7rem;color:#10b981;margin-top:2px;">Imaš pravo sudjelovanja!</div>':'')
+                +'</div>'
+                +'</div>'
+                +'</div>';
+        });
+        document.getElementById('qualifications').innerHTML = html || '<p style="color:#9ca3af;text-align:center;padding:10px;">Nema podataka</p>';
+    });
+}
+
+// ── CHART ────────────────────────────────────────────
+function updateChart() {
+    const ctx    = document.getElementById('earningsChart').getContext('2d');
+    const recent = [...allResults].sort((a,b)=>a.timestamp-b.timestamp).slice(-15);
+    const labels = recent.map(r=>new Date(r.timestamp).toLocaleDateString('hr-HR',{day:'2-digit',month:'2-digit'}));
+    const earnData= recent.map(r=>r.earnings||0);
+    const rankData= recent.map(r=>r.rank||0);
+    if (chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(ctx, {
+        type:'bar',
+        data:{
+            labels,
+            datasets:[
+                {
+                    label:'Zarada (€)',data:earnData,
+                    backgroundColor:earnData.map(v=>v>0?'rgba(16,185,129,.7)':'rgba(239,68,68,.4)'),
+                    borderColor:earnData.map(v=>v>0?'#10b981':'#ef4444'),
+                    borderWidth:2, borderRadius:5, yAxisID:'y'
+                },
+                {
+                    label:'Rang (#)',data:rankData,type:'line',
+                    borderColor:'#b75800',backgroundColor:'rgba(183,88,0,.07)',
+                    borderWidth:2, pointBackgroundColor:rankData.map(v=>v===1?'#d97706':'#b75800'),
+                    pointRadius:4, tension:0.35, yAxisID:'y2'
+                }
+            ]
+        },
+        options:{
+            responsive:true, interaction:{mode:'index',intersect:false},
+            plugins:{
+                legend:{labels:{font:{family:'Tillana',size:12},color:'#632705'}},
+                tooltip:{callbacks:{label:ctx=>ctx.dataset.label==='Rang (#)'?' Rang: #'+ctx.raw:' Zarada: '+ctx.raw+'€'}}
+            },
+            scales:{
+                x:{ticks:{font:{family:'Tillana',size:11},color:'#9ca3af'},grid:{display:false}},
+                y:{position:'left',ticks:{font:{family:'Tillana',size:11},color:'#10b981',callback:v=>v+'€'},grid:{color:'rgba(0,0,0,.05)'}},
+                y2:{position:'right',reverse:true,ticks:{font:{family:'Tillana',size:11},color:'#b75800',callback:v=>'#'+v},grid:{display:false}}
+            }
+        }
+    });
+}
+
+// ── FILTER ───────────────────────────────────────────
+function setFilter(f, el) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+    el.classList.add('active');
+    renderResults();
+}
+
+// ── RENDER RESULTS ────────────────────────────────────
+function renderResults() {
+    const sort = document.getElementById('sort-sel').value;
+    let filtered = allResults.filter(r => {
+        switch(currentFilter) {
+            case 'win':  return r.rank===1;
+            case 'top3': return r.rank<=3;
+            case 'earn': return (r.earnings||0)>0;
+            default:     return true;
+        }
+    });
+    filtered.sort((a,b) => {
+        switch(sort) {
+            case 'date-asc':    return (a.timestamp||0)-(b.timestamp||0);
+            case 'rank-asc':    return (a.rank||999)-(b.rank||999);
+            case 'earn-desc':   return (b.earnings||0)-(a.earnings||0);
+            case 'rating-desc': return (b.rating||0)-(a.rating||0);
+            default:            return (b.timestamp||0)-(a.timestamp||0);
+        }
+    });
+    document.getElementById('results-count').textContent = filtered.length;
+    if (!filtered.length) {
+        document.getElementById('results-list').innerHTML = '<div class="empty-msg">😕 Nema rezultata za ovaj filter</div>';
+        return;
+    }
+    const myName = playerProfile ? (playerProfile.nickname||playerProfile.firstName||'Igrač') : 'Igrač';
+    let html = '';
+    filtered.forEach((res, idx) => {
+        const rank   = res.rank || 0;
+        const date   = res.timestamp ? new Date(res.timestamp).toLocaleString('hr-HR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+        const earn   = res.earnings || 0;
+        const rat    = res.rating   || 0;
+        const qType  = res.quizType || res.type || '';
+        const medal  = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'';
+        const rkCls  = rank===1?'gold':rank===2?'silver':rank===3?'bronze':'normal';
+        const crdCls = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'';
+        const stars  = rat>0 ? ('★'.repeat(Math.round(rat/2))+'☆'.repeat(5-Math.round(rat/2))) : '';
+        const typeLabel = TYPE_LABELS[qType]||'';
+        const shareText = buildShareText(res, myName);
+        html += '<div class="result-card '+crdCls+' fade-up" id="rc-'+idx+'">'
+            +'<div class="rc-main">'
+            +'<div class="rc-left">'
+            +'<div class="rc-quiz" title="'+(res.quizName||'Kviz')+'">'+(res.quizName||'Kviz')+'</div>'
+            +'<div class="rc-date">📅 '+date+'</div>'
+            +'<div class="rc-pills">'
+            +(typeLabel?'<span class="rc-type-badge">'+typeLabel+'</span>':'')
+            +(res.correctAnswers!=null?'<span class="rc-pill">✅ '+res.correctAnswers+'/'+(res.totalQuestions||'?')+'</span>':'')
+            +(res.reachedFinal?'<span class="rc-pill" style="color:#d97706;">🏆 Finale</span>':'')
+            +'</div>'
+            +'</div>'
+            +'<div class="rc-right">'
+            +'<div class="rc-rank '+rkCls+'">'+(medal||('#'+rank))+'</div>'
+            +'<div class="rc-earn '+(earn===0?'zero':'')+'">'+(earn>0?'+'+earn+'€':earn<0?earn+'€':'— €')+'</div>'
+            +(rat>0?'<div class="rc-stars">'+stars+'</div>':'')
+            +'</div>'
+            +'</div>'
+            // Footer with share button
+            +'<div class="rc-footer">'
+            +'<div class="rc-footer-info">'+buildFooterInfo(res)+'</div>'
+            +'<button class="btn-share" onclick="toggleShare('+idx+')">'
+            +'<span class="share-icon">📤</span> Podijeli'
+            +'</button>'
+            +'</div>'
+            // Share panel
+            +'<div class="share-panel" id="sp-'+idx+'">'
+            +'<div class="share-text" id="st-'+idx+'">'+escHtml(shareText)+'</div>'
+            +'<div class="share-label">Podijeli putem:</div>'
+            +'<div class="share-btns">'
+            +(navigator.share?'<button class="share-btn native" onclick="shareNative('+idx+')">📱 Dijeli</button>':'')
+            +'<button class="share-btn whatsapp" onclick="shareWA('+idx+')">💬 WhatsApp</button>'
+            +'<button class="share-btn telegram" onclick="shareTG('+idx+')">✈️ Telegram</button>'
+            +'<button class="share-btn viber"    onclick="shareVB('+idx+')">🟣 Viber</button>'
+            +'<button class="share-btn facebook" onclick="shareFB('+idx+')">👤 Facebook</button>'
+            +'<button class="share-btn copy"     onclick="copyShare('+idx+')">📋 Kopiraj</button>'
+            +'</div>'
+            +'</div>'
+            +'</div>';
+    });
+    document.getElementById('results-list').innerHTML = html;
+    // store results for share functions
+    window._shareResults = filtered;
+}
+
+// ── SHARE ────────────────────────────────────────────
+function buildShareText(res, myName) {
+    const rank  = res.rank||0;
+    const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'🏅';
+    const earn  = res.earnings||0;
+    const date  = res.timestamp ? new Date(res.timestamp).toLocaleDateString('hr-HR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+    let text = medal+' '+myName+' je završio/la kviz "'+( res.quizName||'Lukavac')+'" na '+rank+'. mjestu!';
+    if (earn>0) text += ' 💰 +'+earn+'€ zarade!';
+    if (res.correctAnswers&&res.totalQuestions) text += ' ✅ '+res.correctAnswers+'/'+res.totalQuestions+' točnih odgovora.';
+    if (date) text += ' 🗓️ '+date;
+    text += '\n\n🦊 Igraj i ti na Lukavac kvizu!';
+    return text;
+}
+
+function buildFooterInfo(res) {
+    const parts = [];
+    if (res.correctAnswers&&res.totalQuestions) parts.push('✅ '+res.correctAnswers+'/'+res.totalQuestions);
+    if ((res.rating||0)>0) parts.push('⭐ '+(res.rating||0).toFixed(1)+'/10');
+    return parts.join(' · ');
+}
+
+function escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
+
+function toggleShare(idx) {
+    const panel = document.getElementById('sp-'+idx);
+    if (!panel) return;
+    const isOpen = panel.classList.contains('open');
+    // close all others
+    document.querySelectorAll('.share-panel.open').forEach(p=>p.classList.remove('open'));
+    if (!isOpen) panel.classList.add('open');
+}
+
+function getShareText(idx) {
+    return window._shareResults && window._shareResults[idx]
+        ? buildShareText(window._shareResults[idx], playerProfile?(playerProfile.nickname||playerProfile.firstName||'Igrač'):'Igrač')
+        : '';
+}
+
+function shareNative(idx) {
+    const text = getShareText(idx);
+    navigator.share({ title:'Lukavac Kviz', text }).catch(()=>{});
+}
+
+function shareWA(idx) {
+    const text = encodeURIComponent(getShareText(idx));
+    window.open('https://wa.me/?text='+text, '_blank');
+}
+
+function shareTG(idx) {
+    const text = encodeURIComponent(getShareText(idx));
+    window.open('https://t.me/share/url?url='+encodeURIComponent(window.location.origin)+'&text='+text, '_blank');
+}
+
+function shareVB(idx) {
+    const text = encodeURIComponent(getShareText(idx));
+    window.open('viber://forward?text='+text, '_blank');
+}
+
+function shareFB(idx) {
+    window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(window.location.origin), '_blank');
+}
+
+function copyShare(idx) {
+    const text = getShareText(idx);
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(()=>showToast('✅ Kopirano u clipboard!'));
+    } else {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta); showToast('✅ Kopirano!');
+    }
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.display='block';
+    setTimeout(()=>t.style.display='none', 2500);
+}
+</script>
+</body>
+</html>
