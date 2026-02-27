@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<!-- Results v2.0 -->
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rezultati - Lukavac</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tillana:wght@400;500;600;700;800&family=Metal+Mania&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand:      #b75800;
+            --brand-dark: #632705;
+            --brand-mid:  #d97706;
+            --brand-light:#ffd995;
+            --brand-pale: #fffff1;
+            --green:      #10b981;
+            --green-dark: #059669;
+            --card-shadow:0 4px 15px rgba(0,0,0,.13);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: linear-gradient(135deg, #e8c99a 0%, #b87333 50%, #e8c99a 100%);
+            font-family: 'Tillana','Segoe UI', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* ── TOP BAR ── */
+        .topbar {
+            background: white;
+            box-shadow: 0 2px 12px rgba(0,0,0,.12);
+            padding: 10px 16px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100; gap: 10px;
+        }
+        .topbar-title { font-family:'Metal Mania',cursive; font-size:1.3rem; color:var(--brand); }
+        .topbar-back {
+            background: var(--brand-pale); border: 1.5px solid var(--brand-light);
+            border-radius: 10px; padding: 6px 14px; font-size: .82rem; font-weight: 700;
+            color: var(--brand); cursor: pointer; text-decoration: none; white-space: nowrap;
+        }
+        .topbar-back:hover { background: var(--brand-light); }
+
+        /* ── LAYOUT ── */
+        .page-wrap { max-width: 900px; margin: 0 auto; padding: 14px 12px 40px; }
+
+        /* ── STAT CARDS ── */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .stat-box {
+            background: linear-gradient(135deg, var(--brand-pale) 0%, var(--brand-light) 100%);
+            border: 1.5px solid var(--brand);
+            border-radius: 13px;
+            padding: 11px 6px 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,.07);
+            position: relative; overflow: hidden;
+        }
+        .stat-box::after {
+            content:''; position:absolute; bottom:0; left:0; right:0; height:3px;
+            background: linear-gradient(90deg, var(--brand-light), var(--brand), var(--brand-dark));
+        }
+        .stat-box .si { font-size: .85rem; margin-bottom: 2px; }
+        .stat-box .sv {
+            font-family: 'Metal Mania', cursive;
+            font-size: 1.3rem; color: var(--brand); line-height: 1; margin-bottom: 2px;
+        }
+        .stat-box .sl {
+            font-family: 'Metal Mania', cursive;
+            font-size: .65rem; color: var(--brand-dark); letter-spacing: .02em; line-height: 1.1;
+        }
+        /* override colour per stat */
+        .stat-box.green .sv  { color: var(--green); }
+        .stat-box.green      { border-color: #a7f3d0; }
+        .stat-box.green::after { background: linear-gradient(90deg,#a7f3d0,var(--green),#059669); }
+        .stat-box.purple .sv { color: #7c3aed; }
+        .stat-box.purple     { border-color: #ddd6fe; }
+        .stat-box.purple::after { background: linear-gradient(90deg,#ddd6fe,#7c3aed,#4c1d95); }
+        .stat-box.blue .sv   { color: #3b82f6; }
+        .stat-box.blue       { border-color: #bfdbfe; }
+        .stat-box.blue::after { background: linear-gradient(90deg,#bfdbfe,#3b82f6,#1d4ed8); }
+
+        /* ── CHART CARD ── */
+        .chart-card {
+            background: white; border-radius: 16px; box-shadow: var(--card-shadow);
+            padding: 16px 18px; margin-bottom: 14px;
+        }
+        .section-title {
+            font-family: 'Metal Mania', cursive; font-size: 1.05rem; color: var(--brand);
+            margin-bottom: 12px; padding-bottom: 8px; border-bottom: 3px solid var(--brand);
+            display: flex; align-items: center; gap: 7px; letter-spacing: .02em;
+        }
+        .section-title .count-badge {
+            background: var(--brand); color: white; border-radius: 20px;
+            padding: 0 8px; font-size: .65rem; margin-left: auto;
+        }
+
+        /* ── FILTER ROW ── */
+        .filter-row {
+            background: white; border-radius: 14px; box-shadow: var(--card-shadow);
+            padding: 12px 14px; margin-bottom: 12px;
+            display: flex; flex-wrap: wrap; gap: 7px; align-items: center;
+        }
+        .filter-chip {
+            padding: 4px 13px; border-radius: 20px; border: 1.5px solid var(--brand-light);
+            background: var(--brand-pale); font-family: 'Metal Mania', cursive; font-size: .7rem;
+            color: var(--brand-dark); cursor: pointer; transition: all .16s; white-space: nowrap;
+        }
+        .filter-chip:hover  { border-color: var(--brand); background: var(--brand-light); }
+        .filter-chip.active {
+            background: linear-gradient(135deg, var(--brand-light), var(--brand));
+            color: white; border-color: var(--brand);
+        }
+        .filter-chip.win.active  { background: linear-gradient(135deg,#a7f3d0,var(--green)); border-color:var(--green); }
+        .filter-chip.top.active  { background: linear-gradient(135deg,#fde68a,#f59e0b); border-color:#f59e0b; }
+        .sort-select {
+            border: 1.5px solid var(--brand-light); border-radius: 9px; padding: 4px 10px;
+            font-family: 'Tillana', sans-serif; font-size: .8rem; color: var(--brand-dark);
+            background: var(--brand-pale); cursor: pointer; margin-left: auto;
+        }
+
+        /* ── RESULT ROWS ── */
+        .result-card {
+            background: linear-gradient(135deg, var(--brand-pale) 0%, var(--brand-light) 100%);
+            border: 1.5px solid var(--brand);
+            border-radius: 14px; padding: 12px 15px; margin-bottom: 9px;
+            display: flex; justify-content: space-between; align-items: center; gap: 12px;
+            transition: transform .18s, box-shadow .18s;
+            box-shadow: 0 2px 8px rgba(0,0,0,.07);
+        }
+        .result-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(183,88,0,.22); }
+
+        /* Rank colour overrides */
+        .result-card.rank-1 {
+            background: linear-gradient(135deg,#fefce8,#fef3c7);
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 2px rgba(245,158,11,.15), 0 3px 12px rgba(245,158,11,.2);
+        }
+        .result-card.rank-2 {
+            background: linear-gradient(135deg,#f8fafc,#e2e8f0);
+            border-color: #94a3b8;
+        }
+        .result-card.rank-3 {
+            background: linear-gradient(135deg,#fff7ed,#fed7aa);
+            border-color: #c2410c;
+        }
+
+        .rc-left { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .rc-quiz { font-family: 'Metal Mania', cursive; font-size: .95rem; color: var(--brand); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        .rc-date { font-size: .7rem; color: #9ca3af; }
+        .rc-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+        .rc-pill  { font-size: .65rem; font-weight: 700; color: var(--brand-dark); display: flex; align-items: center; gap: 2px; }
+
+        .rc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+        .rc-rank  { font-family: 'Metal Mania', cursive; font-size: 1.8rem; line-height: 1; }
+        .rc-rank.gold   { color: #d97706; }
+        .rc-rank.silver { color: #64748b; }
+        .rc-rank.bronze { color: #c2410c; }
+        .rc-rank.normal { color: var(--brand); }
+        .rc-earn { font-family: 'Metal Mania', cursive; font-size: .78rem; color: var(--green); }
+        .rc-earn.zero { color: #9ca3af; }
+        .rc-stars { font-size: .7rem; color: #d97706; }
+        .rc-type-badge {
+            font-size: .6rem; font-weight: 800; border-radius: 8px; padding: 1px 6px;
+            background: var(--brand-pale); border: 1px solid var(--brand-light); color: var(--brand-dark);
+        }
+
+        /* ── EMPTY ── */
+        .empty-msg { text-align: center; color: #9ca3af; padding: 30px 10px; font-size: .88rem; }
+
+        /* ── SPINNER ── */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner { width: 26px; height: 26px; border: 3px solid var(--brand-light); border-top-color: var(--brand); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 8px; }
+
+        @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .fade-up { animation: fadeUp .25s ease; }
+
+        @media(max-width: 480px) {
+            .stats-bar { grid-template-columns: repeat(2, 1fr); }
+            .rc-quiz   { max-width: 140px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── TOP BAR ── -->
+<div class="topbar">
+    <div class="topbar-title">📊 REZULTATI</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-family:'Metal Mania',cursive;font-size:.78rem;color:#9ca3af;" id="topbar-player">—</span>
+        <a href="dashboard.html" class="topbar-back">← Dashboard</a>
+    </div>
+</div>
+
+<div class="page-wrap">
+
+    <!-- ── STAT CARDS ── -->
+    <div class="stats-bar">
+        <div class="stat-box green">
+            <div class="si">🏆</div>
+            <div class="sv" id="stat-wins">—</div>
+            <div class="sl">Pobjede</div>
+        </div>
+        <div class="stat-box">
+            <div class="si">🎮</div>
+            <div class="sv" id="stat-games">—</div>
+            <div class="sl">Ukupno Igara</div>
+        </div>
+        <div class="stat-box blue">
+            <div class="si">⭐</div>
+            <div class="sv" id="stat-rating">—</div>
+            <div class="sl">Prosj. Ocjena</div>
+        </div>
+        <div class="stat-box purple">
+            <div class="si">💰</div>
+            <div class="sv" id="stat-earn">—</div>
+            <div class="sl">Ukupna Zarada</div>
+        </div>
+    </div>
+
+    <!-- ── CHART ── -->
+    <div class="chart-card">
+        <div class="section-title">📈 Zarada po Igrama</div>
+        <canvas id="earningsChart" height="80"></canvas>
+    </div>
+
+    <!-- ── FILTER ROW ── -->
+    <div class="filter-row">
+        <button class="filter-chip active" onclick="setFilter('all',this)">📋 Svi</button>
+        <button class="filter-chip win"  onclick="setFilter('win',this)">🥇 Pobjede</button>
+        <button class="filter-chip top"  onclick="setFilter('top3',this)">🏅 Top 3</button>
+        <button class="filter-chip"      onclick="setFilter('earn',this)">💰 S nagradom</button>
+        <select class="sort-select" id="sort-sel" onchange="renderResults()">
+            <option value="date-desc">📅 Najnovije</option>
+            <option value="date-asc">📅 Najstarije</option>
+            <option value="rank-asc">🏆 Rang ↑</option>
+            <option value="earn-desc">💰 Zarada ↓</option>
+            <option value="rating-desc">⭐ Ocjena ↓</option>
+        </select>
+    </div>
+
+    <!-- ── RESULTS LIST ── -->
+    <div>
+        <div class="section-title">
+            🎯 Moje Igre
+            <span class="count-badge" id="results-count">0</span>
+        </div>
+        <div id="results-list">
+            <div style="text-align:center;padding:30px;">
+                <div class="spinner"></div>
+                <div style="color:#9ca3af;font-size:.85rem;">Učitavam rezultate...</div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /page-wrap -->
+
+<script>
+const playerProfileId = sessionStorage.getItem('playerProfileId');
+const playerProfile   = JSON.parse(sessionStorage.getItem('playerProfile') || 'null');
+
+let allResults   = [];
+let currentFilter = 'all';
+let chartInstance = null;
+
+// ── INIT ──────────────────────────────────────────
+window.onload = function() {
+    if (!playerProfileId) { window.location.href = 'login.html'; return; }
+
+    if (playerProfile) {
+        const nick = playerProfile.nickname || playerProfile.firstName || '—';
+        document.getElementById('topbar-player').textContent = nick;
+    }
+
+    database.ref(`playerResults/${playerProfileId}`).on('value', snap => {
+        const raw = snap.val() || {};
+        allResults = Object.entries(raw)
+            .map(([id, d]) => ({ id, ...d }))
+            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        updateStats();
+        updateChart();
+        renderResults();
+    });
+};
+
+// ── STATS ──────────────────────────────────────────
+function updateStats() {
+    const wins   = allResults.filter(r => r.rank === 1).length;
+    const total  = allResults.length;
+    const avg    = total ? (allResults.reduce((s, r) => s + (r.rating || 0), 0) / total).toFixed(1) : '0';
+    const earn   = allResults.reduce((s, r) => s + (r.earnings || 0), 0);
+    const winPct = total ? Math.round(wins / total * 100) : 0;
+
+    document.getElementById('stat-wins').textContent  = wins + (total ? ` (${winPct}%)` : '');
+    document.getElementById('stat-games').textContent = total;
+    document.getElementById('stat-rating').textContent = avg + '/10';
+    document.getElementById('stat-earn').textContent   = earn + '€';
+}
+
+// ── CHART ──────────────────────────────────────────
+function updateChart() {
+    const ctx    = document.getElementById('earningsChart').getContext('2d');
+    const recent = [...allResults].sort((a,b) => a.timestamp - b.timestamp).slice(-15);
+
+    const labels  = recent.map(r => new Date(r.timestamp).toLocaleDateString('hr-HR',{day:'2-digit',month:'2-digit'}));
+    const earnData = recent.map(r => r.earnings || 0);
+    const rankData = recent.map(r => r.rank || 0);
+
+    if (chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Zarada (€)',
+                    data: earnData,
+                    backgroundColor: earnData.map(v => v > 0 ? 'rgba(16,185,129,.7)' : 'rgba(239,68,68,.4)'),
+                    borderColor:     earnData.map(v => v > 0 ? '#10b981' : '#ef4444'),
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Rang (#)',
+                    data: rankData,
+                    type: 'line',
+                    borderColor: '#b75800',
+                    backgroundColor: 'rgba(183,88,0,.08)',
+                    borderWidth: 2,
+                    pointBackgroundColor: rankData.map(v => v===1?'#d97706':'#b75800'),
+                    pointRadius: 4,
+                    tension: 0.35,
+                    yAxisID: 'y2'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: { mode:'index', intersect:false },
+            plugins: {
+                legend: { labels: { font:{ family:'Tillana', size:12 }, color:'#632705' } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ctx.dataset.label === 'Rang (#)'
+                            ? ` Rang: #${ctx.raw}`
+                            : ` Zarada: ${ctx.raw}€`
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { font:{ family:'Tillana', size:11 }, color:'#9ca3af' }, grid:{ display:false } },
+                y: {
+                    position: 'left',
+                    ticks: { font:{ family:'Tillana', size:11 }, color:'#10b981', callback: v => v+'€' },
+                    grid:{ color:'rgba(0,0,0,.05)' }
+                },
+                y2: {
+                    position: 'right',
+                    reverse: true,
+                    ticks: { font:{ family:'Tillana', size:11 }, color:'#b75800', callback: v => '#'+v },
+                    grid:{ display:false }
+                }
+            }
+        }
+    });
+}
+
+// ── FILTER ──────────────────────────────────────────
+function setFilter(f, el) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    renderResults();
+}
+
+// ── RENDER ──────────────────────────────────────────
+function renderResults() {
+    const sort = document.getElementById('sort-sel').value;
+    const el   = document.getElementById('results-list');
+
+    let filtered = allResults.filter(r => {
+        switch (currentFilter) {
+            case 'win':  return r.rank === 1;
+            case 'top3': return r.rank <= 3;
+            case 'earn': return (r.earnings || 0) > 0;
+            default:     return true;
+        }
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+        switch (sort) {
+            case 'date-asc':   return (a.timestamp||0) - (b.timestamp||0);
+            case 'rank-asc':   return (a.rank||999) - (b.rank||999);
+            case 'earn-desc':  return (b.earnings||0) - (a.earnings||0);
+            case 'rating-desc':return (b.rating||0) - (a.rating||0);
+            default:           return (b.timestamp||0) - (a.timestamp||0);
+        }
+    });
+
+    document.getElementById('results-count').textContent = filtered.length;
+
+    if (!filtered.length) {
+        el.innerHTML = `<div class="empty-msg">😕 Nema rezultata za ovaj filter</div>`;
+        return;
+    }
+
+    let html = '';
+    filtered.forEach(res => {
+        const rank  = res.rank || 0;
+        const date  = res.timestamp
+            ? new Date(res.timestamp).toLocaleString('hr-HR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
+            : '—';
+        const earn  = res.earnings || 0;
+        const rat   = res.rating   || 0;
+        const qType = res.quizType || res.type || '';
+
+        // Rank display
+        const rankEmoji = rank===1 ? '🥇' : rank===2 ? '🥈' : rank===3 ? '🥉' : '';
+        const rankClass = rank===1?'gold':rank===2?'silver':rank===3?'bronze':'normal';
+        const cardClass = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'';
+
+        // Stars (rating/10 → up to 5 stars)
+        const stars = rat > 0 ? ('★'.repeat(Math.round(rat/2)) + '☆'.repeat(5-Math.round(rat/2))) : '';
+
+        // Type label
+        const typeLabels = {
+            sata:'🕐 Sata', dana:'🌙 Dana', tjedna:'📅 Tjedna', mjeseca:'📆 Mjeseca',
+            premium:'💎 Premium', poseban:'⭐ Poseban', private:'🔒 Privatni'
+        };
+        const typeLabel = typeLabels[qType] || qType;
+
+        html += `
+        <div class="result-card ${cardClass} fade-up">
+            <div class="rc-left">
+                <div class="rc-quiz" title="${res.quizName||'Kviz'}">${res.quizName || 'Kviz'}</div>
+                <div class="rc-date">📅 ${date}</div>
+                <div class="rc-pills">
+                    ${typeLabel ? `<span class="rc-type-badge">${typeLabel}</span>` : ''}
+                    ${res.correctAnswers != null ? `<span class="rc-pill">✅ ${res.correctAnswers}/${res.totalQuestions||'?'} točno</span>` : ''}
+                    ${res.reachedFinal ? `<span class="rc-pill" style="color:#d97706;">🏆 Finale</span>` : ''}
+                </div>
+            </div>
+            <div class="rc-right">
+                <div class="rc-rank ${rankClass}">${rankEmoji || ('#' + rank)}</div>
+                <div class="rc-earn ${earn===0?'zero':''}">${earn > 0 ? '+'+earn+'€' : earn < 0 ? earn+'€' : '— €'}</div>
+                ${rat > 0 ? `<div class="rc-stars" title="${rat}/10">${stars}</div>` : ''}
+            </div>
+        </div>`;
+    });
+
+    el.innerHTML = html;
+}
+</script>
+</body>
+</html>
