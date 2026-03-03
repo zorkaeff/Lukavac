@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<!-- League Detail v1.0 -->
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liga - Lukavac</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tillana:wght@400;500;600;700;800&family=Metal+Mania&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand:#b75800; --brand-dark:#632705; --brand-mid:#d97706;
+            --brand-light:#ffd995; --brand-pale:#fffff1;
+            --green:#10b981; --green-dark:#059669; --green-pale:#f0fdf4;
+            --red:#ef4444; --card-shadow:0 4px 15px rgba(0,0,0,.13);
+            --tier1:#d97706; --tier2:#64748b; --tier3:#c2410c;
+            --private:#7c3aed; --official:#0ea5e9;
+        }
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{background:linear-gradient(135deg,#e8c99a 0%,#b87333 50%,#e8c99a 100%);font-family:'Tillana','Segoe UI',sans-serif;min-height:100vh;}
+
+        /* TOPBAR */
+        .topbar{background:white;box-shadow:0 2px 12px rgba(0,0,0,.12);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;gap:10px;}
+        .topbar-title{font-family:'Metal Mania',cursive;font-size:1.1rem;color:var(--brand);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
+        .topbar-back{background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:10px;padding:6px 14px;font-size:.82rem;font-weight:700;color:var(--brand);cursor:pointer;text-decoration:none;white-space:nowrap;flex-shrink:0;}
+        .topbar-back:hover{background:var(--brand-light);}
+
+        /* LAYOUT */
+        .page-wrap{max-width:900px;margin:0 auto;padding:14px 12px 60px;}
+
+        /* HERO BANNER */
+        .league-hero{background:white;border-radius:20px;box-shadow:var(--card-shadow);overflow:hidden;margin-bottom:12px;}
+        .hero-stripe{height:8px;}
+        .hero-body{padding:18px 18px 16px;}
+        .hero-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;}
+        .hero-icon{width:60px;height:60px;border-radius:18px;background:var(--brand-pale);border:2px solid var(--brand-light);display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;}
+        .hero-info{flex:1;}
+        .hero-name{font-family:'Metal Mania',cursive;font-size:1.3rem;color:var(--brand);line-height:1.1;margin-bottom:5px;}
+        .hero-pills{display:flex;gap:6px;flex-wrap:wrap;}
+        .pill{font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;}
+        .pill-tier1{background:#fef3c7;color:#92400e;border:1px solid #fde68a;}
+        .pill-tier2{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;}
+        .pill-tier3{background:#fff7ed;color:#7c2d12;border:1px solid #fed7aa;}
+        .pill-private{background:#ede9fe;color:#4c1d95;border:1px solid #c4b5fd;}
+        .pill-official{background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;}
+        .pill-cat{background:var(--brand-pale);color:var(--brand-dark);border:1px solid var(--brand-light);}
+        .pill-schedule{background:#f0fdf4;color:#065f46;border:1px solid #a7f3d0;}
+        .hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+        .hs-box{text-align:center;background:linear-gradient(135deg,var(--brand-pale),var(--brand-light));border:1px solid var(--brand);border-radius:11px;padding:9px 4px;}
+        .hs-val{font-family:'Metal Mania',cursive;font-size:1.15rem;color:var(--brand);line-height:1;}
+        .hs-label{font-family:'Metal Mania',cursive;font-size:.58rem;color:var(--brand-dark);margin-top:2px;}
+
+        /* SECTION */
+        .section-title{font-family:'Metal Mania',cursive;font-size:1.05rem;color:var(--brand);margin-bottom:10px;padding-bottom:7px;border-bottom:3px solid var(--brand);display:flex;align-items:center;gap:7px;}
+        .count-badge{background:var(--brand);color:white;border-radius:20px;padding:0 8px;font-size:.65rem;margin-left:auto;}
+
+        /* TABS */
+        .tab-bar{background:white;border-radius:16px;box-shadow:var(--card-shadow);padding:6px;display:flex;gap:4px;margin-bottom:14px;}
+        .tab-btn{flex:1;padding:9px 4px;border-radius:11px;border:none;background:transparent;font-family:'Metal Mania',cursive;font-size:.7rem;color:var(--brand-dark);cursor:pointer;transition:all .18s;text-align:center;}
+        .tab-btn.active{background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;}
+
+        /* LEADERBOARD */
+        .lb-card{background:white;border-radius:14px;box-shadow:var(--card-shadow);overflow:hidden;margin-bottom:10px;}
+        .lb-podium{display:flex;align-items:flex-end;justify-content:center;gap:8px;padding:16px 14px 10px;background:linear-gradient(135deg,var(--brand-pale),var(--brand-light));}
+        .lb-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;max-width:110px;}
+        .lb-avatar{border-radius:50%;border:2px solid var(--brand-light);background:white;display:flex;align-items:center;justify-content:center;font-size:1.1rem;overflow:hidden;}
+        .lb-col.p1 .lb-avatar{width:54px;height:54px;border-color:var(--brand);}
+        .lb-col.p2 .lb-avatar{width:44px;height:44px;border-color:#94a3b8;}
+        .lb-col.p3 .lb-avatar{width:38px;height:38px;border-color:#c2410c;}
+        .lb-nick{font-family:'Metal Mania',cursive;font-size:.7rem;color:var(--brand-dark);text-align:center;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+        .lb-pts{font-family:'Metal Mania',cursive;font-size:.75rem;color:var(--brand);text-align:center;}
+        .lb-block{border-radius:8px 8px 0 0;width:100%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;padding:6px 0;}
+        .lb-col.p1 .lb-block{background:linear-gradient(180deg,#fef3c7,#fde68a);height:60px;}
+        .lb-col.p2 .lb-block{background:linear-gradient(180deg,#f1f5f9,#e2e8f0);height:44px;}
+        .lb-col.p3 .lb-block{background:linear-gradient(180deg,#fff7ed,#fed7aa);height:34px;}
+
+        .lb-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--brand-light);}
+        .lb-row:last-child{border-bottom:none;}
+        .lb-row.me{background:linear-gradient(135deg,var(--brand-pale),#fff8e6);border-left:3px solid var(--brand);}
+        .lb-rank{font-family:'Metal Mania',cursive;font-size:.9rem;color:var(--brand);min-width:28px;text-align:center;}
+        .lb-ava{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--brand-light);background:var(--brand-pale);display:flex;align-items:center;justify-content:center;font-size:.85rem;overflow:hidden;flex-shrink:0;}
+        .lb-rname{flex:1;font-family:'Metal Mania',cursive;font-size:.82rem;color:var(--brand-dark);}
+        .lb-rpts{font-family:'Metal Mania',cursive;font-size:.85rem;color:var(--brand);}
+        .lb-rwins{font-size:.65rem;color:#9ca3af;}
+        .me-tag{font-size:.55rem;background:var(--brand);color:white;border-radius:7px;padding:1px 5px;margin-left:3px;font-family:'Tillana',sans-serif;font-weight:800;}
+
+        /* MEMBERS */
+        .member-row{display:flex;align-items:center;gap:10px;background:white;border-radius:12px;padding:10px 14px;margin-bottom:7px;box-shadow:0 2px 6px rgba(0,0,0,.06);}
+        .member-row.founder-row{border:1.5px solid var(--brand);}
+        .mem-ava{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--brand-light);background:var(--brand-pale);display:flex;align-items:center;justify-content:center;font-size:.95rem;overflow:hidden;flex-shrink:0;}
+        .mem-name{flex:1;font-family:'Metal Mania',cursive;font-size:.85rem;color:var(--brand-dark);}
+        .mem-badge{font-size:.6rem;font-weight:800;padding:2px 7px;border-radius:8px;white-space:nowrap;}
+        .badge-founder{background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;}
+        .badge-member{background:#f0fdf4;color:#065f46;border:1px solid #a7f3d0;}
+        .founder-btn{background:var(--red);color:white;border:none;border-radius:8px;padding:4px 10px;font-size:.65rem;font-family:'Metal Mania',cursive;cursor:pointer;}
+        .founder-btn:hover{opacity:.85;}
+
+        /* QUIZZES */
+        .quiz-item{background:white;border-radius:13px;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:8px;overflow:hidden;border:1.5px solid var(--brand-light);}
+        .qi-head{display:flex;align-items:center;gap:10px;padding:12px 14px;}
+        .qi-icon{width:38px;height:38px;border-radius:10px;background:var(--brand-pale);border:1.5px solid var(--brand-light);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+        .qi-info{flex:1;}
+        .qi-name{font-family:'Metal Mania',cursive;font-size:.88rem;color:var(--brand);}
+        .qi-sub{font-size:.67rem;color:#9ca3af;margin-top:2px;}
+        .qi-right{text-align:right;flex-shrink:0;}
+        .qi-status{font-family:'Metal Mania',cursive;font-size:.72rem;padding:3px 10px;border-radius:10px;}
+        .status-upcoming{background:#fef3c7;color:#92400e;}
+        .status-live{background:#d1fae5;color:#065f46;animation:pulse .8s ease infinite;}
+        .status-finished{background:#f1f5f9;color:#64748b;}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+        .qi-fee{font-size:.62rem;color:#9ca3af;margin-top:3px;}
+        .btn-play{background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border:none;border-radius:10px;padding:6px 14px;font-family:'Metal Mania',cursive;font-size:.7rem;cursor:pointer;margin-top:6px;}
+
+        /* ADMIN PANEL (founder only) */
+        .admin-card{background:linear-gradient(135deg,#ede9fe,#ddd6fe);border:2px solid #7c3aed;border-radius:16px;padding:16px;margin-bottom:12px;}
+        .admin-title{font-family:'Metal Mania',cursive;font-size:1rem;color:#4c1d95;margin-bottom:12px;}
+        .admin-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+        .admin-btn{padding:8px 16px;border-radius:10px;border:1.5px solid #7c3aed;background:white;color:#4c1d95;font-family:'Metal Mania',cursive;font-size:.72rem;cursor:pointer;transition:all .18s;}
+        .admin-btn:hover{background:#7c3aed;color:white;}
+        .admin-btn.danger{border-color:var(--red);color:var(--red);}
+        .admin-btn.danger:hover{background:var(--red);color:white;}
+        .pending-approval{background:white;border-radius:12px;padding:10px 12px;margin-bottom:7px;display:flex;align-items:center;gap:10px;border:1.5px solid #c4b5fd;}
+        .pa-name{flex:1;font-family:'Metal Mania',cursive;font-size:.82rem;color:#4c1d95;}
+        .pa-btn{padding:5px 12px;border-radius:8px;border:none;font-family:'Metal Mania',cursive;font-size:.68rem;cursor:pointer;}
+        .pa-accept{background:var(--green);color:white;}
+        .pa-reject{background:#fee2e2;color:#991b1b;}
+
+        /* REVENUE (founder) */
+        .revenue-card{background:white;border-radius:14px;box-shadow:var(--card-shadow);padding:15px;margin-bottom:10px;}
+        .rev-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--brand-light);font-size:.8rem;color:#4b5563;}
+        .rev-row:last-child{border-bottom:none;}
+        .rev-val{font-family:'Metal Mania',cursive;color:var(--green);}
+
+        /* MODAL */
+        .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;padding:16px;}
+        .modal-backdrop.open{display:flex;}
+        .modal-card{background:white;border-radius:20px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto;}
+        .modal-head{padding:18px 18px 14px;border-bottom:1px solid var(--brand-light);display:flex;justify-content:space-between;align-items:center;}
+        .modal-title{font-family:'Metal Mania',cursive;font-size:1.1rem;color:var(--brand);}
+        .modal-close{background:none;border:none;font-size:1.4rem;cursor:pointer;color:#9ca3af;}
+        .modal-body{padding:16px 18px 20px;}
+        .btn-primary{width:100%;padding:12px;background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border:none;border-radius:12px;font-family:'Metal Mania',cursive;font-size:.9rem;cursor:pointer;margin-top:10px;}
+        label{font-size:.75rem;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;}
+        .form-input{width:100%;border:2px solid var(--brand-light);border-radius:10px;padding:9px 12px;font-family:'Tillana',sans-serif;font-size:.88rem;color:#1f2937;background:var(--brand-pale);margin-bottom:10px;}
+        .form-input:focus{border-color:var(--brand);outline:none;background:white;}
+
+        /* EMPTY / SPINNER */
+        .empty-msg{text-align:center;color:#9ca3af;padding:30px 10px;font-size:.88rem;}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .spinner{width:26px;height:26px;border:3px solid var(--brand-light);border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+        .fade-up{animation:fadeUp .22s ease;}
+
+        #toast{position:fixed;bottom:24px;right:16px;z-index:999;background:#1f2937;color:white;border-radius:12px;padding:10px 16px;font-size:.82rem;display:none;box-shadow:0 8px 24px rgba(0,0,0,.25);}
+
+        @media(max-width:480px){
+            .hero-stats{grid-template-columns:repeat(2,1fr);}
+        }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="topbar-title" id="topbar-league-name">Liga</div>
+    <a href="leagues.html" class="topbar-back">← Lige</a>
+</div>
+
+<div class="page-wrap">
+
+    <!-- HERO -->
+    <div class="league-hero">
+        <div class="hero-stripe" id="hero-stripe"></div>
+        <div class="hero-body">
+            <div class="hero-top">
+                <div class="hero-icon" id="hero-icon">🎲</div>
+                <div class="hero-info">
+                    <div class="hero-name" id="hero-name">Učitavam...</div>
+                    <div class="hero-pills" id="hero-pills"></div>
+                </div>
+            </div>
+            <div class="hero-stats">
+                <div class="hs-box"><div class="hs-val" id="hs-members">—</div><div class="hs-label">👥 Članova</div></div>
+                <div class="hs-box"><div class="hs-val" id="hs-quizzes">—</div><div class="hs-label">🎮 Kvizova</div></div>
+                <div class="hs-box" style="border-color:#a7f3d0;"><div class="hs-val" style="color:var(--green);" id="hs-entryfee">—</div><div class="hs-label">🔑 Ulaz</div></div>
+                <div class="hs-box" style="border-color:#fde68a;"><div class="hs-val" style="color:var(--tier1);" id="hs-quizfee">—</div><div class="hs-label">🪙 Kviz</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tab-bar">
+        <button class="tab-btn active" onclick="showTab('leaderboard',this)">🏆 Ljestvica</button>
+        <button class="tab-btn" onclick="showTab('quizzes',this)">🎮 Kvizovi</button>
+        <button class="tab-btn" onclick="showTab('members',this)">👥 Članovi</button>
+        <button class="tab-btn" id="tab-admin-btn" style="display:none;" onclick="showTab('admin',this)">⚙️ Admin</button>
+    </div>
+
+    <!-- TAB: LEADERBOARD -->
+    <div id="tab-leaderboard">
+        <div class="lb-card">
+            <div class="lb-podium" id="lb-podium">
+                <div style="text-align:center;padding:20px;width:100%;"><div class="spinner"></div></div>
+            </div>
+            <div id="lb-full-list"></div>
+        </div>
+        <div id="my-position-banner" style="display:none;margin-top:10px;"></div>
+    </div>
+
+    <!-- TAB: QUIZZES -->
+    <div id="tab-quizzes" style="display:none;">
+        <div class="section-title">🎮 Kvizovi u Ligi <span class="count-badge" id="quizzes-count">0</span></div>
+        <div id="quizzes-list">
+            <div style="text-align:center;padding:30px;"><div class="spinner"></div></div>
+        </div>
+    </div>
+
+    <!-- TAB: MEMBERS -->
+    <div id="tab-members" style="display:none;">
+        <div class="section-title">👥 Članovi <span class="count-badge" id="members-count">0</span></div>
+        <div id="members-list">
+            <div style="text-align:center;padding:30px;"><div class="spinner"></div></div>
+        </div>
+    </div>
+
+    <!-- TAB: ADMIN (founder only) -->
+    <div id="tab-admin" style="display:none;">
+        <!-- Founder revenue -->
+        <div class="revenue-card" id="rev-section" style="display:none;">
+            <div class="section-title">💰 Zarade Osnivača</div>
+            <div id="rev-content"></div>
+        </div>
+
+        <!-- Pending requests -->
+        <div id="pending-section" style="display:none;">
+            <div class="section-title">⏳ Zahtjevi <span class="count-badge" id="pending-count-admin">0</span></div>
+            <div id="pending-list-admin"></div>
+        </div>
+
+        <!-- Admin actions -->
+        <div class="admin-card">
+            <div class="admin-title">⚙️ Upravljanje Ligom</div>
+            <div class="admin-row">
+                <button class="admin-btn" onclick="openAddQuizModal()">➕ Dodaj Kviz</button>
+                <button class="admin-btn" onclick="openInviteModal()">📨 Pozovi Igrače</button>
+                <button class="admin-btn" onclick="togglePublic()">🌍 Javno/Privatno</button>
+            </div>
+            <div class="admin-row">
+                <button class="admin-btn danger" onclick="confirmDelete()">🗑️ Briši Ligu</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ADD QUIZ MODAL -->
+<div class="modal-backdrop" id="add-quiz-modal">
+    <div class="modal-card">
+        <div class="modal-head">
+            <div class="modal-title">➕ Dodaj Kviz</div>
+            <button class="modal-close" onclick="document.getElementById('add-quiz-modal').classList.remove('open')">✕</button>
+        </div>
+        <div class="modal-body">
+            <label>Naziv kviza *</label>
+            <input type="text" class="form-input" id="aq-name" placeholder="npr. Tjedni sport izazov">
+            <label>Datum i vrijeme *</label>
+            <input type="datetime-local" class="form-input" id="aq-datetime">
+            <label>Kviz fee (tokeni, 0 = besplatno)</label>
+            <input type="number" class="form-input" id="aq-fee" value="0" min="0">
+            <div style="font-size:.72rem;color:#9ca3af;margin-top:-6px;margin-bottom:8px;">Ostaviti 0 za fee koji je postavljen na razini lige</div>
+            <button class="btn-primary" onclick="addQuizToLeague()">✅ Dodaj</button>
+        </div>
+    </div>
+</div>
+
+<!-- INVITE MODAL -->
+<div class="modal-backdrop" id="invite-modal">
+    <div class="modal-card">
+        <div class="modal-head">
+            <div class="modal-title">📨 Pozovi Igrače</div>
+            <button class="modal-close" onclick="document.getElementById('invite-modal').classList.remove('open')">✕</button>
+        </div>
+        <div class="modal-body">
+            <label>Traži igrača</label>
+            <div style="position:relative;margin-bottom:8px;">
+                <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);">🔍</span>
+                <input type="text" class="form-input" id="modal-invite-search" style="padding-left:34px;" placeholder="Ime ili nadimak..." oninput="searchModalInvite()">
+            </div>
+            <div id="modal-invite-results" style="max-height:220px;overflow-y:auto;border:1.5px solid var(--brand-light);border-radius:12px;background:var(--brand-pale);">
+                <div style="text-align:center;padding:12px;color:#9ca3af;font-size:.8rem;">Upiši ime...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const playerProfileId = sessionStorage.getItem('playerProfileId');
+const playerProfile   = JSON.parse(sessionStorage.getItem('playerProfile') || 'null');
+const myNick = playerProfile ? (playerProfile.nickname||playerProfile.firstName||'Igrač') : 'Igrač';
+const myTokens = playerProfile?.stats?.tokenBalance || 0;
+
+const TIER_LABELS    = {1:'🥇 Liga 1',2:'🥈 Liga 2',3:'🥉 Liga 3'};
+const CAT_LABELS     = {misovito:'🎲 Mješovito',sport:'⚽ Sport',kultura:'🎭 Kultura',povijest:'📜 Povijest',geografija:'🌍 Geografija',film:'🎬 Film',glazba:'🎵 Glazba',opce:'🧠 Opće'};
+const CAT_ICONS      = {misovito:'🎲',sport:'⚽',kultura:'🎭',povijest:'📜',geografija:'🌍',film:'🎬',glazba:'🎵',opce:'🧠'};
+const SCHED_LABELS   = {daily:'📅 Dnevno',weekly:'📆 Tjedno',monthly:'🗓️ Mjesečno',custom:'⚙️ Custom'};
+const STRIPE_COLORS  = {
+    'tier-1':'linear-gradient(90deg,#fde68a,#d97706,#92400e)',
+    'tier-2':'linear-gradient(90deg,#e2e8f0,#94a3b8,#475569)',
+    'tier-3':'linear-gradient(90deg,#fed7aa,#c2410c,#7c2d12)',
+    'private':'linear-gradient(90deg,#ede9fe,#7c3aed,#4c1d95)',
+    'official':'linear-gradient(90deg,#bae6fd,#0ea5e9,#0369a1)'
+};
+
+let league     = null;
+let leagueId   = null;
+let members    = {};
+let leaderboard= {};
+let leagueQuizzes = [];
+let allPlayersMap  = {};
+let isFounder  = false;
+let isMember   = false;
+
+// ── INIT ──────────────────────────────────────────────
+window.onload = function() {
+    const params = new URLSearchParams(window.location.search);
+    leagueId = params.get('id');
+    if (!leagueId) { window.location.href='leagues.html'; return; }
+
+    // Load all players for name lookup
+    database.ref('playerProfiles').once('value').then(snap => {
+        const raw = snap.val()||{};
+        Object.entries(raw).forEach(([id,p])=>allPlayersMap[id]=p);
+    });
+
+    database.ref('leagues/'+leagueId).on('value', snap => {
+        if (!snap.exists()) { window.location.href='leagues.html'; return; }
+        league = { id:leagueId, ...snap.val() };
+        members = league.members || {};
+        leaderboard = league.leaderboard || {};
+        isFounder = league.founderId === playerProfileId;
+        isMember  = !!members[playerProfileId] || isFounder;
+        renderHero();
+        renderLeaderboard();
+        renderMembers();
+        renderQuizzes();
+        if (isFounder) { document.getElementById('tab-admin-btn').style.display=''; renderAdmin(); }
+    });
+};
+
+// ── HERO ──────────────────────────────────────────────
+function renderHero() {
+    document.getElementById('topbar-league-name').textContent = league.name||'Liga';
+    document.getElementById('hero-name').textContent = league.name||'Liga';
+    document.getElementById('hero-icon').textContent = CAT_ICONS[league.category||'misovito']||'🎲';
+
+    const tierNum   = league.tier||3;
+    const stripeKey = league.type==='official'?'official':league.type==='private'?'private':'tier-'+tierNum;
+    document.getElementById('hero-stripe').style.background = STRIPE_COLORS[stripeKey]||'';
+
+    const tierPill = league.type==='official'
+        ? '<span class="pill pill-official">🏆 Oficial</span>'
+        : league.type==='private'
+        ? '<span class="pill pill-private">🔒 Privatna</span>'
+        : '<span class="pill pill-tier'+tierNum+'">'+(TIER_LABELS[tierNum]||'')+'</span>';
+
+    document.getElementById('hero-pills').innerHTML =
+        tierPill
+        +'<span class="pill pill-cat">'+(CAT_LABELS[league.category||'misovito']||'')+'</span>'
+        +(league.schedule?'<span class="pill pill-schedule">'+(SCHED_LABELS[league.schedule]||'')+'</span>':'')
+        +(isMember?'<span class="pill" style="background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;">✅ Član</span>':'')
+        +(isFounder?'<span class="pill" style="background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;">👑 Osnivač</span>':'');
+
+    const memberCount = Object.keys(members).length;
+    document.getElementById('hs-members').textContent  = memberCount + (league.maxMembers>0?'/'+league.maxMembers:'');
+    document.getElementById('hs-quizzes').textContent  = (league.quizzes ? Object.keys(league.quizzes).length : 0);
+    document.getElementById('hs-entryfee').textContent = league.entryFee>0?(league.entryFee+' tok.'):'Besplatno';
+    document.getElementById('hs-quizfee').textContent  = league.quizFee>0?(league.quizFee+' tok./kviz'):'Besplatno';
+}
+
+// ── TABS ──────────────────────────────────────────────
+function showTab(tab, el) {
+    ['leaderboard','quizzes','members','admin'].forEach(t => {
+        const el2 = document.getElementById('tab-'+t);
+        if (el2) el2.style.display = t===tab?'':'none';
+    });
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    el.classList.add('active');
+}
+
+// ── LEADERBOARD ───────────────────────────────────────
+function renderLeaderboard() {
+    const entries = Object.entries(leaderboard)
+        .map(([id,d])=>({id,...d}))
+        .sort((a,b)=>(b.points||0)-(a.points||0));
+
+    if (!entries.length) {
+        document.getElementById('lb-podium').innerHTML = '<div class="empty-msg">Ljestvica je prazna. Odigraj kviz!</div>';
+        document.getElementById('lb-full-list').innerHTML = '';
+        return;
+    }
+
+    // Podium
+    const top3 = entries.slice(0,3);
+    const order = [top3[1],top3[0],top3[2]];
+    const cls   = ['p2','p1','p3'];
+    const medals= ['🥈','🥇','🥉'];
+    let podHtml = '';
+    order.forEach((e,i) => {
+        if (!e) return;
+        const p = allPlayersMap[e.id]||{};
+        const photo = p.profilePhoto?'<img src="'+p.profilePhoto+'" style="width:100%;height:100%;object-fit:cover;">':'👤';
+        podHtml += '<div class="lb-col '+cls[i]+'">'
+            +'<div class="lb-avatar">'+photo+'</div>'
+            +'<div class="lb-nick">'+(p.nickname||p.firstName||'—')+(e.id===playerProfileId?'<span class="me-tag">TI</span>':'')+'</div>'
+            +'<div class="lb-pts">'+(e.points||0)+' bod.</div>'
+            +'<div class="lb-block">'+medals[i]+'</div>'
+            +'</div>';
+    });
+    document.getElementById('lb-podium').innerHTML = podHtml;
+
+    // Full list
+    let listHtml = '';
+    entries.forEach((e,i) => {
+        const p = allPlayersMap[e.id]||{};
+        const isMe = e.id===playerProfileId;
+        const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':null;
+        const photo = p.profilePhoto?'<img src="'+p.profilePhoto+'" style="width:100%;height:100%;object-fit:cover;">':'👤';
+        listHtml += '<div class="lb-row '+(isMe?'me':'')+'">'
+            +'<div class="lb-rank">'+(medal||(i+1))+'</div>'
+            +'<div class="lb-ava">'+photo+'</div>'
+            +'<div class="lb-rname">'+(p.nickname||p.firstName||'—')+(isMe?'<span class="me-tag">TI</span>':'')+'</div>'
+            +'<div style="text-align:right;">'
+            +'<div class="lb-rpts">'+(e.points||0)+' bod.</div>'
+            +'<div class="lb-rwins">🥇 '+(e.wins||0)+'</div>'
+            +'</div>'
+            +'</div>';
+    });
+    document.getElementById('lb-full-list').innerHTML = listHtml;
+
+    // My position banner
+    const myIdx = entries.findIndex(e=>e.id===playerProfileId);
+    if (myIdx>=3 && isMember) {
+        const myEntry = entries[myIdx];
+        document.getElementById('my-position-banner').style.display='';
+        document.getElementById('my-position-banner').innerHTML =
+            '<div style="background:linear-gradient(135deg,var(--brand-pale),var(--brand-light));border:2px solid var(--brand);border-radius:14px;padding:12px 15px;display:flex;align-items:center;gap:12px;">'
+            +'<div style="font-family:\'Metal Mania\',cursive;font-size:1.5rem;color:var(--brand);">#'+(myIdx+1)+'</div>'
+            +'<div style="flex:1;"><div style="font-size:.65rem;color:#9ca3af;text-transform:uppercase;font-weight:800;">Tvoja pozicija</div>'
+            +'<div style="font-family:\'Metal Mania\',cursive;font-size:.9rem;color:var(--brand-dark);">'+myNick+'</div></div>'
+            +'<div style="font-family:\'Metal Mania\',cursive;font-size:1rem;color:var(--brand);">'+(myEntry.points||0)+' bod.</div>'
+            +'</div>';
+    }
+}
+
+// ── QUIZZES ───────────────────────────────────────────
+function renderQuizzes() {
+    const raw = league.quizzes||{};
+    leagueQuizzes = Object.entries(raw).map(([id,q])=>({id,...q})).sort((a,b)=>(b.scheduledAt||0)-(a.scheduledAt||0));
+    document.getElementById('quizzes-count').textContent = leagueQuizzes.length;
+    if (!leagueQuizzes.length) {
+        document.getElementById('quizzes-list').innerHTML = '<div class="empty-msg">📅 Nema zakazanih kvizova</div>';
+        return;
+    }
+    const now = Date.now();
+    document.getElementById('quizzes-list').innerHTML = leagueQuizzes.map(q => {
+        const dt    = q.scheduledAt||0;
+        const isLive= q.isLive||false;
+        const isDone= q.isDone||(dt>0&&dt<now&&!isLive);
+        const dateStr = dt?new Date(dt).toLocaleString('hr-HR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+        const fee   = q.quizFee!=null?q.quizFee:(league.quizFee||0);
+        let statusBadge = isDone?'<span class="qi-status status-finished">✓ Gotovo</span>'
+            :isLive?'<span class="qi-status status-live">🔴 Uživo</span>'
+            :'<span class="qi-status status-upcoming">⏰ Uskoro</span>';
+        return '<div class="quiz-item fade-up">'
+            +'<div class="qi-head">'
+            +'<div class="qi-icon">🎮</div>'
+            +'<div class="qi-info">'
+            +'<div class="qi-name">'+(q.name||'Kviz')+'</div>'
+            +'<div class="qi-sub">📅 '+dateStr+(q.quizId?'<br>→ Linkedan kviz: '+q.quizId:'')+'</div>'
+            +'</div>'
+            +'<div class="qi-right">'
+            +statusBadge
+            +'<div class="qi-fee">'+(fee>0?'🪙 '+fee+' tok.':'Besplatno')+'</div>'
+            +(isLive&&isMember?'<button class="btn-play" onclick="window.location.href=\'player.html\'">▶ Igraj</button>':'')
+            +'</div>'
+            +'</div>'
+            +'</div>';
+    }).join('');
+}
+
+// ── MEMBERS ───────────────────────────────────────────
+function renderMembers() {
+    const list = Object.entries(members).map(([id,m])=>({id,...m}));
+    document.getElementById('members-count').textContent = list.length;
+    if (!list.length) { document.getElementById('members-list').innerHTML = '<div class="empty-msg">Nema članova</div>'; return; }
+    document.getElementById('members-list').innerHTML = list.map(m => {
+        const p = allPlayersMap[m.id]||{};
+        const isFounderRow = m.id===league.founderId;
+        const isMe = m.id===playerProfileId;
+        const photo = p.profilePhoto?'<img src="'+p.profilePhoto+'" style="width:100%;height:100%;object-fit:cover;">':'👤';
+        return '<div class="member-row '+(isFounderRow?'founder-row':'')+' fade-up">'
+            +'<div class="mem-ava">'+photo+'</div>'
+            +'<div class="mem-name">'+(p.nickname||p.firstName||'—')+(isMe?'<span style="font-size:.55rem;background:var(--brand);color:white;border-radius:7px;padding:1px 5px;margin-left:4px;font-family:\'Tillana\',sans-serif;font-weight:800;">TI</span>':'')+'</div>'
+            +(isFounderRow?'<span class="mem-badge badge-founder">👑 Osnivač</span>':'<span class="mem-badge badge-member">✅ Član</span>')
+            +(isFounder&&!isFounderRow?'<button class="founder-btn" onclick="removeMember(\''+m.id+'\')">Ukloni</button>':'')
+            +'</div>';
+    }).join('');
+}
+
+// ── ADMIN ─────────────────────────────────────────────
+function renderAdmin() {
+    // Revenue
+    database.ref('leagueRevenue/'+leagueId).once('value').then(snap => {
+        const raw = snap.val()||{};
+        const logs = Object.values(raw);
+        const totalIn = logs.reduce((s,l)=>s+(l.amount||0),0);
+        const myEarn  = logs.reduce((s,l)=>s+(l.founderCut||0),0);
+        if (logs.length>0) {
+            document.getElementById('rev-section').style.display='';
+            document.getElementById('rev-content').innerHTML =
+                '<div class="rev-row"><span>Ukupno naplaćeno ulaza</span><span class="rev-val">'+totalIn+' tok.</span></div>'
+                +'<div class="rev-row"><span>Tvoja zarada (30%)</span><span class="rev-val">'+myEarn+' tok.</span></div>'
+                +'<div class="rev-row"><span>Broj transakcija</span><span class="rev-val">'+logs.length+'</span></div>';
+        }
+    });
+
+    // Pending requests
+    database.ref('leagueMemberships').once('value').then(snap => {
+        const all = snap.val()||{};
+        const pending = Object.entries(all)
+            .filter(([pid,lgs])=>lgs[leagueId]==='pending')
+            .map(([pid])=>({playerId:pid,...(allPlayersMap[pid]||{})}));
+        if (pending.length>0) {
+            document.getElementById('pending-section').style.display='';
+            document.getElementById('pending-count-admin').textContent = pending.length;
+            document.getElementById('pending-list-admin').innerHTML = pending.map(p =>
+                '<div class="pending-approval">'
+                +'<div class="pa-name">'+(p.nickname||p.firstName||'Nepoznat igrač')+'</div>'
+                +'<button class="pa-btn pa-accept" onclick="approveRequest(\''+p.playerId+'\')">✅ Prihvati</button>'
+                +'<button class="pa-btn pa-reject" onclick="rejectRequest(\''+p.playerId+'\')">✕ Odbij</button>'
+                +'</div>'
+            ).join('');
+        }
+    });
+}
+
+function approveRequest(playerId) {
+    database.ref('leagueMemberships/'+playerId+'/'+leagueId).set('member');
+    database.ref('leagues/'+leagueId+'/members/'+playerId).set({ joinedAt:Date.now() });
+    database.ref('notifications/'+playerId).push({ message:'✅ Zahtjev za ligu "'+league.name+'" prihvaćen!', timestamp:Date.now(), read:false });
+    showToast('✅ Igrač prihvaćen');
+}
+
+function rejectRequest(playerId) {
+    database.ref('leagueMemberships/'+playerId+'/'+leagueId).remove();
+    showToast('Zahtjev odbijen');
+}
+
+function removeMember(memberId) {
+    if (!confirm('Ukloniti ovog igrača iz lige?')) return;
+    database.ref('leagues/'+leagueId+'/members/'+memberId).remove();
+    database.ref('leagueMemberships/'+memberId+'/'+leagueId).remove();
+    showToast('Igrač uklonjen');
+}
+
+function openAddQuizModal() { document.getElementById('add-quiz-modal').classList.add('open'); }
+
+function addQuizToLeague() {
+    const name = document.getElementById('aq-name').value.trim();
+    const dt   = document.getElementById('aq-datetime').value;
+    if (!name||!dt) { showToast('❌ Popuni naziv i datum'); return; }
+    const fee  = parseInt(document.getElementById('aq-fee').value)||0;
+    database.ref('leagues/'+leagueId+'/quizzes').push({
+        name, scheduledAt:new Date(dt).getTime(),
+        quizFee:fee, createdAt:Date.now(), isDone:false, isLive:false
+    });
+    document.getElementById('add-quiz-modal').classList.remove('open');
+    showToast('✅ Kviz dodan');
+}
+
+function openInviteModal() { document.getElementById('invite-modal').classList.add('open'); }
+
+function searchModalInvite() {
+    const q = document.getElementById('modal-invite-search').value.trim().toLowerCase();
+    if (!q) return;
+    const res = Object.entries(allPlayersMap)
+        .filter(([id,p])=>!members[id]&&((p.nickname||'')+(p.firstName||'')).toLowerCase().includes(q))
+        .slice(0,8);
+    document.getElementById('modal-invite-results').innerHTML = res.length
+        ? res.map(([id,p])=>'<div style="display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--brand-light);cursor:pointer;" onclick="sendInvite(\''+id+'\',\''+((p.nickname||p.firstName||'?').replace(/'/g,"\\'")+'\')">\'')
+            +'<div style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--brand-light);background:var(--brand-pale);display:flex;align-items:center;justify-content:center;font-size:.8rem;overflow:hidden;">'
+            +(p.profilePhoto?'<img src="'+p.profilePhoto+'" style="width:100%;height:100%;object-fit:cover;">':'👤')+'</div>'
+            +'<div style="flex:1;font-family:\'Metal Mania\',cursive;font-size:.8rem;color:var(--brand-dark);">'+(p.nickname||p.firstName||'—')+'</div>'
+            +'<span style="font-size:.65rem;color:var(--brand);">Pozovi →</span>'
+            +'</div>').join('')
+        : '<div style="text-align:center;padding:12px;color:#9ca3af;font-size:.8rem;">Nema rezultata</div>';
+}
+
+function sendInvite(pid, name) {
+    database.ref('leagueInvites/'+pid+'/'+leagueId).set({ from:myNick, leagueName:league.name, sentAt:Date.now() });
+    database.ref('notifications/'+pid).push({ message:'🏅 '+myNick+' te poziva u ligu "'+league.name+'"!', timestamp:Date.now(), read:false });
+    showToast('📨 Pozivnica poslana: '+name);
+}
+
+function togglePublic() {
+    const newVal = !league.isPublic;
+    database.ref('leagues/'+leagueId+'/isPublic').set(newVal);
+    showToast(newVal?'🌍 Liga je sada javna':'🔒 Liga je sada privatna');
+}
+
+function confirmDelete() {
+    if (!confirm('Sigurno brišeš ligu "'+league.name+'"? Ova radnja je nepovratna.')) return;
+    database.ref('leagues/'+leagueId).remove();
+    database.ref('leagueRevenue/'+leagueId).remove();
+    // Remove all memberships
+    Object.keys(members).forEach(pid => database.ref('leagueMemberships/'+pid+'/'+leagueId).remove());
+    window.location.href='leagues.html';
+}
+
+function showToast(msg) {
+    const t=document.getElementById('toast');
+    t.textContent=msg;t.style.display='block';
+    setTimeout(()=>t.style.display='none',2800);
+}
+</script>
+</body>
+</html>
