@@ -47,67 +47,82 @@
         .hero-name{font-family:'Metal Mania',cursive;font-size:1.4rem;color:var(--brand);line-height:1.1;margin-bottom:4px;}
         .hero-nick{font-size:.82rem;color:#9ca3af;margin-bottom:7px;}
         .hero-pills{display:flex;flex-wrap:wrap;gap:5px;}
-        .h-pill{font-size:.62rem;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;}
+        .h-pill{font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:10px;white-space:nowrap;}
         .hp-rank{background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;}
         .hp-member{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;}
         .hp-wins{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
         .hp-rating{background:#fef3c7;color:#92400e;border:1px solid #fde68a;}
 
         /* EDIT mode toggle */
-        .btn-edit-toggle{padding:7px 16px;border-radius:11px;border:1.5px solid var(--brand-light);background:var(--brand-pale);font-family:'Metal Mania',cursive;font-size:.72rem;color:var(--brand-dark);cursor:pointer;transition:all .18s;white-space:nowrap;}
+        .btn-edit-toggle{padding:8px 18px;border-radius:11px;border:1.5px solid var(--brand-light);background:var(--brand-pale);font-family:'Metal Mania',cursive;font-size:.82rem;color:var(--brand-dark);cursor:pointer;transition:all .18s;white-space:nowrap;}
         .btn-edit-toggle:hover,.btn-edit-toggle.active{background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border-color:var(--brand);}
 
         /* hero bio */
-        .hero-bio{font-size:.82rem;color:#6b7280;line-height:1.6;margin-top:10px;padding-top:10px;border-top:1px solid var(--brand-light);}
+        .hero-bio{font-size:.92rem;color:#6b7280;line-height:1.6;margin-top:10px;padding-top:10px;border-top:1px solid var(--brand-light);}
         .hero-bio.placeholder{color:#c4c4c4;font-style:italic;}
-        .bio-edit{display:none;width:100%;border:2px solid var(--brand-light);border-radius:12px;padding:9px 12px;font-family:'Tillana',sans-serif;font-size:.88rem;color:#1f2937;background:var(--brand-pale);resize:vertical;min-height:70px;}
+        .bio-edit{display:none;width:100%;border:2px solid var(--brand-light);border-radius:12px;padding:10px 13px;font-family:'Tillana',sans-serif;font-size:.95rem;color:#1f2937;background:var(--brand-pale);resize:vertical;min-height:70px;}
         .bio-edit:focus{border-color:var(--brand);outline:none;background:white;}
 
         /* member since */
-        .member-since{font-size:.65rem;color:#9ca3af;margin-top:8px;display:flex;align-items:center;gap:5px;}
+        .member-since{font-size:.78rem;color:#9ca3af;margin-top:8px;display:flex;align-items:center;gap:5px;}
 
         /* ── STATS GRID ── */
         .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
         .stat-box{background:linear-gradient(135deg,var(--brand-pale),var(--brand-light));border:1.5px solid var(--brand);border-radius:13px;padding:12px 6px 13px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.07);position:relative;overflow:hidden;}
         .stat-box::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--brand-light),var(--brand),var(--brand-dark));}
-        .sv{font-family:'Metal Mania',cursive;font-size:1.25rem;color:var(--brand);line-height:1;margin-bottom:2px;}
-        .sl{font-family:'Metal Mania',cursive;font-size:.6rem;color:var(--brand-dark);}
+        .sv{font-family:'Metal Mania',cursive;font-size:1.3rem;color:var(--brand);line-height:1;margin-bottom:2px;}
+        .sl{font-family:'Metal Mania',cursive;font-size:.7rem;color:var(--brand-dark);}
 
         /* ── TABS ── */
         .tab-bar{background:white;border-radius:16px;box-shadow:var(--card-shadow);padding:6px;display:flex;gap:4px;margin-bottom:12px;overflow-x:auto;}
         .tab-bar::-webkit-scrollbar{display:none;}
-        .tab-btn{flex:1;min-width:fit-content;padding:9px 8px;border-radius:11px;border:none;background:transparent;font-family:'Metal Mania',cursive;font-size:.68rem;color:var(--brand-dark);cursor:pointer;transition:all .18s;text-align:center;white-space:nowrap;}
+        .tab-btn{flex:1;min-width:fit-content;padding:10px 8px;border-radius:11px;border:none;background:transparent;font-family:'Metal Mania',cursive;font-size:.78rem;color:var(--brand-dark);cursor:pointer;transition:all .18s;text-align:center;white-space:nowrap;}
         .tab-btn.active{background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;box-shadow:0 3px 10px rgba(183,88,0,.25);}
 
         /* ── CARD ── */
         .card{background:white;border-radius:16px;box-shadow:var(--card-shadow);padding:16px;margin-bottom:10px;}
-        .section-title{font-family:'Metal Mania',cursive;font-size:1rem;color:var(--brand);margin-bottom:10px;padding-bottom:7px;border-bottom:3px solid var(--brand);display:flex;align-items:center;gap:7px;}
+        .section-title{font-family:'Metal Mania',cursive;font-size:1.05rem;color:var(--brand);margin-bottom:10px;padding-bottom:7px;border-bottom:3px solid var(--brand);display:flex;align-items:center;gap:7px;}
 
         /* ── EDIT FORM ── */
         .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
         .form-row.full{grid-template-columns:1fr;}
-        label{display:block;font-family:'Metal Mania',cursive;font-size:.7rem;color:var(--brand-dark);margin-bottom:4px;}
+        label{display:block;font-family:'Metal Mania',cursive;font-size:.8rem;color:var(--brand-dark);margin-bottom:5px;}
         label .req{color:var(--red);margin-left:2px;}
-        .fi{width:100%;border:2px solid var(--brand-light);border-radius:11px;padding:9px 12px;font-family:'Tillana',sans-serif;font-size:.88rem;color:#1f2937;background:var(--brand-pale);transition:border-color .2s;}
+        .fi{width:100%;border:2px solid var(--brand-light);border-radius:11px;padding:10px 13px;font-family:'Tillana',sans-serif;font-size:.95rem;color:#1f2937;background:var(--brand-pale);transition:border-color .2s;}
         .fi:focus{border-color:var(--brand);outline:none;background:white;}
         .fi:disabled{opacity:.5;cursor:not-allowed;}
-        .fi-hint{font-size:.64rem;color:#9ca3af;margin-top:3px;}
-        .btn-save{padding:11px 28px;background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border:none;border-radius:12px;font-family:'Metal Mania',cursive;font-size:.85rem;cursor:pointer;box-shadow:0 4px 12px rgba(183,88,0,.28);transition:all .2s;}
+        .fi-hint{font-size:.75rem;color:#9ca3af;margin-top:4px;}
+        .btn-save{padding:12px 28px;background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border:none;border-radius:12px;font-family:'Metal Mania',cursive;font-size:.9rem;cursor:pointer;box-shadow:0 4px 12px rgba(183,88,0,.28);transition:all .2s;}
         .btn-save:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(183,88,0,.35);}
-        .btn-cancel{padding:11px 18px;background:transparent;border:1.5px solid var(--brand-light);color:#9ca3af;border-radius:12px;font-family:'Metal Mania',cursive;font-size:.85rem;cursor:pointer;transition:all .18s;}
+        .btn-cancel{padding:12px 18px;background:transparent;border:1.5px solid var(--brand-light);color:#9ca3af;border-radius:12px;font-family:'Metal Mania',cursive;font-size:.9rem;cursor:pointer;transition:all .18s;}
         .btn-cancel:hover{border-color:var(--brand);color:var(--brand);}
 
+        /* ── NICKNAME CHANGE ── */
+        .nick-box{background:linear-gradient(135deg,#fef9c3,#fef3c7);border:2px solid #fde68a;border-radius:14px;padding:14px 16px;margin-bottom:10px;}
+        .nick-box-title{font-family:'Metal Mania',cursive;font-size:.9rem;color:#92400e;margin-bottom:4px;display:flex;align-items:center;gap:7px;}
+        .nick-current{font-family:'Metal Mania',cursive;font-size:1.2rem;color:var(--brand);margin-bottom:10px;}
+        .nick-cost-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border-radius:20px;padding:3px 12px;font-family:'Metal Mania',cursive;font-size:.78rem;}
+        .nick-free-badge{display:inline-flex;align-items:center;gap:5px;background:#d1fae5;color:#065f46;border:1.5px solid #a7f3d0;border-radius:20px;padding:3px 12px;font-family:'Metal Mania',cursive;font-size:.78rem;}
+        .nick-input-row{display:flex;gap:8px;margin-top:10px;align-items:flex-end;}
+        .nick-input-row .fi{flex:1;margin-bottom:0;}
+        .btn-nick-change{padding:10px 16px;background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border:none;border-radius:11px;font-family:'Metal Mania',cursive;font-size:.8rem;cursor:pointer;white-space:nowrap;transition:all .18s;flex-shrink:0;}
+        .btn-nick-change:hover{opacity:.88;}
+        .btn-nick-change:disabled{opacity:.45;cursor:not-allowed;}
+        .nick-history{margin-top:10px;padding-top:10px;border-top:1px dashed #fde68a;}
+        .nick-history-title{font-family:'Metal Mania',cursive;font-size:.72rem;color:#92400e;margin-bottom:5px;}
+        .nick-hist-item{font-size:.78rem;color:#9ca3af;padding:3px 0;display:flex;justify-content:space-between;}
+
         /* ── RESULTS LIST ── */
-        .result-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--brand-light);}
+        .result-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--brand-light);}
         .result-row:last-child{border-bottom:none;}
-        .rr-rank{font-family:'Metal Mania',cursive;font-size:1.1rem;min-width:34px;text-align:center;}
+        .rr-rank{font-family:'Metal Mania',cursive;font-size:1.15rem;min-width:34px;text-align:center;}
         .rr-info{flex:1;min-width:0;}
-        .rr-name{font-family:'Metal Mania',cursive;font-size:.85rem;color:var(--brand-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-        .rr-sub{font-size:.66rem;color:#9ca3af;margin-top:2px;}
+        .rr-name{font-family:'Metal Mania',cursive;font-size:.9rem;color:var(--brand-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .rr-sub{font-size:.76rem;color:#9ca3af;margin-top:2px;}
         .rr-right{text-align:right;flex-shrink:0;}
-        .rr-earn{font-family:'Metal Mania',cursive;font-size:.9rem;color:var(--green);}
-        .rr-rating{font-size:.68rem;color:#f59e0b;margin-top:2px;}
-        .load-more{width:100%;padding:9px;background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:10px;font-family:'Metal Mania',cursive;font-size:.72rem;color:var(--brand-dark);cursor:pointer;margin-top:8px;transition:all .18s;}
+        .rr-earn{font-family:'Metal Mania',cursive;font-size:.95rem;color:var(--green);}
+        .rr-rating{font-size:.76rem;color:#f59e0b;margin-top:2px;}
+        .load-more{width:100%;padding:10px;background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:10px;font-family:'Metal Mania',cursive;font-size:.8rem;color:var(--brand-dark);cursor:pointer;margin-top:8px;transition:all .18s;}
         .load-more:hover{background:var(--brand-light);border-color:var(--brand);}
 
         /* ── QUALIFICATIONS ── */
@@ -117,13 +132,13 @@
         .qual-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;padding-bottom:7px;}
         .qual-head.yes{border-bottom:1.5px solid #10b981;}
         .qual-head.no{border-bottom:1.5px solid #fca5a5;}
-        .qual-name{font-family:'Metal Mania',cursive;font-size:1rem;}
+        .qual-name{font-family:'Metal Mania',cursive;font-size:1.05rem;}
         .qual-name.yes{color:#065f46;}
         .qual-name.no{color:#991b1b;}
-        .qual-badge{border-radius:20px;padding:2px 12px;font-family:'Metal Mania',cursive;font-size:.72rem;}
+        .qual-badge{border-radius:20px;padding:3px 12px;font-family:'Metal Mania',cursive;font-size:.78rem;}
         .qb-yes{background:#10b981;color:white;}
         .qb-no{background:#fee2e2;color:#991b1b;border:1.5px solid #fca5a5;}
-        .qual-sub{font-size:.75rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;}
+        .qual-sub{font-size:.82rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;}
 
         /* ── ACHIEVEMENTS / BADGES ── */
         .badges-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
@@ -131,40 +146,40 @@
         .badge-item.earned{border-color:var(--brand);background:linear-gradient(135deg,var(--brand-pale),var(--brand-light));}
         .badge-item.locked{opacity:.4;filter:grayscale(1);}
         .badge-icon{font-size:1.6rem;margin-bottom:5px;}
-        .badge-name{font-family:'Metal Mania',cursive;font-size:.6rem;color:var(--brand-dark);line-height:1.2;}
+        .badge-name{font-family:'Metal Mania',cursive;font-size:.68rem;color:var(--brand-dark);line-height:1.2;}
         .badge-item.earned .badge-name{color:var(--brand);}
 
         /* ── LEAGUES MINI ── */
-        .league-mini-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--brand-light);}
+        .league-mini-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--brand-light);}
         .league-mini-row:last-child{border-bottom:none;}
-        .lmr-icon{width:36px;height:36px;border-radius:10px;background:var(--brand-pale);border:1.5px solid var(--brand-light);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
-        .lmr-name{flex:1;font-family:'Metal Mania',cursive;font-size:.82rem;color:var(--brand-dark);}
-        .lmr-pos{font-family:'Metal Mania',cursive;font-size:.9rem;color:var(--brand);}
+        .lmr-icon{width:38px;height:38px;border-radius:10px;background:var(--brand-pale);border:1.5px solid var(--brand-light);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+        .lmr-name{flex:1;font-family:'Metal Mania',cursive;font-size:.88rem;color:var(--brand-dark);}
+        .lmr-pos{font-family:'Metal Mania',cursive;font-size:.95rem;color:var(--brand);}
 
         /* ── SECURITY ── */
-        .security-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--brand-light);gap:10px;}
+        .security-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--brand-light);gap:10px;}
         .security-row:last-child{border-bottom:none;}
         .sr-info{flex:1;}
-        .sr-label{font-family:'Metal Mania',cursive;font-size:.8rem;color:var(--brand-dark);margin-bottom:2px;}
-        .sr-sub{font-size:.68rem;color:#9ca3af;}
-        .sr-btn{padding:6px 14px;border-radius:9px;border:1.5px solid var(--brand-light);background:var(--brand-pale);font-family:'Metal Mania',cursive;font-size:.68rem;color:var(--brand-dark);cursor:pointer;white-space:nowrap;transition:all .18s;flex-shrink:0;}
+        .sr-label{font-family:'Metal Mania',cursive;font-size:.88rem;color:var(--brand-dark);margin-bottom:3px;}
+        .sr-sub{font-size:.76rem;color:#9ca3af;}
+        .sr-btn{padding:7px 15px;border-radius:9px;border:1.5px solid var(--brand-light);background:var(--brand-pale);font-family:'Metal Mania',cursive;font-size:.76rem;color:var(--brand-dark);cursor:pointer;white-space:nowrap;transition:all .18s;flex-shrink:0;}
         .sr-btn:hover{border-color:var(--brand);background:var(--brand-light);}
         .sr-btn.danger{border-color:#fca5a5;color:#991b1b;}
         .sr-btn.danger:hover{background:#fee2e2;}
 
         /* DANGER ZONE */
         .danger-zone{background:linear-gradient(135deg,#fff1f2,#fee2e2);border:2px solid #fca5a5;border-radius:14px;padding:14px 16px;}
-        .dz-title{font-family:'Metal Mania',cursive;font-size:.85rem;color:#991b1b;margin-bottom:8px;}
-        .dz-sub{font-size:.75rem;color:#9ca3af;margin-bottom:10px;line-height:1.5;}
+        .dz-title{font-family:'Metal Mania',cursive;font-size:.92rem;color:#991b1b;margin-bottom:8px;}
+        .dz-sub{font-size:.82rem;color:#9ca3af;margin-bottom:10px;line-height:1.5;}
 
         /* EMPTY / SPINNER */
-        .empty{text-align:center;color:#9ca3af;padding:22px 10px;font-size:.85rem;}
+        .empty{text-align:center;color:#9ca3af;padding:22px 10px;font-size:.9rem;}
         @keyframes spin{to{transform:rotate(360deg)}}
         .spinner{width:24px;height:24px;border:3px solid var(--brand-light);border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px;}
         @keyframes fadeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
         .fu{animation:fadeUp .22s ease;}
 
-        #toast{position:fixed;bottom:24px;right:16px;z-index:999;background:#1f2937;color:white;border-radius:12px;padding:10px 16px;font-size:.82rem;display:none;box-shadow:0 8px 24px rgba(0,0,0,.25);}
+        #toast{position:fixed;bottom:24px;right:16px;z-index:999;background:#1f2937;color:white;border-radius:12px;padding:11px 17px;font-size:.88rem;display:none;box-shadow:0 8px 24px rgba(0,0,0,.25);}
 
         @keyframes spin-sm{to{transform:rotate(360deg)}}
         .spin-sm{width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin-sm .5s linear infinite;display:inline-block;vertical-align:middle;margin-right:5px;}
@@ -175,6 +190,8 @@
             .badges-grid{grid-template-columns:repeat(3,1fr);}
             .hero-top{flex-direction:column;align-items:center;text-align:center;}
             .hero-pills{justify-content:center;}
+            .nick-input-row{flex-direction:column;}
+            .btn-nick-change{width:100%;}
         }
     </style>
 </head>
@@ -239,6 +256,37 @@
          TAB: OSOBNI PODACI
     ══════════════════════════════════════════ -->
     <div id="tab-info">
+
+        <!-- ── NADIMAK KARTICA ── -->
+        <div class="card fu">
+            <div class="section-title">🦊 Nadimak u Igri</div>
+            <div class="nick-box">
+                <div class="nick-box-title">✏️ Trenutni nadimak</div>
+                <div class="nick-current" id="nick-display">—</div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;">
+                    <span style="font-size:.85rem;color:#92400e;font-weight:600;">Cijena promjene:</span>
+                    <span id="nick-cost-el"><span class="nick-cost-badge" id="nick-cost-badge">⏳ Učitavam...</span></span>
+                    <span style="font-size:.8rem;color:#9ca3af;margin-left:auto;">Tvoji tokeni: <strong id="nick-tokens">—</strong> 🪙</span>
+                </div>
+                <div class="nick-input-row">
+                    <div style="flex:1;">
+                        <label>Novi nadimak</label>
+                        <input type="text" class="fi" id="nick-new"
+                               placeholder="min 3, max 24 znaka" maxlength="24"
+                               oninput="validateNick(this.value)">
+                        <div class="fi-hint" id="nick-hint">3–24 znaka · slova, brojevi, točka, crtica</div>
+                    </div>
+                    <button class="btn-nick-change" id="nick-btn" onclick="changeNickname()" disabled>
+                        🦊 Promijeni
+                    </button>
+                </div>
+            </div>
+            <div id="nick-history" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #fde68a;">
+                <div style="font-family:'Metal Mania',cursive;font-size:.78rem;color:#92400e;margin-bottom:5px;">📋 Prethodna imena:</div>
+                <div id="nick-history-list"></div>
+            </div>
+        </div>
+
         <div class="card fu">
             <div class="section-title">👤 Osobni Podaci</div>
             <div class="form-row">
@@ -253,12 +301,17 @@
             </div>
             <div class="form-row">
                 <div>
-                    <label>Nadimak</label>
-                    <input type="text" class="fi" id="f-nickname" placeholder="Kako te zovemo u igri" maxlength="24">
-                </div>
-                <div>
                     <label>Datum rođenja</label>
                     <input type="date" class="fi" id="f-birthdate">
+                </div>
+                <div>
+                    <label>Spol</label>
+                    <select class="fi" id="f-gender">
+                        <option value="">— Odaberi —</option>
+                        <option value="m">Muško</option>
+                        <option value="f">Žensko</option>
+                        <option value="o">Ostalo</option>
+                    </select>
                 </div>
             </div>
             <div class="form-row full">
@@ -527,6 +580,7 @@ window.onload = function() {
         renderStats();
         fillForm();
         renderSecurity();
+        loadNicknameSection();
     });
 };
 
@@ -587,7 +641,6 @@ function fillForm() {
     const pr = p.preferences || {};
     setVal('f-firstName', p.firstName);
     setVal('f-lastName',  p.lastName);
-    setVal('f-nickname',  p.nickname);
     setVal('f-email',     p.email);
     setVal('f-birthdate', p.birthDate);
     setVal('f-city',      p.city);
@@ -606,7 +659,7 @@ function fillForm() {
 }
 
 function setFieldsEnabled(on) {
-    ['f-firstName','f-lastName','f-nickname','f-email','f-birthdate','f-city','f-country',
+    ['f-firstName','f-lastName','f-email','f-birthdate','f-city','f-country',
      'f-phone','f-gender','f-iban','f-ibanName','f-bank'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.disabled = !on;
@@ -650,7 +703,6 @@ function saveProfile() {
     const updates = {
         firstName:  firstName,
         lastName:   document.getElementById('f-lastName').value.trim() || null,
-        nickname:   document.getElementById('f-nickname').value.trim() || null,
         email:      email,
         birthDate:  document.getElementById('f-birthdate').value || null,
         city:       document.getElementById('f-city').value.trim() || null,
@@ -704,6 +756,139 @@ function previewAvatar(input) {
         });
     };
     reader.readAsDataURL(file);
+}
+
+// ── NICKNAME PROMJENA ─────────────────────────────────
+let nickChangeCost = 0;  // tokeni, admin određuje via settings/nicknameCost
+
+function loadNicknameSection() {
+    const p  = playerProfile;
+    const s  = p.stats || {};
+
+    // Prikaži trenutni nadimak
+    document.getElementById('nick-display').textContent = p.nickname || p.firstName || '—';
+    document.getElementById('nick-tokens').textContent  = s.tokenBalance || 0;
+
+    // Dohvati cijenu od admina  (settings/nicknameCost)
+    database.ref('settings/nicknameCost').once('value').then(snap => {
+        nickChangeCost = snap.exists() ? Number(snap.val()) : 0;
+        const costEl   = document.getElementById('nick-cost-badge');
+        const tokens   = s.tokenBalance || 0;
+
+        if (nickChangeCost === 0) {
+            costEl.outerHTML = '<span class="nick-free-badge" id="nick-cost-badge">✅ Besplatno</span>';
+        } else {
+            const canAfford = tokens >= nickChangeCost;
+            document.getElementById('nick-cost-badge').textContent = nickChangeCost + ' 🪙';
+            document.getElementById('nick-cost-badge').style.background =
+                canAfford ? 'linear-gradient(135deg,var(--brand-light),var(--brand))'
+                          : 'linear-gradient(135deg,#fee2e2,#ef4444)';
+            if (!canAfford) {
+                document.getElementById('nick-hint').textContent =
+                    '❌ Nemaš dovoljno tokena (trebaš ' + nickChangeCost + ', imaš ' + tokens + ')';
+                document.getElementById('nick-hint').style.color = '#ef4444';
+            }
+        }
+    });
+
+    // Prethodna imena
+    const history = p.nicknameHistory || {};
+    const entries = Object.entries(history).sort((a,b)=>b[1].changedAt-a[1].changedAt);
+    if (entries.length) {
+        document.getElementById('nick-history').style.display = '';
+        document.getElementById('nick-history-list').innerHTML = entries.slice(0,5).map(([,v]) => {
+            const dt = new Date(v.changedAt).toLocaleDateString('hr-HR',{day:'2-digit',month:'2-digit',year:'numeric'});
+            return '<div style="font-size:.82rem;color:#9ca3af;padding:3px 0;display:flex;justify-content:space-between;">'
+                + '<span>' + esc(v.oldNick) + '</span><span>' + dt + '</span></div>';
+        }).join('');
+    }
+}
+
+function validateNick(val) {
+    const btn  = document.getElementById('nick-btn');
+    const hint = document.getElementById('nick-hint');
+    const ok   = /^[a-zA-Z0-9._-]{3,24}$/.test(val);
+    const same = val.trim() === (playerProfile.nickname || '');
+    const canAfford = (playerProfile.stats?.tokenBalance || 0) >= nickChangeCost || nickChangeCost === 0;
+
+    if (!val) {
+        hint.textContent = '3–24 znaka · slova, brojevi, točka, crtica';
+        hint.style.color = '#9ca3af';
+    } else if (same) {
+        hint.textContent = 'To je već tvoj nadimak';
+        hint.style.color = '#d97706';
+    } else if (!ok) {
+        hint.textContent = '⚠️ Samo slova, brojevi, točka i crtica (3–24 znaka)';
+        hint.style.color = '#ef4444';
+    } else if (!canAfford) {
+        hint.textContent = '❌ Nemaš dovoljno tokena';
+        hint.style.color = '#ef4444';
+    } else {
+        hint.textContent = '✅ Nadimak je ispravan';
+        hint.style.color = '#059669';
+    }
+    btn.disabled = !ok || same || !canAfford;
+}
+
+function changeNickname() {
+    const newNick  = document.getElementById('nick-new').value.trim();
+    const oldNick  = playerProfile.nickname || playerProfile.firstName || '';
+    const tokens   = playerProfile.stats?.tokenBalance || 0;
+
+    if (!newNick || newNick === oldNick) return;
+    if (nickChangeCost > 0 && tokens < nickChangeCost) {
+        toast('❌ Nemaš dovoljno tokena!'); return;
+    }
+
+    const confirmMsg = nickChangeCost > 0
+        ? 'Promjena nadimka košta ' + nickChangeCost + ' 🪙 tokena.\n\n"' + oldNick + '" → "' + newNick + '"\n\nPotvrđuješ?'
+        : 'Promijeni nadimak iz "' + oldNick + '" u "' + newNick + '"?';
+    if (!confirm(confirmMsg)) return;
+
+    const btn = document.getElementById('nick-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin-sm"></span>Mijenjam...';
+
+    const newBalance = tokens - nickChangeCost;
+    const histKey    = Date.now().toString();
+
+    const updates = {};
+    updates['playerProfiles/' + playerProfileId + '/nickname']                        = newNick;
+    updates['playerProfiles/' + playerProfileId + '/nicknameHistory/' + histKey]      = { oldNick, changedAt: Date.now() };
+    if (nickChangeCost > 0) {
+        updates['playerProfiles/' + playerProfileId + '/stats/tokenBalance']          = newBalance;
+        // Token transaction log
+        updates['tokenTransactions/' + playerProfileId + '/' + histKey] = {
+            type: 'nicknameChange', amount: -nickChangeCost,
+            description: 'Promjena nadimka: ' + oldNick + ' → ' + newNick,
+            balanceAfter: newBalance, timestamp: Date.now()
+        };
+    }
+
+    database.ref().update(updates).then(() => {
+        // Update session
+        playerProfile.nickname = newNick;
+        if (nickChangeCost > 0) {
+            if (!playerProfile.stats) playerProfile.stats = {};
+            playerProfile.stats.tokenBalance = newBalance;
+        }
+        if (!playerProfile.nicknameHistory) playerProfile.nicknameHistory = {};
+        playerProfile.nicknameHistory[histKey] = { oldNick, changedAt: Date.now() };
+        sessionStorage.setItem('playerProfile', JSON.stringify(playerProfile));
+
+        renderHero();
+        renderStats();
+        loadNicknameSection();
+
+        document.getElementById('nick-new').value = '';
+        btn.disabled = false;
+        btn.innerHTML = '🦊 Promijeni';
+        toast('✅ Nadimak promijenjen u "' + newNick + '"' + (nickChangeCost > 0 ? ' · -' + nickChangeCost + ' 🪙' : ''));
+    }).catch(err => {
+        toast('❌ Greška: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '🦊 Promijeni';
+    });
 }
 
 // ── RESULTS ───────────────────────────────────────────
