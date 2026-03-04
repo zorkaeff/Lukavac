@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<!-- Lukavac Shop v1.0 -->
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop - Lukavac</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tillana:wght@400;500;600;700;800&family=Metal+Mania&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand:#b75800; --brand-dark:#632705; --brand-mid:#d97706;
+            --brand-light:#ffd995; --brand-pale:#fffff1;
+            --green:#10b981; --red:#ef4444;
+            --card-shadow:0 4px 18px rgba(0,0,0,.13);
+        }
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{background:linear-gradient(135deg,#e8c99a 0%,#b87333 50%,#e8c99a 100%);font-family:'Tillana','Segoe UI',sans-serif;min-height:100vh;}
+
+        /* ── TOPBAR ── */
+        .topbar{background:white;box-shadow:0 2px 14px rgba(0,0,0,.12);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;gap:10px;}
+        .topbar-left{display:flex;align-items:center;gap:10px;}
+        .topbar-title{font-family:'Metal Mania',cursive;font-size:1.3rem;color:var(--brand);}
+        .token-display{background:linear-gradient(135deg,var(--brand-pale),var(--brand-light));border:1.5px solid var(--brand);border-radius:20px;padding:5px 14px;display:flex;align-items:center;gap:5px;font-family:'Metal Mania',cursive;font-size:.88rem;color:var(--brand-dark);}
+        .token-amount{color:var(--brand);font-size:1rem;}
+        .topbar-back{background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:10px;padding:7px 15px;font-size:.85rem;font-weight:700;color:var(--brand);cursor:pointer;text-decoration:none;white-space:nowrap;}
+        .topbar-back:hover{background:var(--brand-light);}
+
+        .page-wrap{max-width:800px;margin:0 auto;padding:14px 12px 70px;}
+
+        /* ── HERO BANNER ── */
+        .shop-hero{background:white;border-radius:20px;box-shadow:var(--card-shadow);overflow:hidden;margin-bottom:14px;}
+        .sh-stripe{height:6px;background:linear-gradient(90deg,var(--brand-light),var(--brand),var(--brand-dark));}
+        .sh-body{padding:20px 18px 18px;display:flex;gap:16px;align-items:center;}
+        .sh-icon{font-size:3.4rem;flex-shrink:0;}
+        .sh-title{font-family:'Metal Mania',cursive;font-size:1.5rem;color:var(--brand);margin-bottom:5px;line-height:1.1;}
+        .sh-sub{font-size:.88rem;color:#6b7280;line-height:1.6;}
+        .sh-token-note{display:inline-flex;align-items:center;gap:5px;margin-top:8px;background:linear-gradient(135deg,var(--brand-pale),var(--brand-light));border:1.5px solid var(--brand);border-radius:20px;padding:4px 14px;font-family:'Metal Mania',cursive;font-size:.75rem;color:var(--brand-dark);}
+
+        /* ── FILTER BAR ── */
+        .filter-bar{background:white;border-radius:16px;box-shadow:var(--card-shadow);padding:10px 12px;margin-bottom:12px;display:flex;gap:6px;overflow-x:auto;}
+        .filter-bar::-webkit-scrollbar{display:none;}
+        .fchip{padding:7px 16px;border-radius:20px;border:1.5px solid var(--brand-light);background:var(--brand-pale);font-family:'Metal Mania',cursive;font-size:.76rem;color:var(--brand-dark);cursor:pointer;white-space:nowrap;transition:all .18s;flex-shrink:0;}
+        .fchip:hover{border-color:var(--brand);background:var(--brand-light);}
+        .fchip.active{background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border-color:var(--brand);box-shadow:0 3px 10px rgba(183,88,0,.22);}
+        .fchip.token-chip.active{background:linear-gradient(135deg,#fef9c3,#ca8a04);border-color:#ca8a04;}
+
+        /* ── SECTION TITLE ── */
+        .sec-title{font-family:'Metal Mania',cursive;font-size:1.05rem;color:var(--brand);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+        .sec-title::after{content:'';flex:1;height:2px;background:linear-gradient(90deg,var(--brand-light),transparent);}
+
+        /* ── PRODUCT GRID ── */
+        .prod-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:18px;}
+        @media(min-width:560px){.prod-grid{grid-template-columns:repeat(3,1fr);}}
+
+        /* ── PRODUCT CARD ── */
+        .prod-card{background:white;border-radius:16px;box-shadow:var(--card-shadow);overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s;position:relative;}
+        .prod-card:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(183,88,0,.22);}
+        .prod-card.sold-out{opacity:.7;}
+        .prod-img-wrap{background:linear-gradient(135deg,var(--brand-pale),#ffe8b8);height:150px;display:flex;align-items:center;justify-content:center;font-size:4rem;position:relative;overflow:hidden;}
+        .prod-img-wrap img{width:100%;height:100%;object-fit:cover;}
+        .prod-img-wrap .prod-emoji{font-size:3.8rem;line-height:1;}
+        .prod-badge{position:absolute;top:8px;left:8px;border-radius:8px;padding:2px 9px;font-family:'Metal Mania',cursive;font-size:.65rem;color:white;}
+        .pb-new{background:var(--green);}
+        .pb-hot{background:var(--red);}
+        .pb-sale{background:var(--brand);}
+        .pb-token{background:linear-gradient(135deg,#d97706,#92400e);}
+        .pb-sold{background:#6b7280;}
+        .prod-body{padding:11px 12px 13px;}
+        .prod-name{font-family:'Metal Mania',cursive;font-size:.92rem;color:var(--brand-dark);margin-bottom:3px;line-height:1.2;}
+        .prod-desc{font-size:.76rem;color:#9ca3af;margin-bottom:9px;line-height:1.4;min-height:32px;}
+        .prod-price-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;}
+        .prod-price{font-family:'Metal Mania',cursive;font-size:1.05rem;color:var(--brand);}
+        .prod-price.token-price{color:#ca8a04;}
+        .prod-price .orig{font-size:.72rem;color:#9ca3af;text-decoration:line-through;margin-right:4px;}
+        .btn-buy{padding:6px 14px;border:none;border-radius:9px;font-family:'Metal Mania',cursive;font-size:.72rem;cursor:pointer;white-space:nowrap;transition:all .18s;}
+        .btn-buy.eur{background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;box-shadow:0 2px 8px rgba(183,88,0,.25);}
+        .btn-buy.tok{background:linear-gradient(135deg,#fef9c3,#ca8a04);color:white;}
+        .btn-buy:hover{transform:translateY(-1px);opacity:.9;}
+        .btn-buy.disabled{background:#e5e7eb;color:#9ca3af;cursor:not-allowed;transform:none;box-shadow:none;}
+
+        /* ── REWARD EXCHANGE SECTION ── */
+        .reward-section{background:white;border-radius:18px;box-shadow:var(--card-shadow);overflow:hidden;margin-bottom:14px;}
+        .rs-header{background:linear-gradient(135deg,var(--brand-pale),var(--brand-light));padding:14px 16px;border-bottom:2px solid var(--brand-light);}
+        .rs-title{font-family:'Metal Mania',cursive;font-size:1.05rem;color:var(--brand);margin-bottom:3px;display:flex;align-items:center;gap:7px;}
+        .rs-sub{font-size:.82rem;color:#9ca3af;}
+        .rs-body{padding:14px 16px;}
+        .exchange-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+        @media(min-width:520px){.exchange-grid{grid-template-columns:repeat(3,1fr);}}
+
+        .exch-card{border:2px solid var(--brand-light);border-radius:14px;padding:13px 10px;text-align:center;cursor:pointer;transition:all .2s;background:linear-gradient(135deg,var(--brand-pale),white);}
+        .exch-card:hover{border-color:var(--brand);background:linear-gradient(135deg,var(--brand-light),white);transform:translateY(-2px);}
+        .exch-icon{font-size:2.2rem;margin-bottom:6px;}
+        .exch-name{font-family:'Metal Mania',cursive;font-size:.8rem;color:var(--brand-dark);margin-bottom:4px;line-height:1.2;}
+        .exch-tokens{background:linear-gradient(135deg,#fef9c3,#fde68a);border:1.5px solid #fcd34d;border-radius:20px;padding:2px 10px;font-family:'Metal Mania',cursive;font-size:.72rem;color:#92400e;display:inline-block;margin-bottom:4px;}
+        .exch-val{font-size:.7rem;color:#9ca3af;}
+
+        /* ── CART / ORDER MODAL ── */
+        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:none;align-items:flex-end;justify-content:center;}
+        .modal-overlay.open{display:flex;}
+        .modal{background:white;border-radius:24px 24px 0 0;padding:0;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;animation:slideUp .28s ease;}
+        @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+        .modal-handle{width:40px;height:4px;background:#e5e7eb;border-radius:4px;margin:12px auto 0;}
+        .modal-head{padding:14px 18px 12px;border-bottom:2px solid var(--brand-light);}
+        .modal-title{font-family:'Metal Mania',cursive;font-size:1.1rem;color:var(--brand);}
+        .modal-body{padding:16px 18px;}
+        .modal-img{background:linear-gradient(135deg,var(--brand-pale),#ffe8b8);height:180px;display:flex;align-items:center;justify-content:center;font-size:5rem;border-radius:14px;margin-bottom:14px;}
+        .modal-prod-name{font-family:'Metal Mania',cursive;font-size:1.15rem;color:var(--brand-dark);margin-bottom:5px;}
+        .modal-prod-desc{font-size:.85rem;color:#6b7280;line-height:1.6;margin-bottom:12px;}
+        .modal-price-box{background:linear-gradient(135deg,var(--brand-pale),var(--brand-light));border:2px solid var(--brand);border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+        .modal-price{font-family:'Metal Mania',cursive;font-size:1.3rem;color:var(--brand);}
+        .modal-price.tok{color:#ca8a04;}
+
+        /* SIZE PICKER */
+        .size-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+        .size-btn{border:2px solid var(--brand-light);border-radius:9px;padding:7px 14px;font-family:'Metal Mania',cursive;font-size:.78rem;color:var(--brand-dark);cursor:pointer;background:var(--brand-pale);transition:all .15s;}
+        .size-btn:hover{border-color:var(--brand);}
+        .size-btn.sel{border-color:var(--brand);background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;}
+        .size-btn.na{opacity:.35;cursor:not-allowed;}
+
+        /* QTY */
+        .qty-row{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+        .qty-btn{width:36px;height:36px;border:2px solid var(--brand-light);border-radius:10px;background:var(--brand-pale);font-family:'Metal Mania',cursive;font-size:1.1rem;color:var(--brand-dark);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+        .qty-btn:hover{border-color:var(--brand);background:var(--brand-light);}
+        .qty-val{font-family:'Metal Mania',cursive;font-size:1.2rem;color:var(--brand);min-width:30px;text-align:center;}
+
+        /* ADDRESS */
+        .addr-field{width:100%;border:2px solid var(--brand-light);border-radius:11px;padding:10px 13px;font-family:'Tillana',sans-serif;font-size:.92rem;color:#1f2937;background:var(--brand-pale);margin-bottom:8px;}
+        .addr-field:focus{border-color:var(--brand);outline:none;background:white;}
+        .addr-label{font-family:'Metal Mania',cursive;font-size:.78rem;color:var(--brand-dark);margin-bottom:5px;display:block;}
+
+        .btn-confirm{width:100%;padding:14px;background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border:none;border-radius:13px;font-family:'Metal Mania',cursive;font-size:1rem;cursor:pointer;box-shadow:0 4px 14px rgba(183,88,0,.3);transition:all .2s;margin-top:4px;}
+        .btn-confirm:hover{transform:translateY(-1px);box-shadow:0 7px 20px rgba(183,88,0,.4);}
+        .btn-confirm:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+        .btn-confirm.tok-confirm{background:linear-gradient(135deg,#fef9c3,#ca8a04);}
+        .btn-modal-close{width:100%;padding:10px;background:transparent;border:1.5px solid var(--brand-light);border-radius:12px;font-family:'Metal Mania',cursive;font-size:.82rem;color:#9ca3af;cursor:pointer;margin-top:8px;}
+
+        /* ── ORDER SUCCESS ── */
+        .order-success{display:none;text-align:center;padding:24px 18px;}
+        .os-icon{font-size:3.5rem;margin-bottom:10px;}
+        .os-title{font-family:'Metal Mania',cursive;font-size:1.25rem;color:#065f46;margin-bottom:8px;}
+        .os-sub{font-size:.85rem;color:#047857;line-height:1.65;margin-bottom:6px;}
+        .os-ref{font-family:'Metal Mania',cursive;font-size:.8rem;color:#9ca3af;margin-top:8px;}
+
+        /* ── MY ORDERS ── */
+        .order-row{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--brand-light);}
+        .order-row:last-child{border-bottom:none;}
+        .or-icon{width:44px;height:44px;background:linear-gradient(135deg,var(--brand-pale),#ffe8b8);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;}
+        .or-info{flex:1;min-width:0;}
+        .or-name{font-family:'Metal Mania',cursive;font-size:.88rem;color:var(--brand-dark);margin-bottom:2px;}
+        .or-meta{font-size:.74rem;color:#9ca3af;}
+        .or-status{border-radius:8px;padding:3px 10px;font-family:'Metal Mania',cursive;font-size:.68rem;flex-shrink:0;margin-top:2px;}
+        .ors-pending{background:#fef3c7;color:#92400e;border:1px solid #fde68a;}
+        .ors-processing{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;}
+        .ors-shipped{background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;}
+        .ors-delivered{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
+        .ors-exchanged{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
+
+        /* SPINNER / TOAST */
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .spin-sm{width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .5s linear infinite;display:inline-block;vertical-align:middle;margin-right:5px;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        .fu{animation:fadeUp .22s ease;}
+        #toast{position:fixed;bottom:24px;right:16px;z-index:999;background:#1f2937;color:white;border-radius:12px;padding:11px 17px;font-size:.88rem;display:none;box-shadow:0 8px 24px rgba(0,0,0,.25);}
+
+        /* TABS */
+        .tab-bar{background:white;border-radius:16px;box-shadow:var(--card-shadow);padding:6px;display:flex;gap:4px;margin-bottom:12px;}
+        .tab-btn{flex:1;padding:10px 6px;border-radius:11px;border:none;background:transparent;font-family:'Metal Mania',cursive;font-size:.78rem;color:var(--brand-dark);cursor:pointer;transition:all .18s;text-align:center;white-space:nowrap;}
+        .tab-btn.active{background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;box-shadow:0 3px 10px rgba(183,88,0,.25);}
+
+        .empty{text-align:center;color:#9ca3af;padding:28px 10px;font-size:.88rem;}
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="topbar-left">
+        <div class="topbar-title">🛒 SHOP</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <div class="token-display">
+            <span>🪙</span>
+            <span class="token-amount" id="topbar-tokens">—</span>
+            <span style="font-size:.7rem;">tokena</span>
+        </div>
+        <a href="dashboard.html" class="topbar-back">← Dashboard</a>
+    </div>
+</div>
+
+<div class="page-wrap">
+
+    <!-- HERO -->
+    <div class="shop-hero fu">
+        <div class="sh-stripe"></div>
+        <div class="sh-body">
+            <div class="sh-icon">🦊</div>
+            <div>
+                <div class="sh-title">Lukavac Shop</div>
+                <div class="sh-sub">Majice, kape i ekskluzivna Lukavac roba. Plati eurima ili zamijeni tokene zarađene igranjem!</div>
+                <div class="sh-token-note">🪙 Tokeni = nagrada za igranje kvizova</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tab-bar fu">
+        <button class="tab-btn active" onclick="showTab('shop',this)">🛍️ Sve Robe</button>
+        <button class="tab-btn" onclick="showTab('tokens',this)">🪙 Za Tokene</button>
+        <button class="tab-btn" onclick="showTab('orders',this)">📦 Moje Narudžbe</button>
+    </div>
+
+    <!-- ════════ TAB: SHOP ════════ -->
+    <div id="tab-shop">
+
+        <!-- FILTER -->
+        <div class="filter-bar fu">
+            <button class="fchip active" onclick="filterCat('sve',this)">🛍️ Sve</button>
+            <button class="fchip" onclick="filterCat('odjeća',this)">👕 Odjeća</button>
+            <button class="fchip" onclick="filterCat('kape',this)">🧢 Kape</button>
+            <button class="fchip" onclick="filterCat('pribor',this)">🎒 Pribor</button>
+            <button class="fchip" onclick="filterCat('digitalno',this)">⚡ Digitalno</button>
+            <button class="fchip token-chip" onclick="filterCat('tokeni',this)">🪙 Za Tokene</button>
+        </div>
+
+        <!-- PRODUCT GRID -->
+        <div class="sec-title fu">👕 Odjeća</div>
+        <div class="prod-grid fu" id="grid-odjeća"></div>
+
+        <div class="sec-title fu">🧢 Kape & Dodaci</div>
+        <div class="prod-grid fu" id="grid-kape"></div>
+
+        <div class="sec-title fu">🎒 Pribor & Ostalo</div>
+        <div class="prod-grid fu" id="grid-pribor"></div>
+
+        <div class="sec-title fu">⚡ Digitalne Nagrade</div>
+        <div class="prod-grid fu" id="grid-digitalno"></div>
+
+    </div>
+
+    <!-- ════════ TAB: ZA TOKENE ════════ -->
+    <div id="tab-tokens" style="display:none;">
+        <div class="reward-section fu">
+            <div class="rs-header">
+                <div class="rs-title">🪙 Zamijeni Tokene za Nagrade</div>
+                <div class="rs-sub">Tokeni koje zarađuješ igranjem možeš zamijeniti za prave nagrade</div>
+            </div>
+            <div class="rs-body">
+                <div style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,var(--brand-pale),var(--brand-light));border-radius:12px;padding:10px 14px;margin-bottom:14px;">
+                    <div style="font-family:'Metal Mania',cursive;font-size:.88rem;color:var(--brand-dark);">Tvoji tokeni:</div>
+                    <div style="font-family:'Metal Mania',cursive;font-size:1.4rem;color:var(--brand);" id="token-balance-big">— 🪙</div>
+                </div>
+                <div class="exchange-grid" id="exchange-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════ TAB: MOJE NARUDŽBE ════════ -->
+    <div id="tab-orders" style="display:none;">
+        <div style="background:white;border-radius:16px;box-shadow:var(--card-shadow);padding:16px;" class="fu">
+            <div style="font-family:'Metal Mania',cursive;font-size:1.05rem;color:var(--brand);margin-bottom:10px;padding-bottom:7px;border-bottom:3px solid var(--brand);">📦 Moje Narudžbe</div>
+            <div id="orders-list"><div class="empty">Učitavam narudžbe...</div></div>
+        </div>
+    </div>
+
+</div><!-- /page-wrap -->
+
+<!-- ════════ PRODUCT MODAL ════════ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+    <div class="modal" id="modal">
+        <div class="modal-handle"></div>
+        <!-- ORDER FORM VIEW -->
+        <div id="modal-order-view">
+            <div class="modal-head">
+                <div class="modal-title" id="modal-title">Produkt</div>
+            </div>
+            <div class="modal-body">
+                <div class="modal-img" id="modal-img-wrap">
+                    <span id="modal-emoji" style="font-size:5rem;">👕</span>
+                </div>
+                <div class="modal-prod-name" id="modal-prod-name">—</div>
+                <div class="modal-prod-desc" id="modal-prod-desc">—</div>
+                <div class="modal-price-box">
+                    <div>
+                        <div style="font-family:'Metal Mania',cursive;font-size:.72rem;color:#9ca3af;margin-bottom:2px;">CIJENA</div>
+                        <div class="modal-price" id="modal-price">—</div>
+                    </div>
+                    <div id="modal-stock-info" style="font-size:.78rem;color:#9ca3af;text-align:right;"></div>
+                </div>
+
+                <!-- SIZES -->
+                <div id="size-section" style="display:none;margin-bottom:12px;">
+                    <div class="addr-label">Veličina</div>
+                    <div class="size-row" id="size-row"></div>
+                </div>
+
+                <!-- QTY -->
+                <div style="margin-bottom:12px;">
+                    <div class="addr-label">Količina</div>
+                    <div class="qty-row">
+                        <button class="qty-btn" onclick="changeQty(-1)">−</button>
+                        <div class="qty-val" id="qty-val">1</div>
+                        <button class="qty-btn" onclick="changeQty(1)">+</button>
+                        <div style="font-size:.8rem;color:#9ca3af;margin-left:4px;" id="qty-total"></div>
+                    </div>
+                </div>
+
+                <!-- ADDRESS (for physical items) -->
+                <div id="addr-section">
+                    <div class="addr-label">Adresa dostave</div>
+                    <input type="text" class="addr-field" id="addr-name"    placeholder="Ime i Prezime">
+                    <input type="text" class="addr-field" id="addr-street"  placeholder="Ulica i kućni broj">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <input type="text" class="addr-field" id="addr-zip"  placeholder="Poštanski broj">
+                        <input type="text" class="addr-field" id="addr-city" placeholder="Grad">
+                    </div>
+                    <input type="text" class="addr-field" id="addr-country" value="Hrvatska">
+                    <input type="tel"  class="addr-field" id="addr-phone"   placeholder="Broj mobitela">
+                    <div style="font-size:.75rem;color:#9ca3af;margin-bottom:10px;">📋 Admin potvrđuje narudžbu i kontaktira te za plaćanje.</div>
+                </div>
+
+                <!-- TOKEN EXCHANGE NOTE -->
+                <div id="token-note" style="display:none;background:linear-gradient(135deg,#fef9c3,#fef3c7);border:1.5px solid #fde68a;border-radius:12px;padding:10px 13px;font-size:.82rem;color:#92400e;margin-bottom:12px;line-height:1.6;"></div>
+
+                <button class="btn-confirm" id="confirm-btn" onclick="confirmOrder()">
+                    ✅ Naruči
+                </button>
+                <button class="btn-modal-close" onclick="closeModalDirect()">Zatvori</button>
+            </div>
+        </div>
+        <!-- SUCCESS VIEW -->
+        <div class="order-success" id="modal-success-view">
+            <div class="os-icon">✅</div>
+            <div class="os-title" id="os-title">Narudžba Primljena!</div>
+            <div class="os-sub" id="os-sub">Admin je obaviješten i kontaktirat će te za detalje dostave i plaćanje.</div>
+            <div class="os-ref" id="os-ref"></div>
+            <button class="btn-modal-close" style="margin-top:16px;" onclick="closeModalDirect()">Zatvori</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const playerProfileId = sessionStorage.getItem('playerProfileId');
+const playerProfile   = JSON.parse(sessionStorage.getItem('playerProfile') || 'null');
+
+// ── CATALOGUE (Firebase-driven; fallback to hardcoded) ──────────
+// Admin može dodavati/mijenjati proizvode u Firebase: shop/products/{id}
+// Ovdje su defaultni proizvodi ako Firebase nema ništa
+
+const DEFAULT_PRODUCTS = [
+    // ODJEĆA
+    { id:'tshirt-black', name:'Lukavac Majica Crna', desc:'100% pamuk, unisex. Logo Lukavac liska sprijeda.', category:'odjeća', emoji:'👕', price:25, currency:'eur', sizes:['XS','S','M','L','XL','2XL'], badge:'hot', inStock:true },
+    { id:'tshirt-white', name:'Lukavac Majica Bijela', desc:'Premium pamuk. "Cunning" natpis na leđima.', category:'odjeća', emoji:'👕', price:25, currency:'eur', sizes:['S','M','L','XL','2XL'], badge:'new', inStock:true },
+    { id:'hoodie',       name:'Lukavac Hoodie', desc:'Topli hoodie s kapuljačom, vez logotipa. Zimska kolekcija.', category:'odjeća', emoji:'🧥', price:49, currency:'eur', sizes:['S','M','L','XL'], badge:'new', inStock:true },
+    { id:'tshirt-tok',   name:'Majica za Tokene', desc:'Ekskluzivno za pobjednike. Samo za zamjenu tokenima!', category:'odjeća', emoji:'🦊', price:300, currency:'token', badge:'token', inStock:true },
+    // KAPE
+    { id:'cap-black',    name:'Lukavac Kapa Crna', desc:'Snapback kapa, podesiva veličina. Vez liska sprijeda.', category:'kape', emoji:'🧢', price:18, currency:'eur', badge:'hot', inStock:true },
+    { id:'cap-orange',   name:'Lukavac Kapa Narančasta', desc:'Brand narančasta boja, bijeli vez. Limitirana serija.', category:'kape', emoji:'🧢', price:18, currency:'eur', badge:'sale', origPrice:22, inStock:true },
+    { id:'beanie',       name:'Zimska Kapa Lukavac', desc:'Topla zimska kapa s Lukavac ispisom.', category:'kape', emoji:'🎩', price:15, currency:'eur', inStock:true },
+    // PRIBOR
+    { id:'mug',          name:'Lukavac Šalica', desc:'Keramička šalica 350ml. "Lukavac jutro" natpis.', category:'pribor', emoji:'☕', price:14, currency:'eur', badge:'new', inStock:true },
+    { id:'tote',         name:'Lukavac Torba', desc:'Pamučna tote bag, 42×38cm. Liska u Lukavac narančastoj.', category:'pribor', emoji:'🛍️', price:12, currency:'eur', inStock:true },
+    { id:'stickers',     name:'Sticker Pack x5', desc:'5 vinilnih naljepnica s Lukavac karakterima. Vodootporne.', category:'pribor', emoji:'🦊', price:5, currency:'eur', inStock:true },
+    { id:'notebook',     name:'Bilježnica Lukavac', desc:'A5 bilježnica, 80 listova, tvrdi uvez s logom.', category:'pribor', emoji:'📓', price:9, currency:'eur', inStock:true },
+    { id:'bag-tok',      name:'Torba za Tokene', desc:'Premijum tote bag — zamijeni tokene i uštedi!', category:'pribor', emoji:'🎒', price:150, currency:'token', badge:'token', inStock:true },
+    // DIGITALNO
+    { id:'tok-100',      name:'+100 Bonusa Tokena', desc:'Instant kredit 100 tokena na tvoj račun.', category:'digitalno', emoji:'🪙', price:5, currency:'eur', inStock:true, digital:true },
+    { id:'tok-500',      name:'+500 Bonusa Tokena', desc:'Popust 20%! Instant kredit 500 tokena.', category:'digitalno', emoji:'💰', price:20, currency:'eur', badge:'sale', origPrice:25, inStock:true, digital:true },
+    { id:'vip-month',    name:'VIP Tjedan', desc:'7 dana VIP pristup: bez entry fee za kvizove.', category:'digitalno', emoji:'👑', price:15, currency:'eur', badge:'new', inStock:true, digital:true },
+    { id:'nick-free',    name:'Besplatna Promjena Nadimka', desc:'Jedan besplatni reset nadimka, vrijedi 30 dana.', category:'digitalno', emoji:'✏️', price:100, currency:'token', badge:'token', inStock:true, digital:true },
+];
+
+const EXCHANGE_REWARDS = [
+    { id:'ex-5eur',   icon:'💵', name:'5€ Gotovina',    tokens:200, value:'5€' },
+    { id:'ex-10eur',  icon:'💶', name:'10€ Gotovina',   tokens:380, value:'10€' },
+    { id:'ex-20eur',  icon:'💴', name:'20€ Gotovina',   tokens:700, value:'20€' },
+    { id:'ex-50eur',  icon:'💸', name:'50€ Gotovina',   tokens:1600, value:'50€' },
+    { id:'ex-tok100', icon:'🎟️', name:'Kviz Entry ×5',  tokens:80,  value:'5 ulaznica' },
+    { id:'ex-vip',    icon:'👑', name:'VIP Tjedan',      tokens:250, value:'7 dana' },
+];
+
+let products    = [...DEFAULT_PRODUCTS];
+let activeFilter= 'sve';
+let openProduct = null;
+let selSize     = null;
+let qty         = 1;
+
+// ── INIT ──────────────────────────────────────────────
+window.onload = function() {
+    loadTokenBalance();
+    // Try Firebase catalogue
+    database.ref('shop/products').once('value').then(snap => {
+        const fbProds = snap.val();
+        if (fbProds) {
+            const arr = Object.entries(fbProds)
+                .map(([id,d]) => ({id,...d}))
+                .filter(p => p.visible !== false);
+            if (arr.length) products = arr;
+        }
+        renderAll();
+    }).catch(() => renderAll());
+
+    // Prefill address from profile
+    if (playerProfile) {
+        const pi = playerProfile;
+        const pf = pi.paymentInfo || {};
+        setAddr('addr-name',    [pi.firstName, pi.lastName].filter(Boolean).join(' '));
+        setAddr('addr-phone',   pi.phone);
+        setAddr('addr-city',    pi.city);
+        setAddr('addr-country', pi.country || 'Hrvatska');
+    }
+};
+
+function loadTokenBalance() {
+    const tokens = playerProfile?.stats?.tokenBalance || 0;
+    document.getElementById('topbar-tokens').textContent = tokens;
+    document.getElementById('token-balance-big').textContent = tokens + ' 🪙';
+}
+
+// ── RENDER ALL ─────────────────────────────────────────
+function renderAll() {
+    renderGrid('odjeća');
+    renderGrid('kape');
+    renderGrid('pribor');
+    renderGrid('digitalno');
+    renderExchange();
+}
+
+function renderGrid(cat) {
+    const prods = products.filter(p => p.category === cat);
+    const el    = document.getElementById('grid-' + cat);
+    if (!prods.length) { el.innerHTML = ''; return; }
+    el.innerHTML = prods.map(p => productCard(p)).join('');
+}
+
+function productCard(p) {
+    const isTok   = p.currency === 'token';
+    const priceStr= isTok ? p.price + ' 🪙' : p.price + '€';
+    const origStr = p.origPrice ? (isTok ? p.origPrice + ' 🪙' : p.origPrice + '€') : '';
+    const BADGE   = { new:'pb-new', hot:'pb-hot', sale:'pb-sale', token:'pb-token' };
+    const userTok = playerProfile?.stats?.tokenBalance || 0;
+    const canAfford = !isTok || userTok >= p.price;
+
+    return '<div class="prod-card' + (p.inStock?'':' sold-out') + '" onclick="openModal(\'' + p.id + '\')">'
+        + '<div class="prod-img-wrap">'
+        + (p.imageUrl ? '<img src="' + esc(p.imageUrl) + '" alt="' + esc(p.name) + '">'
+                      : '<span class="prod-emoji">' + (p.emoji||'🛍️') + '</span>')
+        + (p.badge ? '<span class="prod-badge ' + (BADGE[p.badge]||'pb-new') + '">'
+            + (p.badge==='new'?'🆕 NOVO':p.badge==='hot'?'🔥 HOT':p.badge==='sale'?'🏷️ POPUST':'🪙 TOKENI') + '</span>' : '')
+        + (!p.inStock ? '<span class="prod-badge pb-sold" style="left:auto;right:8px;">RASPRODANO</span>' : '')
+        + '</div>'
+        + '<div class="prod-body">'
+        + '<div class="prod-name">' + esc(p.name) + '</div>'
+        + '<div class="prod-desc">' + esc(p.desc) + '</div>'
+        + '<div class="prod-price-row">'
+        + '<div class="prod-price' + (isTok?' token-price':'') + '">'
+        + (origStr ? '<span class="orig">' + origStr + '</span>' : '')
+        + priceStr + '</div>'
+        + (p.inStock
+            ? '<button class="btn-buy ' + (isTok?'tok':'eur') + (canAfford?'':' disabled') + '">'
+              + (isTok ? '🪙 Zamijeni' : '🛒 Kupi') + '</button>'
+            : '<span style="font-family:\'Metal Mania\',cursive;font-size:.7rem;color:#9ca3af;">Rasprodano</span>')
+        + '</div>'
+        + '</div>'
+        + '</div>';
+}
+
+// ── FILTER ────────────────────────────────────────────
+function filterCat(cat, el) {
+    activeFilter = cat;
+    document.querySelectorAll('.fchip').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    // Show/hide section groups
+    const CATS = ['odjeća','kape','pribor','digitalno'];
+    CATS.forEach(c => {
+        const sec  = document.getElementById('grid-' + c)?.previousElementSibling;
+        const grid = document.getElementById('grid-' + c);
+        if (!sec || !grid) return;
+        const visible = cat === 'sve' || cat === c || (cat === 'tokeni' && grid.querySelectorAll('.prod-card').length);
+        if (cat === 'tokeni') {
+            // Show only token products
+            grid.querySelectorAll('.prod-card').forEach(card => {
+                const pid = card.onclick?.toString().match(/'([^']+)'/)?.[1];
+                const p   = products.find(x => x.id === pid);
+                card.style.display = p && p.currency === 'token' ? '' : 'none';
+            });
+            const anyVis = [...grid.querySelectorAll('.prod-card')].some(c => c.style.display !== 'none');
+            sec.style.display  = anyVis ? '' : 'none';
+            grid.style.display = anyVis ? '' : 'none';
+        } else {
+            grid.querySelectorAll('.prod-card').forEach(card => card.style.display = '');
+            const show = cat === 'sve' || cat === c;
+            sec.style.display  = show ? '' : 'none';
+            grid.style.display = show ? '' : 'none';
+        }
+    });
+}
+
+// ── EXCHANGE GRID ─────────────────────────────────────
+function renderExchange() {
+    const el = document.getElementById('exchange-grid');
+    el.innerHTML = EXCHANGE_REWARDS.map(r =>
+        '<div class="exch-card" onclick="openExchange(\'' + r.id + '\')">'
+        + '<div class="exch-icon">' + r.icon + '</div>'
+        + '<div class="exch-name">' + r.name + '</div>'
+        + '<div class="exch-tokens">🪙 ' + r.tokens + ' tokena</div>'
+        + '<div class="exch-val">Vrijednost: ' + r.value + '</div>'
+        + '</div>'
+    ).join('');
+}
+
+function openExchange(id) {
+    const r = EXCHANGE_REWARDS.find(x => x.id === id);
+    if (!r) return;
+    const tokens = playerProfile?.stats?.tokenBalance || 0;
+    if (tokens < r.tokens) {
+        toast('❌ Nemaš dovoljno tokena. Trebaš ' + r.tokens + ', imaš ' + tokens + ' 🪙');
+        return;
+    }
+    openProductById('__exchange__', r);
+}
+
+// ── MODAL ─────────────────────────────────────────────
+function openModal(pid) {
+    const p = products.find(x => x.id === pid);
+    if (!p) return;
+    openProductById(pid, null, p);
+}
+
+function openProductById(pid, exch, prod) {
+    openProduct = prod || exch;
+    selSize     = null;
+    qty         = 1;
+
+    const isExch = !!exch;
+    const p      = prod;
+    const isTok  = p ? p.currency === 'token' : true;
+
+    // Reset views
+    document.getElementById('modal-order-view').style.display   = '';
+    document.getElementById('modal-success-view').style.display = 'none';
+
+    // Fill
+    document.getElementById('modal-title').textContent = isExch ? '🪙 Zamjena Tokena' : (p.name || '');
+    document.getElementById('modal-prod-name').textContent = isExch ? exch.name : p.name;
+    document.getElementById('modal-prod-desc').textContent = isExch
+        ? 'Zamijeni ' + exch.tokens + ' tokena za ' + exch.value + '. Admin obrađuje zahtjeve unutar 48h.'
+        : p.desc;
+    document.getElementById('modal-emoji').textContent = isExch ? exch.icon : (p.emoji || '🛍️');
+
+    const priceEl = document.getElementById('modal-price');
+    if (isExch) {
+        priceEl.textContent = exch.tokens + ' 🪙';
+        priceEl.className   = 'modal-price tok';
+    } else {
+        priceEl.textContent = p.currency === 'token' ? p.price + ' 🪙' : p.price + '€';
+        priceEl.className   = 'modal-price' + (p.currency === 'token' ? ' tok' : '');
+    }
+
+    document.getElementById('modal-stock-info').textContent = '';
+
+    // Sizes
+    const sizeSection = document.getElementById('size-section');
+    if (!isExch && p.sizes && p.sizes.length) {
+        sizeSection.style.display = '';
+        document.getElementById('size-row').innerHTML = p.sizes.map(s =>
+            '<button class="size-btn" onclick="pickSize(\'' + s + '\',this)">' + s + '</button>'
+        ).join('');
+    } else {
+        sizeSection.style.display = 'none';
+    }
+
+    // Address vs token note
+    document.getElementById('addr-section').style.display  = (!isExch && !p.digital) ? '' : 'none';
+    const tokenNote = document.getElementById('token-note');
+    if (isExch || isTok) {
+        const bal = playerProfile?.stats?.tokenBalance || 0;
+        const cost= isExch ? exch.tokens : p.price;
+        tokenNote.style.display = '';
+        tokenNote.innerHTML = '🪙 Tvoji tokeni: <strong>' + bal + '</strong><br>'
+            + 'Cijena: <strong>' + cost + ' 🪙</strong><br>'
+            + 'Ostatak: <strong>' + Math.max(0, bal - cost) + ' 🪙</strong>';
+    } else {
+        tokenNote.style.display = 'none';
+    }
+
+    // Qty
+    document.getElementById('qty-val').textContent = 1;
+    updateQtyTotal();
+
+    // Confirm btn
+    const cfm = document.getElementById('confirm-btn');
+    cfm.className = 'btn-confirm' + (isTok || isExch ? ' tok-confirm' : '');
+    cfm.textContent = isExch ? '🪙 Zamijeni Tokene'
+                     : (isTok ? '🪙 Potvrdi Zamjenu' : '🛒 Naruči');
+
+    document.getElementById('modal-overlay').classList.add('open');
+}
+
+function pickSize(s, el) {
+    selSize = s;
+    document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('sel'));
+    el.classList.add('sel');
+}
+
+function changeQty(d) {
+    qty = Math.max(1, Math.min(10, qty + d));
+    document.getElementById('qty-val').textContent = qty;
+    updateQtyTotal();
+}
+
+function updateQtyTotal() {
+    if (!openProduct) return;
+    const isExch = !openProduct.category; // exchange objects have no category
+    const isTok  = isExch || openProduct.currency === 'token';
+    const total  = openProduct.price * qty;
+    document.getElementById('qty-total').textContent =
+        qty > 1 ? ('= ' + total + (isTok ? ' 🪙' : '€')) : '';
+}
+
+function confirmOrder() {
+    const isExch   = openProduct && !openProduct.category;
+    const isTok    = isExch || (openProduct && openProduct.currency === 'token');
+    const isDigital= openProduct && openProduct.digital;
+    const p        = openProduct;
+
+    // Validation
+    if (!isExch && p.sizes && p.sizes.length && !selSize) {
+        toast('❌ Odaberi veličinu!'); return;
+    }
+    if (!isExch && !isDigital) {
+        const name = document.getElementById('addr-name').value.trim();
+        const street = document.getElementById('addr-street').value.trim();
+        const city   = document.getElementById('addr-city').value.trim();
+        if (!name || !street || !city) { toast('❌ Upiši adresu dostave!'); return; }
+    }
+
+    const tokens   = playerProfile?.stats?.tokenBalance || 0;
+    const cost     = p.price * qty;
+    if (isTok && tokens < cost) { toast('❌ Nemaš dovoljno tokena!'); return; }
+
+    const btn = document.getElementById('confirm-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin-sm"></span>Obradujem...';
+
+    const orderId  = database.ref('shop/orders').push().key;
+    const now      = Date.now();
+
+    const order = {
+        orderId,
+        playerId:   playerProfileId || 'guest',
+        playerName: playerProfile?.nickname || playerProfile?.firstName || 'Igrač',
+        playerEmail:playerProfile?.email || '',
+        type: isExch ? 'exchange' : (isTok ? 'token_product' : 'purchase'),
+        status: 'pending',
+        createdAt: now,
+    };
+
+    if (isExch) {
+        order.rewardId   = p.id;
+        order.rewardName = p.name;
+        order.tokensCost = p.tokens;
+        order.value      = p.value;
+    } else {
+        order.productId   = p.id;
+        order.productName = p.name;
+        order.qty         = qty;
+        order.size        = selSize || null;
+        order.currency    = p.currency;
+        order.price       = p.price;
+        order.totalPrice  = cost;
+        order.emoji       = p.emoji;
+        if (!isDigital) {
+            order.address = {
+                name:    document.getElementById('addr-name').value.trim(),
+                street:  document.getElementById('addr-street').value.trim(),
+                zip:     document.getElementById('addr-zip').value.trim(),
+                city:    document.getElementById('addr-city').value.trim(),
+                country: document.getElementById('addr-country').value.trim(),
+                phone:   document.getElementById('addr-phone').value.trim(),
+            };
+        }
+    }
+
+    const updates = {};
+    updates['shop/orders/' + orderId] = order;
+
+    // Deduct tokens
+    const tokenCost = isExch ? p.tokens : (isTok ? cost : 0);
+    if (tokenCost > 0) {
+        const newBalance = tokens - tokenCost;
+        updates['playerProfiles/' + playerProfileId + '/stats/tokenBalance'] = newBalance;
+        updates['tokenTransactions/' + playerProfileId + '/' + orderId] = {
+            type: isExch ? 'reward_exchange' : 'shop_purchase',
+            amount: -tokenCost, balanceAfter: newBalance,
+            description: isExch ? ('Zamjena: ' + p.name) : ('Kupnja: ' + p.name),
+            timestamp: now
+        };
+    }
+
+    // Admin notification
+    const adminNotifKey = database.ref('adminNotifications').push().key;
+    updates['adminNotifications/' + adminNotifKey] = {
+        type:'shop_order', orderId, from: order.playerName,
+        item: isExch ? p.name : p.name, currency: isExch ? 'token' : p.currency,
+        timestamp: now, read: false
+    };
+
+    database.ref().update(updates).then(() => {
+        // Update session tokens
+        if (tokenCost > 0 && playerProfile) {
+            if (!playerProfile.stats) playerProfile.stats = {};
+            playerProfile.stats.tokenBalance = (playerProfile.stats.tokenBalance || 0) - tokenCost;
+            sessionStorage.setItem('playerProfile', JSON.stringify(playerProfile));
+            document.getElementById('topbar-tokens').textContent = playerProfile.stats.tokenBalance;
+            document.getElementById('token-balance-big').textContent = playerProfile.stats.tokenBalance + ' 🪙';
+        }
+
+        // Show success
+        document.getElementById('modal-order-view').style.display   = 'none';
+        document.getElementById('modal-success-view').style.display = '';
+        document.getElementById('os-title').textContent = isExch ? '🪙 Zamjena Primljena!' : '✅ Narudžba Primljena!';
+        document.getElementById('os-sub').innerHTML = isExch
+            ? 'Admin obrađuje tvoj zahtjev za zamjenu tokena.<br>Isplata unutar <strong>48h</strong> na tvoj račun.'
+            : (isTok
+                ? 'Tvoji tokeni su oduzeti. Admin šalje predmet unutar <strong>3–5 radnih dana</strong>.'
+                : 'Admin je obaviješten i kontaktirat će te za detalje plaćanja.<br>Dostava unutar <strong>3–5 radnih dana</strong>.');
+        document.getElementById('os-ref').textContent = '📋 Ref: #' + orderId.slice(-8).toUpperCase();
+        btn.disabled  = false;
+    }).catch(err => {
+        toast('❌ Greška: ' + err.message);
+        btn.disabled  = false;
+        btn.innerHTML = '✅ Naruči';
+    });
+}
+
+function closeModal(e) {
+    if (e.target === document.getElementById('modal-overlay')) closeModalDirect();
+}
+function closeModalDirect() {
+    document.getElementById('modal-overlay').classList.remove('open');
+    openProduct = null; selSize = null; qty = 1;
+}
+
+// ── MY ORDERS ─────────────────────────────────────────
+function loadOrders() {
+    if (!playerProfileId) {
+        document.getElementById('orders-list').innerHTML = '<div class="empty">Nisi prijavljen</div>';
+        return;
+    }
+    database.ref('shop/orders')
+        .orderByChild('playerId').equalTo(playerProfileId)
+        .once('value').then(snap => {
+        const raw = snap.val() || {};
+        const orders = Object.entries(raw)
+            .map(([id,d]) => ({id,...d}))
+            .sort((a,b) => b.createdAt - a.createdAt);
+        if (!orders.length) {
+            document.getElementById('orders-list').innerHTML = '<div class="empty">Još nisi ništa naručio/la 🛒</div>';
+            return;
+        }
+        const STATUS_MAP = {
+            pending:'ors-pending', processing:'ors-processing',
+            shipped:'ors-shipped', delivered:'ors-delivered', exchanged:'ors-exchanged'
+        };
+        const STATUS_LABELS = {
+            pending:'⏳ Na čekanju', processing:'⚙️ U obradi',
+            shipped:'🚚 Poslano', delivered:'✅ Dostavljeno', exchanged:'✅ Obradjeno'
+        };
+        document.getElementById('orders-list').innerHTML = orders.map(o => {
+            const dt  = new Date(o.createdAt).toLocaleDateString('hr-HR',{day:'2-digit',month:'2-digit',year:'numeric'});
+            const sc  = STATUS_MAP[o.status] || 'ors-pending';
+            const sl  = STATUS_LABELS[o.status] || '⏳ Na čekanju';
+            const price = o.type === 'exchange' ? (o.tokensCost + ' 🪙')
+                        : o.currency === 'token' ? (o.totalPrice + ' 🪙')
+                        : (o.totalPrice + '€');
+            return '<div class="order-row fu">'
+                + '<div class="or-icon">' + (o.emoji || '📦') + '</div>'
+                + '<div class="or-info">'
+                + '<div class="or-name">' + esc(o.productName || o.rewardName || '—') + (o.size?' ('+o.size+')':'') + (o.qty>1?' ×'+o.qty:'') + '</div>'
+                + '<div class="or-meta">📅 ' + dt + ' · ' + price + '</div>'
+                + '</div>'
+                + '<span class="or-status ' + sc + '">' + sl + '</span>'
+                + '</div>';
+        }).join('');
+    });
+}
+
+// ── TABS ──────────────────────────────────────────────
+function showTab(tab, el) {
+    ['shop','tokens','orders'].forEach(t =>
+        document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none'
+    );
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    if (tab === 'orders') loadOrders();
+}
+
+// ── HELPERS ───────────────────────────────────────────
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function setAddr(id, val){ const el = document.getElementById(id); if(el && val) el.value = val; }
+function toast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 3000);
+}
+</script>
+</body>
+</html>
