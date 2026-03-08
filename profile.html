@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<!-- Profile v1.0 -->
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moj Profil - Lukavac</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tillana:wght@400;500;600;700;800&family=Metal+Mania&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand:#b75800; --brand-dark:#632705; --brand-mid:#d97706;
+            --brand-light:#ffd995; --brand-pale:#fffff1;
+            --green:#10b981; --green-dark:#059669; --green-pale:#f0fdf4;
+            --red:#ef4444; --card-shadow:0 4px 15px rgba(0,0,0,.13);
+        }
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{background:linear-gradient(135deg,#e8c99a 0%,#b87333 50%,#e8c99a 100%);font-family:'Tillana','Segoe UI',sans-serif;min-height:100vh;}
+
+        /* TOPBAR */
+        .topbar{background:white;box-shadow:0 2px 12px rgba(0,0,0,.12);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;gap:10px;}
+        .topbar-title{font-family:'Metal Mania',cursive;font-size:1.3rem;color:var(--brand);}
+        .topbar-back{background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:10px;padding:6px 14px;font-size:.82rem;font-weight:700;color:var(--brand);cursor:pointer;text-decoration:none;white-space:nowrap;}
+        .topbar-back:hover{background:var(--brand-light);}
+
+        /* LAYOUT */
+        .page-wrap{max-width:760px;margin:0 auto;padding:14px 12px 60px;}
+
+        /* ── PROFILE HERO ── */
+        .profile-hero{background:white;border-radius:20px;box-shadow:var(--card-shadow);overflow:hidden;margin-bottom:12px;}
+        .hero-stripe{height:7px;background:linear-gradient(90deg,var(--brand-light),var(--brand),var(--brand-dark));}
+        .hero-body{padding:20px 18px 16px;}
+        .hero-top{display:flex;gap:16px;align-items:flex-start;margin-bottom:16px;}
+
+        /* avatar */
+        .avatar-wrap{position:relative;flex-shrink:0;}
+        .avatar{width:88px;height:88px;border-radius:50%;border:3px solid var(--brand);object-fit:cover;display:block;background:#f3f4f6;}
+        .avatar-edit{position:absolute;bottom:0;right:0;width:28px;height:28px;background:var(--brand);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid white;font-size:.8rem;}
+        .avatar-edit:hover{background:var(--brand-dark);}
+        .avatar-edit input{display:none;}
+
+        /* hero info */
+        .hero-info{flex:1;min-width:0;}
+        .hero-name{font-family:'Metal Mania',cursive;font-size:1.4rem;color:var(--brand);line-height:1.1;margin-bottom:4px;}
+        .hero-nick{font-size:.82rem;color:#9ca3af;margin-bottom:7px;}
+        .hero-pills{display:flex;flex-wrap:wrap;gap:5px;}
+        .h-pill{font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:10px;white-space:nowrap;}
+        .hp-rank{background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;}
+        .hp-member{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;}
+        .hp-wins{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;}
+        .hp-rating{background:#fef3c7;color:#92400e;border:1px solid #fde68a;}
+
+        /* EDIT mode toggle */
+        .btn-edit-toggle{padding:8px 18px;border-radius:11px;border:1.5px solid var(--brand-light);background:var(--brand-pale);font-family:'Metal Mania',cursive;font-size:.82rem;color:var(--brand-dark);cursor:pointer;transition:all .18s;white-space:nowrap;}
+        .btn-edit-toggle:hover,.btn-edit-toggle.active{background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border-color:var(--brand);}
+
+        /* hero bio */
+        .hero-bio{font-size:.92rem;color:#6b7280;line-height:1.6;margin-top:10px;padding-top:10px;border-top:1px solid var(--brand-light);}
+        .hero-bio.placeholder{color:#c4c4c4;font-style:italic;}
+        .bio-edit{display:none;width:100%;border:2px solid var(--brand-light);border-radius:12px;padding:10px 13px;font-family:'Tillana',sans-serif;font-size:.95rem;color:#1f2937;background:var(--brand-pale);resize:vertical;min-height:70px;}
+        .bio-edit:focus{border-color:var(--brand);outline:none;background:white;}
+
+        /* member since */
+        .member-since{font-size:.78rem;color:#9ca3af;margin-top:8px;display:flex;align-items:center;gap:5px;}
+
+        /* ── STATS GRID ── */
+        .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+        .stat-box{background:linear-gradient(135deg,var(--brand-pale),var(--brand-light));border:1.5px solid var(--brand);border-radius:13px;padding:12px 6px 13px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.07);position:relative;overflow:hidden;}
+        .stat-box::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--brand-light),var(--brand),var(--brand-dark));}
+        .sv{font-family:'Metal Mania',cursive;font-size:1.5rem;color:var(--brand);line-height:1;margin-bottom:4px;}
+        .sl{font-family:'Metal Mania',cursive;font-size:.82rem;color:var(--brand-dark);}
+
+        /* ── TABS ── */
+        .tab-bar{background:white;border-radius:16px;box-shadow:var(--card-shadow);padding:6px;display:flex;gap:4px;margin-bottom:12px;overflow-x:auto;}
+        .tab-bar::-webkit-scrollbar{display:none;}
+        .tab-btn{flex:1;min-width:fit-content;padding:10px 8px;border-radius:11px;border:none;background:transparent;font-family:'Metal Mania',cursive;font-size:.85rem;color:var(--brand-dark);cursor:pointer;transition:all .18s;text-align:center;white-space:nowrap;}
+        .tab-btn.active{background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;box-shadow:0 3px 10px rgba(183,88,0,.25);}
+
+        /* ── CARD ── */
+        .card{background:white;border-radius:16px;box-shadow:var(--card-shadow);padding:16px;margin-bottom:10px;}
+        .section-title{font-family:'Metal Mania',cursive;font-size:1.05rem;color:var(--brand);margin-bottom:10px;padding-bottom:7px;border-bottom:3px solid var(--brand);display:flex;align-items:center;gap:7px;}
+
+        /* ── EDIT FORM ── */
+        .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+        .form-row.full{grid-template-columns:1fr;}
+        label{display:block;font-family:'Metal Mania',cursive;font-size:.8rem;color:var(--brand-dark);margin-bottom:5px;}
+        label .req{color:var(--red);margin-left:2px;}
+        .fi{width:100%;border:2px solid var(--brand-light);border-radius:11px;padding:10px 13px;font-family:'Tillana',sans-serif;font-size:.95rem;color:#1f2937;background:var(--brand-pale);transition:border-color .2s;}
+        .fi:focus{border-color:var(--brand);outline:none;background:white;}
+        .fi:disabled{opacity:.5;cursor:not-allowed;}
+        .fi-hint{font-size:.75rem;color:#9ca3af;margin-top:4px;}
+        .btn-save{padding:12px 28px;background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border:none;border-radius:12px;font-family:'Metal Mania',cursive;font-size:.9rem;cursor:pointer;box-shadow:0 4px 12px rgba(183,88,0,.28);transition:all .2s;}
+        .btn-save:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(183,88,0,.35);}
+        .btn-cancel{padding:12px 18px;background:transparent;border:1.5px solid var(--brand-light);color:#9ca3af;border-radius:12px;font-family:'Metal Mania',cursive;font-size:.9rem;cursor:pointer;transition:all .18s;}
+        .btn-cancel:hover{border-color:var(--brand);color:var(--brand);}
+
+        /* ── NICKNAME CHANGE ── */
+        .nick-box{background:linear-gradient(135deg,#fef9c3,#fef3c7);border:2px solid #fde68a;border-radius:14px;padding:14px 16px;margin-bottom:10px;}
+        .nick-box-title{font-family:'Metal Mania',cursive;font-size:.9rem;color:#92400e;margin-bottom:4px;display:flex;align-items:center;gap:7px;}
+        .nick-current{font-family:'Metal Mania',cursive;font-size:1.2rem;color:var(--brand);margin-bottom:10px;}
+        .nick-cost-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border-radius:20px;padding:3px 12px;font-family:'Metal Mania',cursive;font-size:.78rem;}
+        .nick-free-badge{display:inline-flex;align-items:center;gap:5px;background:#d1fae5;color:#065f46;border:1.5px solid #a7f3d0;border-radius:20px;padding:3px 12px;font-family:'Metal Mania',cursive;font-size:.78rem;}
+        .nick-input-row{display:flex;gap:8px;margin-top:10px;align-items:flex-end;}
+        .nick-input-row .fi{flex:1;margin-bottom:0;}
+        .btn-nick-change{padding:10px 16px;background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border:none;border-radius:11px;font-family:'Metal Mania',cursive;font-size:.8rem;cursor:pointer;white-space:nowrap;transition:all .18s;flex-shrink:0;}
+        .btn-nick-change:hover{opacity:.88;}
+        .btn-nick-change:disabled{opacity:.45;cursor:not-allowed;}
+        .nick-history{margin-top:10px;padding-top:10px;border-top:1px dashed #fde68a;}
+        .nick-history-title{font-family:'Metal Mania',cursive;font-size:.72rem;color:#92400e;margin-bottom:5px;}
+        .nick-hist-item{font-size:.78rem;color:#9ca3af;padding:3px 0;display:flex;justify-content:space-between;}
+
+        /* SORT BAR */
+        .sort-bar{background:white;border-radius:14px;box-shadow:var(--card-shadow);padding:9px 12px;margin-bottom:10px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+        .sort-label{font-family:'Metal Mania',cursive;font-size:.8rem;color:var(--brand-dark);white-space:nowrap;}
+        .sort-btn{padding:5px 13px;border-radius:20px;border:1.5px solid var(--brand-light);background:var(--brand-pale);font-family:'Metal Mania',cursive;font-size:.74rem;color:var(--brand-dark);cursor:pointer;white-space:nowrap;transition:all .18s;}
+        .sort-btn:hover{border-color:var(--brand);background:var(--brand-light);}
+        .sort-btn.active{background:linear-gradient(135deg,var(--brand-pale),var(--brand-light));border-color:var(--brand);}
+
+        /* READ-ONLY DATA ROWS */
+        .data-row{display:flex;align-items:center;padding:11px 0;border-bottom:1px solid var(--brand-light);gap:12px;}
+        .data-row:last-child{border-bottom:none;}
+        .data-icon{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--brand-pale),var(--brand-light));border:1px solid var(--brand-light);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+        .data-label{font-family:'Metal Mania',cursive;font-size:.78rem;color:#9ca3af;margin-bottom:2px;}
+        .data-value{font-family:'Metal Mania',cursive;font-size:.92rem;color:var(--brand-dark);}
+        .data-value.empty{color:#c4c4c4;font-style:italic;font-family:'Tillana',sans-serif;font-size:.85rem;}
+        .data-edit-btn{margin-left:auto;padding:5px 13px;border-radius:9px;border:1.5px solid var(--brand-light);background:var(--brand-pale);font-family:'Metal Mania',cursive;font-size:.72rem;color:var(--brand-dark);cursor:pointer;flex-shrink:0;transition:all .18s;}
+        .data-edit-btn:hover{border-color:var(--brand);background:var(--brand-light);}
+
+        /* INLINE EDIT */
+        .data-fi{width:100%;border:2px solid var(--brand);border-radius:9px;padding:7px 11px;font-family:'Tillana',sans-serif;font-size:.95rem;color:#1f2937;background:white;margin-top:4px;}
+        .result-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--brand-light);}
+        .result-row:last-child{border-bottom:none;}
+        .rr-rank{font-family:'Metal Mania',cursive;font-size:1.15rem;min-width:34px;text-align:center;}
+        .rr-info{flex:1;min-width:0;}
+        .rr-name{font-family:'Metal Mania',cursive;font-size:.9rem;color:var(--brand-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .rr-sub{font-size:.76rem;color:#9ca3af;margin-top:2px;}
+        .rr-right{text-align:right;flex-shrink:0;}
+        .rr-earn{font-family:'Metal Mania',cursive;font-size:.95rem;color:var(--green);}
+        .rr-rating{font-size:.76rem;color:#f59e0b;margin-top:2px;}
+        .load-more{width:100%;padding:10px;background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:10px;font-family:'Metal Mania',cursive;font-size:.8rem;color:var(--brand-dark);cursor:pointer;margin-top:8px;transition:all .18s;}
+        .load-more:hover{background:var(--brand-light);border-color:var(--brand);}
+
+        /* ── QUALIFICATIONS ── */
+        .qual-row{border-radius:13px;padding:13px 14px;margin-bottom:8px;border:2px solid transparent;}
+        .qual-row.yes{background:linear-gradient(135deg,#d1fae5,#a7f3d0);border-color:#10b981;}
+        .qual-row.no{background:linear-gradient(135deg,#fff1f2,#fee2e2);border-color:#fca5a5;}
+        .qual-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;padding-bottom:7px;}
+        .qual-head.yes{border-bottom:1.5px solid #10b981;}
+        .qual-head.no{border-bottom:1.5px solid #fca5a5;}
+        .qual-name{font-family:'Metal Mania',cursive;font-size:1.05rem;}
+        .qual-name.yes{color:#065f46;}
+        .qual-name.no{color:#991b1b;}
+        .qual-badge{border-radius:20px;padding:3px 12px;font-family:'Metal Mania',cursive;font-size:.78rem;}
+        .qb-yes{background:#10b981;color:white;}
+        .qb-no{background:#fee2e2;color:#991b1b;border:1.5px solid #fca5a5;}
+        .qual-sub{font-size:.82rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;}
+
+        /* ── ACHIEVEMENTS / BADGES ── */
+        .badges-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+        .badge-item{border-radius:13px;padding:12px 8px;text-align:center;border:1.5px solid var(--brand-light);background:var(--brand-pale);}
+        .badge-item.earned{border-color:var(--brand);background:linear-gradient(135deg,var(--brand-pale),var(--brand-light));}
+        .badge-item.locked{opacity:.4;filter:grayscale(1);}
+        .badge-icon{font-size:1.6rem;margin-bottom:5px;}
+        .badge-name{font-family:'Metal Mania',cursive;font-size:.68rem;color:var(--brand-dark);line-height:1.2;}
+        .badge-item.earned .badge-name{color:var(--brand);}
+
+        /* ── LEAGUES MINI ── */
+        .league-mini-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--brand-light);}
+        .league-mini-row:last-child{border-bottom:none;}
+        .lmr-icon{width:38px;height:38px;border-radius:10px;background:var(--brand-pale);border:1.5px solid var(--brand-light);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+        .lmr-name{flex:1;font-family:'Metal Mania',cursive;font-size:.88rem;color:var(--brand-dark);}
+        .lmr-pos{font-family:'Metal Mania',cursive;font-size:.95rem;color:var(--brand);}
+
+        /* ── SECURITY ── */
+        .security-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--brand-light);gap:10px;}
+        .security-row:last-child{border-bottom:none;}
+        .sr-info{flex:1;}
+        .sr-label{font-family:'Metal Mania',cursive;font-size:.88rem;color:var(--brand-dark);margin-bottom:3px;}
+        .sr-sub{font-size:.76rem;color:#9ca3af;}
+        .sr-btn{padding:7px 15px;border-radius:9px;border:1.5px solid var(--brand-light);background:var(--brand-pale);font-family:'Metal Mania',cursive;font-size:.76rem;color:var(--brand-dark);cursor:pointer;white-space:nowrap;transition:all .18s;flex-shrink:0;}
+        .sr-btn:hover{border-color:var(--brand);background:var(--brand-light);}
+        .sr-btn.danger{border-color:#fca5a5;color:#991b1b;}
+        .sr-btn.danger:hover{background:#fee2e2;}
+
+        /* DANGER ZONE */
+        .danger-zone{background:linear-gradient(135deg,#fff1f2,#fee2e2);border:2px solid #fca5a5;border-radius:14px;padding:14px 16px;}
+        .dz-title{font-family:'Metal Mania',cursive;font-size:.92rem;color:#991b1b;margin-bottom:8px;}
+        .dz-sub{font-size:.82rem;color:#9ca3af;margin-bottom:10px;line-height:1.5;}
+
+        /* EMPTY / SPINNER */
+        .empty{text-align:center;color:#9ca3af;padding:22px 10px;font-size:.9rem;}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .spinner{width:24px;height:24px;border:3px solid var(--brand-light);border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+        .fu{animation:fadeUp .22s ease;}
+
+        #toast{position:fixed;bottom:24px;right:16px;z-index:999;background:#1f2937;color:white;border-radius:12px;padding:11px 17px;font-size:.88rem;display:none;box-shadow:0 8px 24px rgba(0,0,0,.25);}
+
+        @keyframes spin-sm{to{transform:rotate(360deg)}}
+        .spin-sm{width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin-sm .5s linear infinite;display:inline-block;vertical-align:middle;margin-right:5px;}
+
+        @media(max-width:540px){
+            .stats-grid{grid-template-columns:repeat(2,1fr);}
+            .form-row{grid-template-columns:1fr;}
+            .badges-grid{grid-template-columns:repeat(3,1fr);}
+            .hero-top{flex-direction:column;align-items:center;text-align:center;}
+            .hero-pills{justify-content:center;}
+            .nick-input-row{flex-direction:column;}
+            .btn-nick-change{width:100%;}
+        }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="topbar-title">👤 MOJ PROFIL</div>
+    <a href="dashboard.html" class="topbar-back">← Dashboard</a>
+</div>
+
+<div class="page-wrap">
+
+    <!-- HERO -->
+    <div class="profile-hero fu">
+        <div class="hero-stripe"></div>
+        <div class="hero-body">
+            <div class="hero-top">
+                <div class="avatar-wrap">
+                    <img class="avatar" id="avatar-img" src="" alt="Profil"
+                         onerror="this.src='https://ui-avatars.com/api/?background=ffd995&color=b75800&name=?&bold=true&size=88'">
+                    <div class="avatar-edit" title="Promijeni sliku" onclick="document.getElementById('avatar-file').click()">
+                        ✏️
+                        <input type="file" id="avatar-file" accept="image/*" onchange="previewAvatar(this)">
+                    </div>
+                </div>
+                <div class="hero-info">
+                    <div class="hero-name" id="hero-name">—</div>
+                    <div class="hero-nick" id="hero-nick"></div>
+                    <div class="hero-pills" id="hero-pills"></div>
+                    <div class="member-since" id="member-since"></div>
+                </div>
+                <button class="btn-edit-toggle" id="edit-toggle-btn" style="display:none;" onclick="toggleEdit()">✏️ Uredi</button>
+            </div>
+            <div class="hero-bio" id="hero-bio">Nema opisa profila.</div>
+            <textarea class="bio-edit" id="bio-edit" maxlength="240" placeholder="Napiši nešto o sebi... (max 240 znakova)"></textarea>
+        </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+        <div class="stat-box"><div class="sv" id="s-rank">—</div><div class="sl">Rang</div></div>
+        <div class="stat-box" style="border-color:#a7f3d0;"><div class="sv" style="color:var(--green);" id="s-wins">—</div><div class="sl">Pobjede</div></div>
+        <div class="stat-box" style="border-color:#fde68a;"><div class="sv" style="color:#d97706;" id="s-tokens">—</div><div class="sl">Tokeni</div></div>
+        <div class="stat-box" style="border-color:#ddd6fe;"><div class="sv" style="color:#7c3aed;" id="s-rating">—</div><div class="sl">Ocjena</div></div>
+        <div class="stat-box"><div class="sv" id="s-games">—</div><div class="sl">Igara</div></div>
+        <div class="stat-box" style="border-color:#a7f3d0;"><div class="sv" style="color:var(--green);" id="s-earnings">—</div><div class="sl">Zarada</div></div>
+        <div class="stat-box" style="border-color:#fde68a;"><div class="sv" style="color:#d97706;" id="s-avg">—</div><div class="sl">Prosjek</div></div>
+        <div class="stat-box" style="border-color:#fca5a5;"><div class="sv" style="color:var(--red);" id="s-finals">—</div><div class="sl">Finala</div></div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tab-bar">
+        <button class="tab-btn active" onclick="showTab('results',this)">Rezultati</button>
+        <button class="tab-btn" onclick="showTab('quals',this)">Kvalifikacije</button>
+        <button class="tab-btn" onclick="showTab('badges',this)">Achievements</button>
+        <button class="tab-btn" onclick="showTab('leagues',this)">Lige</button>
+        <button class="tab-btn" onclick="showTab('info',this)">Podaci</button>
+        <button class="tab-btn" onclick="showTab('security',this)">Sigurnost</button>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         TAB: OSOBNI PODACI (na kraju)
+    ══════════════════════════════════════════ -->
+    <div id="tab-info" style="display:none;">
+
+        <!-- NADIMAK - posebna kartica -->
+        <div class="card fu">
+            <div class="section-title">🦊 Nadimak u Igri</div>
+            <div class="nick-box">
+                <div class="nick-box-title">✏️ Trenutni nadimak</div>
+                <div class="nick-current" id="nick-display">—</div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;">
+                    <span style="font-size:.85rem;color:#92400e;font-weight:600;">Cijena promjene:</span>
+                    <span id="nick-cost-el"><span class="nick-cost-badge" id="nick-cost-badge">⏳ Učitavam...</span></span>
+                    <span style="font-size:.8rem;color:#9ca3af;margin-left:auto;">Tvoji tokeni: <strong id="nick-tokens">—</strong> 🪙</span>
+                </div>
+                <div class="nick-input-row">
+                    <div style="flex:1;">
+                        <label>Novi nadimak</label>
+                        <input type="text" class="fi" id="nick-new"
+                               placeholder="min 3, max 24 znaka" maxlength="24"
+                               oninput="validateNick(this.value)">
+                        <div class="fi-hint" id="nick-hint">3–24 znaka · slova, brojevi, točka, crtica</div>
+                    </div>
+                    <button class="btn-nick-change" id="nick-btn" onclick="changeNickname()" disabled>
+                        🦊 Promijeni
+                    </button>
+                </div>
+            </div>
+            <div id="nick-history" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #fde68a;">
+                <div style="font-family:'Metal Mania',cursive;font-size:.78rem;color:#92400e;margin-bottom:5px;">📋 Prethodna imena:</div>
+                <div id="nick-history-list"></div>
+            </div>
+        </div>
+
+        <!-- READ-ONLY OSOBNI PODACI -->
+        <div class="card fu">
+            <div class="section-title">👤 Osobni Podaci
+                <button class="data-edit-btn" style="margin-left:auto;" onclick="toggleEdit()">✏️ Uredi</button>
+            </div>
+            <!-- READ VIEW -->
+            <div id="data-read-view">
+                <div class="data-row"><div class="data-icon">👤</div><div><div class="data-label">Ime i prezime</div><div class="data-value" id="dr-name">—</div></div></div>
+                <div class="data-row"><div class="data-icon">📧</div><div><div class="data-label">E-mail</div><div class="data-value" id="dr-email">—</div></div></div>
+                <div class="data-row"><div class="data-icon">🎂</div><div><div class="data-label">Datum rođenja</div><div class="data-value" id="dr-birthdate">—</div></div></div>
+                <div class="data-row"><div class="data-icon">🧑</div><div><div class="data-label">Spol</div><div class="data-value" id="dr-gender">—</div></div></div>
+                <div class="data-row"><div class="data-icon">📍</div><div><div class="data-label">Grad / Država</div><div class="data-value" id="dr-location">—</div></div></div>
+                <div class="data-row"><div class="data-icon">📱</div><div><div class="data-label">Mobitel</div><div class="data-value" id="dr-phone">—</div></div></div>
+            </div>
+            <!-- EDIT VIEW (skriveno dok ne klikneš Uredi) -->
+            <div id="data-edit-view" style="display:none;">
+                <div class="form-row">
+                    <div><label>Ime <span class="req">*</span></label><input type="text" class="fi" id="f-firstName" placeholder="Ime"></div>
+                    <div><label>Prezime</label><input type="text" class="fi" id="f-lastName" placeholder="Prezime"></div>
+                </div>
+                <div class="form-row">
+                    <div><label>Datum rođenja</label><input type="date" class="fi" id="f-birthdate"></div>
+                    <div><label>Spol</label>
+                        <select class="fi" id="f-gender">
+                            <option value="">— Odaberi —</option>
+                            <option value="m">Muško</option>
+                            <option value="f">Žensko</option>
+                            <option value="o">Ostalo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row full"><div><label>E-mail <span class="req">*</span></label><input type="email" class="fi" id="f-email" placeholder="tvoj@email.com"></div></div>
+                <div class="form-row">
+                    <div><label>Grad</label><input type="text" class="fi" id="f-city" placeholder="npr. Split"></div>
+                    <div><label>Država</label><input type="text" class="fi" id="f-country" placeholder="Hrvatska"></div>
+                </div>
+                <div class="form-row full"><div><label>Mobitel</label><input type="tel" class="fi" id="f-phone" placeholder="+385 91 234 5678"></div></div>
+                <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
+                    <button class="btn-save" id="save-btn" onclick="saveProfile()">💾 Spremi</button>
+                    <button class="btn-cancel" onclick="cancelEdit()">Odustani</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- BIO (posebno) -->
+        <div class="card fu">
+            <div class="section-title">✍️ O meni</div>
+            <div class="hero-bio" id="hero-bio-tab">Nema opisa profila.</div>
+            <textarea class="bio-edit" id="bio-edit" maxlength="240" placeholder="Napiši nešto o sebi... (max 240 znakova)" style="display:none;"></textarea>
+            <button class="data-edit-btn" style="margin-top:10px;" id="bio-edit-btn" onclick="toggleBioEdit()">✏️ Uredi opis</button>
+        </div>
+
+        <!-- ISPLATNI PODACI -->
+        <div class="card fu">
+            <div class="section-title">💰 Isplatni Podaci
+                <button class="data-edit-btn" style="margin-left:auto;" onclick="toggleIbanEdit()">✏️ Uredi</button>
+            </div>
+            <div id="iban-read-view">
+                <div class="data-row"><div class="data-icon">🏦</div><div><div class="data-label">IBAN</div><div class="data-value" id="dr-iban">—</div></div></div>
+                <div class="data-row"><div class="data-icon">👤</div><div><div class="data-label">Ime na računu</div><div class="data-value" id="dr-ibanName">—</div></div></div>
+                <div class="data-row"><div class="data-icon">🏛️</div><div><div class="data-label">Banka</div><div class="data-value" id="dr-bank">—</div></div></div>
+            </div>
+            <div id="iban-edit-view" style="display:none;">
+                <div class="form-row full"><div><label>IBAN</label><input type="text" class="fi" id="f-iban" placeholder="HR12 3456 7890..." maxlength="34"><div class="fi-hint">Za tjedne isplate nagrada (min 10€)</div></div></div>
+                <div class="form-row">
+                    <div><label>Ime na računu</label><input type="text" class="fi" id="f-ibanName" placeholder="Ime Prezime"></div>
+                    <div><label>Banka</label><input type="text" class="fi" id="f-bank" placeholder="npr. Erste banka"></div>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:8px;">
+                    <button class="btn-save" onclick="saveIban()">💾 Spremi</button>
+                    <button class="btn-cancel" onclick="toggleIbanEdit()">Odustani</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- OBAVIJESTI -->
+        <div class="card fu">
+            <div class="section-title">🔔 Postavke Obavijesti</div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'Metal Mania',cursive;font-size:.82rem;color:#374151;">
+                    <input type="checkbox" id="pref-notif-quiz" style="width:18px;height:18px;accent-color:var(--brand);">
+                    Kvizovi (start, rezultati)
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'Metal Mania',cursive;font-size:.82rem;color:#374151;">
+                    <input type="checkbox" id="pref-notif-league" style="width:18px;height:18px;accent-color:var(--brand);">
+                    Lige
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'Metal Mania',cursive;font-size:.82rem;color:#374151;">
+                    <input type="checkbox" id="pref-notif-news" style="width:18px;height:18px;accent-color:var(--brand);">
+                    Novosti od admina
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'Metal Mania',cursive;font-size:.82rem;color:#374151;">
+                    <input type="checkbox" id="pref-notif-promo" style="width:18px;height:18px;accent-color:var(--brand);">
+                    Promotivne ponude
+                </label>
+                <button class="btn-save" style="width:auto;padding:9px 22px;margin-top:4px;" onclick="savePrefs()">💾 Spremi postavke</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         TAB: REZULTATI (prvi tab)
+    ══════════════════════════════════════════ -->
+    <div id="tab-results">
+        <!-- Sort bar -->
+        <div class="sort-bar fu">
+            <span class="sort-label">Sortiraj:</span>
+            <button class="sort-btn active" id="sort-date"    onclick="setSort('date',this)">📅 Datum <span id="arr-date">↓</span></button>
+            <button class="sort-btn"        id="sort-rank"    onclick="setSort('rank',this)">🏅 Rang <span id="arr-rank">↑</span></button>
+            <button class="sort-btn"        id="sort-earn"    onclick="setSort('earn',this)">💰 Zarada <span id="arr-earn">↓</span></button>
+            <button class="sort-btn"        id="sort-rating"  onclick="setSort('rating',this)">⭐ Ocjena <span id="arr-rating">↓</span></button>
+        </div>
+        <div class="card fu">
+            <div class="section-title">📊 Rezultati <span style="margin-left:auto;font-size:.72rem;color:#9ca3af;font-family:'Tillana',sans-serif;" id="results-total-label"></span></div>
+            <div id="results-list">
+                <div style="text-align:center;padding:20px;"><div class="spinner"></div></div>
+            </div>
+            <button class="load-more" id="load-more-btn" style="display:none;" onclick="loadMoreResults()">▼ Učitaj više</button>
+        </div>
+        <div class="card fu">
+            <div class="section-title">🏆 Osobni Rekordi</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="personal-bests">
+                <div style="background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:12px;padding:12px;text-align:center;">
+                    <div style="font-family:'Metal Mania',cursive;font-size:1.4rem;color:var(--brand);" id="pb-best-rank">—</div>
+                    <div style="font-family:'Metal Mania',cursive;font-size:.72rem;color:var(--brand-dark);">Najbolji Rang</div>
+                </div>
+                <div style="background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:12px;padding:12px;text-align:center;">
+                    <div style="font-family:'Metal Mania',cursive;font-size:1.4rem;color:var(--green);" id="pb-best-earn">—</div>
+                    <div style="font-family:'Metal Mania',cursive;font-size:.72rem;color:var(--brand-dark);">Najveća Zarada</div>
+                </div>
+                <div style="background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:12px;padding:12px;text-align:center;">
+                    <div style="font-family:'Metal Mania',cursive;font-size:1.4rem;color:#f59e0b;" id="pb-best-rating">—</div>
+                    <div style="font-family:'Metal Mania',cursive;font-size:.72rem;color:var(--brand-dark);">Najbolja Ocjena</div>
+                </div>
+                <div style="background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:12px;padding:12px;text-align:center;">
+                    <div style="font-family:'Metal Mania',cursive;font-size:1.4rem;color:#7c3aed;" id="pb-best-correct">—</div>
+                    <div style="font-family:'Metal Mania',cursive;font-size:.72rem;color:var(--brand-dark);">Maks. Točnih</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         TAB: KVALIFIKACIJE
+    ══════════════════════════════════════════ -->
+    <div id="tab-quals" style="display:none;">
+        <div class="card fu">
+            <div class="section-title">🏆 Status Kvalifikacija</div>
+            <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1.5px solid #bfdbfe;border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:.8rem;color:#1e40af;line-height:1.55;">
+                📌 Plasmanom u finale <strong>Lukavac Sata</strong> automatski se kvalificiraš za <strong>Lukavac Dana</strong>, finale Dana → Tjedna, itd. Svaka razina je veće natjecanje s većim nagradama.
+            </div>
+            <div id="quals-list">
+                <div style="text-align:center;padding:20px;"><div class="spinner"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         TAB: ACHIEVEMENTS
+    ══════════════════════════════════════════ -->
+    <div id="tab-badges" style="display:none;">
+        <div class="card fu">
+            <div class="section-title">🎖️ Achievements <span style="font-family:'Tillana',sans-serif;font-size:.72rem;color:#9ca3af;margin-left:auto;" id="badges-progress"></span></div>
+            <div class="badges-grid" id="badges-grid">
+                <div style="text-align:center;padding:20px;grid-column:1/-1;"><div class="spinner"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         TAB: LIGE
+    ══════════════════════════════════════════ -->
+    <div id="tab-leagues" style="display:none;">
+        <div class="card fu">
+            <div class="section-title">🏅 Moje Lige</div>
+            <div id="leagues-list">
+                <div style="text-align:center;padding:20px;"><div class="spinner"></div></div>
+            </div>
+            <a href="leagues.html" style="display:block;text-align:center;margin-top:10px;padding:9px;background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border-radius:12px;font-family:'Metal Mania',cursive;font-size:.78rem;text-decoration:none;">🔍 Traži ili osnuj ligu →</a>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         TAB: SIGURNOST
+    ══════════════════════════════════════════ -->
+    <div id="tab-security" style="display:none;">
+        <div class="card fu">
+            <div class="section-title">🔒 Sigurnost & Račun</div>
+            <div class="security-row">
+                <div class="sr-info">
+                    <div class="sr-label">🔑 Lozinka</div>
+                    <div class="sr-sub">Zadnja promjena nije zabilježena</div>
+                </div>
+                <button class="sr-btn" onclick="changePassword()">Promijeni</button>
+            </div>
+            <div class="security-row">
+                <div class="sr-info">
+                    <div class="sr-label">📧 E-mail adresa</div>
+                    <div class="sr-sub" id="sec-email">—</div>
+                </div>
+                <button class="sr-btn" onclick="changeEmail()">Promijeni</button>
+            </div>
+            <div class="security-row">
+                <div class="sr-info">
+                    <div class="sr-label">🛡️ Vidljivost profila</div>
+                    <div class="sr-sub">Drugi igrači mogu te vidjeti u ligama i ljestvicama</div>
+                </div>
+                <button class="sr-btn" id="privacy-btn" onclick="togglePrivacy()">Javno</button>
+            </div>
+            <div class="security-row">
+                <div class="sr-info">
+                    <div class="sr-label">📱 Zadnja prijava</div>
+                    <div class="sr-sub" id="last-login">—</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card fu">
+            <div class="section-title">📋 Uvjeti & Privatnost</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <a href="terms.html"   style="font-family:'Metal Mania',cursive;font-size:.75rem;color:var(--brand);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--brand-light);">📋 Uvjeti Korištenja →</a>
+                <a href="privacy.html" style="font-family:'Metal Mania',cursive;font-size:.75rem;color:var(--brand);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--brand-light);">🔒 Politika Privatnosti →</a>
+                <a href="pravila.html" style="font-family:'Metal Mania',cursive;font-size:.75rem;color:var(--brand);text-decoration:none;padding:8px 0;">📜 Pravila Igre →</a>
+            </div>
+        </div>
+
+        <div class="card fu">
+            <div class="danger-zone">
+                <div class="dz-title">⚠️ Opasna Zona</div>
+                <div class="dz-sub">Ove radnje su nepovratne. Razmisli dobro.</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="sr-btn danger" onclick="exportData()">📤 Preuzmi podatke</button>
+                    <button class="sr-btn danger" onclick="confirmDeactivate()">🚫 Deaktiviraj račun</button>
+                    <button class="sr-btn danger" onclick="confirmDelete()">🗑️ Obriši račun</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /page-wrap -->
+<div id="toast"></div>
+
+<script>
+const playerProfileId = sessionStorage.getItem('playerProfileId');
+let playerProfile     = JSON.parse(sessionStorage.getItem('playerProfile') || 'null');
+let editMode          = false;
+let resultsPage       = 0;
+let allResults        = [];
+const PAGE_SIZE       = 10;
+
+const QUAL_CHAIN = [
+    { key:'sata',    name:'Lukavac Sata',    emoji:'🕐', next:'dana'    },
+    { key:'dana',    name:'Lukavac Dana',    emoji:'🌙', next:'tjedna'  },
+    { key:'tjedna',  name:'Lukavac Tjedna',  emoji:'📅', next:'mjeseca' },
+    { key:'mjeseca', name:'Lukavac Mjeseca', emoji:'📆', next:'sezone'  },
+    { key:'sezone',  name:'Lukavac Sezone',  emoji:'🏆', next:null      }
+];
+
+const ALL_BADGES = [
+    { id:'first_win',    icon:'🥇', name:'Prva Pobjeda',   desc:'Pobijedi u prvom kvizu'    },
+    { id:'wins_5',       icon:'🏆', name:'Šampion 5',      desc:'5 pobjeda ukupno'           },
+    { id:'wins_25',      icon:'🔥', name:'Šampion 25',     desc:'25 pobjeda ukupno'          },
+    { id:'final_dana',   icon:'🌙', name:'Dana Finalista', desc:'Ušao u finale Lukavac Dana' },
+    { id:'final_tjedna', icon:'📅', name:'Tjedni Finalst', desc:'Finale Lukavac Tjedna'      },
+    { id:'final_sezone', icon:'🏆', name:'Sezonski Prvak', desc:'Finale Lukavac Sezone'      },
+    { id:'games_10',     icon:'🎮', name:'Veteran 10',     desc:'10 odigranih kvizova'       },
+    { id:'games_50',     icon:'💪', name:'Veteran 50',     desc:'50 odigranih kvizova'       },
+    { id:'games_100',    icon:'🧙', name:'Legenda',        desc:'100 odigranih kvizova'      },
+    { id:'earnings_50',  icon:'💰', name:'Zaradio 50€',    desc:'Ukupna zarada 50€'          },
+    { id:'earnings_200', icon:'💎', name:'Zaradio 200€',   desc:'Ukupna zarada 200€'         },
+    { id:'lukavac_10',   icon:'🦊', name:'Lukavac x10',    desc:'10 puta koristio Lukavac'   },
+    { id:'perfect',      icon:'✨', name:'Savršen',         desc:'Sve točne u jednom kviizu'  },
+    { id:'streak_3',     icon:'⚡', name:'Niz 3',          desc:'3 pobjede zaredom'          },
+    { id:'league_win',   icon:'🏅', name:'Ligaš',          desc:'Pobijedi u ligi'            },
+    { id:'founder',      icon:'👑', name:'Osnivač',        desc:'Osnuj vlastitu ligu'        },
+];
+
+// ── INIT ──────────────────────────────────────────────
+window.onload = function() {
+    if (!playerProfileId) { window.location.href = 'login.html'; return; }
+    database.ref('playerProfiles/' + playerProfileId).once('value').then(snap => {
+        if (!snap.exists()) { window.location.href = 'login.html'; return; }
+        playerProfile = { id: playerProfileId, ...snap.val() };
+        sessionStorage.setItem('playerProfile', JSON.stringify(playerProfile));
+        renderHero();
+        renderStats();
+        fillReadView();
+        renderSecurity();
+        loadResults();  // učitaj odmah, rezultati su prvi tab
+    });
+};
+
+// ── HERO ──────────────────────────────────────────────
+function renderHero() {
+    const p    = playerProfile;
+    const s    = p.stats || {};
+    const name = [p.firstName, p.lastName].filter(Boolean).join(' ') || p.nickname || 'Igrač';
+    const nick = p.nickname && p.nickname !== p.firstName ? '@' + p.nickname : '';
+    const initial = (p.nickname || p.firstName || '?').charAt(0).toUpperCase();
+
+    document.getElementById('hero-name').textContent = name;
+    document.getElementById('hero-nick').textContent = nick;
+    document.getElementById('avatar-img').src = p.profilePhoto ||
+        'https://ui-avatars.com/api/?background=ffd995&color=b75800&name='+initial+'&bold=true&size=88';
+    document.getElementById('topbar-title').textContent = '👤 ' + (p.nickname || p.firstName || 'Profil');
+
+    // Bio
+    const bioEl = document.getElementById('hero-bio');
+    if (p.bio) { bioEl.textContent = p.bio; bioEl.classList.remove('placeholder'); }
+    else        { bioEl.textContent = 'Nema opisa profila.'; bioEl.classList.add('placeholder'); }
+    document.getElementById('bio-edit').value = p.bio || '';
+
+    // Pills
+    const pills = [];
+    if (s.currentRank) pills.push('<span class="h-pill hp-rank">🏅 #' + s.currentRank + '</span>');
+    if (s.wins)        pills.push('<span class="h-pill hp-wins">🥇 ' + s.wins + ' pobjeda</span>');
+    if (s.averageRating) pills.push('<span class="h-pill hp-rating">⭐ ' + parseFloat(s.averageRating).toFixed(1) + '</span>');
+    if (p.city)        pills.push('<span class="h-pill hp-member">📍 ' + esc(p.city) + '</span>');
+    document.getElementById('hero-pills').innerHTML = pills.join('');
+
+    // Member since
+    if (p.createdAt) {
+        const d = new Date(p.createdAt).toLocaleDateString('hr-HR', { day:'2-digit', month:'long', year:'numeric' });
+        document.getElementById('member-since').innerHTML = '📅 Član od: ' + d;
+    }
+}
+
+// ── STATS ──────────────────────────────────────────────
+function renderStats() {
+    const s = playerProfile.stats || {};
+    const games    = s.quizzesPlayed || 0;
+    const earnings = s.totalEarnings || 0;
+    document.getElementById('s-rank').textContent    = s.currentRank  ? '#' + s.currentRank : '—';
+    document.getElementById('s-wins').textContent    = s.wins         || 0;
+    document.getElementById('s-tokens').textContent  = (s.tokenBalance || 0) + ' 🪙';
+    document.getElementById('s-rating').textContent  = s.averageRating ? parseFloat(s.averageRating).toFixed(1) : '—';
+    document.getElementById('s-games').textContent   = games;
+    document.getElementById('s-earnings').textContent= earnings + '€';
+    document.getElementById('s-avg').textContent     = (games > 0 ? Math.round(earnings / games) : 0) + '€';
+    document.getElementById('s-finals').textContent  = s.finals || 0;
+}
+
+// ── READ-ONLY PRIKAZ PODATAKA ────────────────────────
+function fillReadView() {
+    const p  = playerProfile;
+    const pf = p.paymentInfo || {};
+    const pr = p.preferences || {};
+
+    const name = [p.firstName, p.lastName].filter(Boolean).join(' ');
+    setDR('dr-name',     name);
+    setDR('dr-email',    p.email);
+    setDR('dr-birthdate',p.birthDate ? new Date(p.birthDate).toLocaleDateString('hr-HR',{day:'2-digit',month:'long',year:'numeric'}) : null);
+    const gMap = { m:'Muško', f:'Žensko', o:'Ostalo' };
+    setDR('dr-gender',   gMap[p.gender] || null);
+    const loc = [p.city, p.country].filter(Boolean).join(', ');
+    setDR('dr-location', loc || null);
+    setDR('dr-phone',    p.phone);
+    setDR('dr-iban',     pf.iban ? pf.iban.replace(/(.{4})/g,'$1 ').trim() : null);
+    setDR('dr-ibanName', pf.ibanName);
+    setDR('dr-bank',     pf.bank);
+
+    // Bio
+    const bioEl = document.getElementById('hero-bio-tab');
+    if (p.bio) { bioEl.textContent = p.bio; bioEl.classList.remove('placeholder'); }
+    else        { bioEl.textContent = 'Nema opisa profila.'; bioEl.classList.add('placeholder'); }
+    document.getElementById('bio-edit').value = p.bio || '';
+
+    // Checkboxes
+    setChk('pref-notif-quiz',   pr.notifQuiz   !== false);
+    setChk('pref-notif-league', pr.notifLeague !== false);
+    setChk('pref-notif-news',   pr.notifNews   !== false);
+    setChk('pref-notif-promo',  pr.notifPromo  === true);
+}
+
+function setDR(id, val) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (val) { el.textContent = val; el.classList.remove('empty'); }
+    else      { el.textContent = 'Nije uneseno'; el.classList.add('empty'); }
+}
+
+function fillEditFields() {
+    const p  = playerProfile;
+    const pf = p.paymentInfo || {};
+    setVal('f-firstName', p.firstName);
+    setVal('f-lastName',  p.lastName);
+    setVal('f-email',     p.email);
+    setVal('f-birthdate', p.birthDate);
+    setVal('f-city',      p.city);
+    setVal('f-country',   p.country || 'Hrvatska');
+    setVal('f-phone',     p.phone);
+    setVal('f-gender',    p.gender);
+    setVal('f-iban',      pf.iban);
+    setVal('f-ibanName',  pf.ibanName);
+    setVal('f-bank',      pf.bank);
+}
+
+function fillForm() { fillReadView(); fillEditFields(); }
+function setFieldsEnabled() {}
+
+// ── EDIT TOGGLE (osobni podaci) ───────────────────────
+function toggleEdit() {
+    const rv = document.getElementById('data-read-view');
+    const ev = document.getElementById('data-edit-view');
+    const isEdit = ev.style.display !== 'none';
+    rv.style.display = isEdit ? '' : 'none';
+    ev.style.display = isEdit ? 'none' : '';
+    if (!isEdit) fillEditFields();
+}
+
+function cancelEdit() {
+    document.getElementById('data-read-view').style.display = '';
+    document.getElementById('data-edit-view').style.display = 'none';
+}
+
+// ── BIO TOGGLE ────────────────────────────────────────
+function toggleBioEdit() {
+    const bioEl  = document.getElementById('hero-bio-tab');
+    const bioEd  = document.getElementById('bio-edit');
+    const btn    = document.getElementById('bio-edit-btn');
+    const isEdit = bioEd.style.display !== 'none';
+    if (isEdit) {
+        // Save
+        const newBio = bioEd.value.trim();
+        database.ref('playerProfiles/' + playerProfileId + '/bio').set(newBio || null).then(() => {
+            playerProfile.bio = newBio;
+            sessionStorage.setItem('playerProfile', JSON.stringify(playerProfile));
+            fillReadView(); renderHero();
+            bioEd.style.display = 'none';
+            bioEl.style.display = '';
+            btn.textContent = '✏️ Uredi opis';
+            toast('✅ Opis spremljen');
+        });
+    } else {
+        bioEl.style.display = 'none';
+        bioEd.style.display = '';
+        btn.textContent = '💾 Spremi opis';
+    }
+}
+
+// ── IBAN TOGGLE ───────────────────────────────────────
+function toggleIbanEdit() {
+    const rv = document.getElementById('iban-read-view');
+    const ev = document.getElementById('iban-edit-view');
+    const isEdit = ev.style.display !== 'none';
+    rv.style.display = isEdit ? '' : 'none';
+    ev.style.display = isEdit ? 'none' : '';
+}
+
+function saveIban() {
+    const updates = {
+        'paymentInfo/iban':     document.getElementById('f-iban').value.trim().replace(/\s+/g,'') || null,
+        'paymentInfo/ibanName': document.getElementById('f-ibanName').value.trim() || null,
+        'paymentInfo/bank':     document.getElementById('f-bank').value.trim() || null,
+    };
+    database.ref('playerProfiles/' + playerProfileId).update(updates).then(() => {
+        if (!playerProfile.paymentInfo) playerProfile.paymentInfo = {};
+        Object.assign(playerProfile.paymentInfo, {
+            iban: updates['paymentInfo/iban'],
+            ibanName: updates['paymentInfo/ibanName'],
+            bank: updates['paymentInfo/bank'],
+        });
+        sessionStorage.setItem('playerProfile', JSON.stringify(playerProfile));
+        fillReadView();
+        toggleIbanEdit();
+        toast('✅ Isplatni podaci spremljeni');
+    }).catch(err => toast('❌ ' + err.message));
+}
+
+// ── SAVE PREFS ────────────────────────────────────────
+function savePrefs() {
+    const prefs = {
+        notifQuiz:   document.getElementById('pref-notif-quiz').checked,
+        notifLeague: document.getElementById('pref-notif-league').checked,
+        notifNews:   document.getElementById('pref-notif-news').checked,
+        notifPromo:  document.getElementById('pref-notif-promo').checked,
+    };
+    database.ref('playerProfiles/' + playerProfileId + '/preferences').update(prefs).then(() => {
+        playerProfile.preferences = prefs;
+        sessionStorage.setItem('playerProfile', JSON.stringify(playerProfile));
+        toast('✅ Postavke obavijesti spremljene');
+    });
+}
+
+// ── SORT REZULTATI ────────────────────────────────────
+let activeSort = 'date', sortDir = { date:'desc', rank:'asc', earn:'desc', rating:'desc' };
+
+function setSort(key, el) {
+    if (activeSort === key) sortDir[key] = sortDir[key]==='asc'?'desc':'asc';
+    else activeSort = key;
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    ['date','rank','earn','rating'].forEach(k => {
+        const a = document.getElementById('arr-'+k);
+        if (a) a.textContent = sortDir[k]==='asc'?'↑':'↓';
+    });
+    resultsPage = 0;
+    renderResults();
+}
+
+// ── SAVE PROFILE ──────────────────────────────────────
+function saveProfile() {
+    const firstName = document.getElementById('f-firstName').value.trim();
+    const email     = document.getElementById('f-email').value.trim();
+    if (!firstName) { toast('❌ Ime je obavezno'); return; }
+    if (!email)     { toast('❌ E-mail je obavezan'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('❌ Ispravna e-mail adresa?'); return; }
+
+    const btn = document.getElementById('save-btn');
+    btn.innerHTML = '<span class="spin-sm"></span>Sprema...';
+    btn.disabled = true;
+
+    const updates = {
+        firstName:  firstName,
+        lastName:   document.getElementById('f-lastName').value.trim() || null,
+        email:      email,
+        birthDate:  document.getElementById('f-birthdate').value || null,
+        city:       document.getElementById('f-city').value.trim() || null,
+        country:    document.getElementById('f-country').value.trim() || null,
+        phone:      document.getElementById('f-phone').value.trim() || null,
+        gender:     document.getElementById('f-gender').value || null,
+        bio:        document.getElementById('bio-edit').value.trim() || null,
+        paymentInfo: {
+            iban:     document.getElementById('f-iban').value.trim().replace(/\s+/g,'') || null,
+            ibanName: document.getElementById('f-ibanName').value.trim() || null,
+            bank:     document.getElementById('f-bank').value.trim() || null,
+        },
+        preferences: {
+            notifQuiz:    document.getElementById('pref-notif-quiz').checked,
+            notifLeague:  document.getElementById('pref-notif-league').checked,
+            notifNews:    document.getElementById('pref-notif-news').checked,
+            notifPromo:   document.getElementById('pref-notif-promo').checked,
+        },
+        updatedAt: Date.now()
+    };
+
+    database.ref('playerProfiles/' + playerProfileId).update(updates).then(() => {
+        // Update session
+        Object.assign(playerProfile, updates);
+        sessionStorage.setItem('playerProfile', JSON.stringify(playerProfile));
+        renderHero();
+        toast('✅ Profil uspješno spremljen!');
+        editMode = true; toggleEdit();
+        btn.innerHTML = '💾 Spremi Promjene';
+        btn.disabled  = false;
+    }).catch(err => {
+        toast('❌ Greška: ' + err.message);
+        btn.innerHTML = '💾 Spremi Promjene';
+        btn.disabled  = false;
+    });
+}
+
+// ── AVATAR PREVIEW ────────────────────────────────────
+function previewAvatar(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 2*1024*1024) { toast('❌ Slika je prevelika (max 2 MB)'); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById('avatar-img').src = e.target.result;
+        // Store as base64 in Firebase (small profile pics only)
+        database.ref('playerProfiles/' + playerProfileId + '/profilePhoto').set(e.target.result).then(() => {
+            playerProfile.profilePhoto = e.target.result;
+            sessionStorage.setItem('playerProfile', JSON.stringify(playerProfile));
+            toast('✅ Slika profila ažurirana');
+        });
+    };
+    reader.readAsDataURL(file);
+}
+
+// ── NICKNAME PROMJENA ─────────────────────────────────
+let nickChangeCost = 0;  // tokeni, admin određuje via settings/nicknameCost
+
+function loadNicknameSection() {
+    const p  = playerProfile;
+    const s  = p.stats || {};
+
+    // Prikaži trenutni nadimak
+    document.getElementById('nick-display').textContent = p.nickname || p.firstName || '—';
+    document.getElementById('nick-tokens').textContent  = s.tokenBalance || 0;
+
+    // Dohvati cijenu od admina  (settings/nicknameCost)
+    database.ref('settings/nicknameCost').once('value').then(snap => {
+        nickChangeCost = snap.exists() ? Number(snap.val()) : 0;
+        const costEl   = document.getElementById('nick-cost-badge');
+        const tokens   = s.tokenBalance || 0;
+
+        if (nickChangeCost === 0) {
+            costEl.outerHTML = '<span class="nick-free-badge" id="nick-cost-badge">✅ Besplatno</span>';
+        } else {
+            const canAfford = tokens >= nickChangeCost;
+            document.getElementById('nick-cost-badge').textContent = nickChangeCost + ' 🪙';
+            document.getElementById('nick-cost-badge').style.background =
+                canAfford ? 'linear-gradient(135deg,var(--brand-light),var(--brand))'
+                          : 'linear-gradient(135deg,#fee2e2,#ef4444)';
+            if (!canAfford) {
+                document.getElementById('nick-hint').textContent =
+                    '❌ Nemaš dovoljno tokena (trebaš ' + nickChangeCost + ', imaš ' + tokens + ')';
+                document.getElementById('nick-hint').style.color = '#ef4444';
+            }
+        }
+    });
+
+    // Prethodna imena
+    const history = p.nicknameHistory || {};
+    const entries = Object.entries(history).sort((a,b)=>b[1].changedAt-a[1].changedAt);
+    if (entries.length) {
+        document.getElementById('nick-history').style.display = '';
+        document.getElementById('nick-history-list').innerHTML = entries.slice(0,5).map(([,v]) => {
+            const dt = new Date(v.changedAt).toLocaleDateString('hr-HR',{day:'2-digit',month:'2-digit',year:'numeric'});
+            return '<div style="font-size:.82rem;color:#9ca3af;padding:3px 0;display:flex;justify-content:space-between;">'
+                + '<span>' + esc(v.oldNick) + '</span><span>' + dt + '</span></div>';
+        }).join('');
+    }
+}
+
+function validateNick(val) {
+    const btn  = document.getElementById('nick-btn');
+    const hint = document.getElementById('nick-hint');
+    const ok   = /^[a-zA-Z0-9._-]{3,24}$/.test(val);
+    const same = val.trim() === (playerProfile.nickname || '');
+    const canAfford = (playerProfile.stats?.tokenBalance || 0) >= nickChangeCost || nickChangeCost === 0;
+
+    if (!val) {
+        hint.textContent = '3–24 znaka · slova, brojevi, točka, crtica';
+        hint.style.color = '#9ca3af';
+    } else if (same) {
+        hint.textContent = 'To je već tvoj nadimak';
+        hint.style.color = '#d97706';
+    } else if (!ok) {
+        hint.textContent = '⚠️ Samo slova, brojevi, točka i crtica (3–24 znaka)';
+        hint.style.color = '#ef4444';
+    } else if (!canAfford) {
+        hint.textContent = '❌ Nemaš dovoljno tokena';
+        hint.style.color = '#ef4444';
+    } else {
+        hint.textContent = '✅ Nadimak je ispravan';
+        hint.style.color = '#059669';
+    }
+    btn.disabled = !ok || same || !canAfford;
+}
+
+function changeNickname() {
+    const newNick  = document.getElementById('nick-new').value.trim();
+    const oldNick  = playerProfile.nickname || playerProfile.firstName || '';
+    const tokens   = playerProfile.stats?.tokenBalance || 0;
+
+    if (!newNick || newNick === oldNick) return;
+    if (nickChangeCost > 0 && tokens < nickChangeCost) {
+        toast('❌ Nemaš dovoljno tokena!'); return;
+    }
+
+    const confirmMsg = nickChangeCost > 0
+        ? 'Promjena nadimka košta ' + nickChangeCost + ' 🪙 tokena.\n\n"' + oldNick + '" → "' + newNick + '"\n\nPotvrđuješ?'
+        : 'Promijeni nadimak iz "' + oldNick + '" u "' + newNick + '"?';
+    if (!confirm(confirmMsg)) return;
+
+    const btn = document.getElementById('nick-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin-sm"></span>Mijenjam...';
+
+    const newBalance = tokens - nickChangeCost;
+    const histKey    = Date.now().toString();
+
+    const updates = {};
+    updates['playerProfiles/' + playerProfileId + '/nickname']                        = newNick;
+    updates['playerProfiles/' + playerProfileId + '/nicknameHistory/' + histKey]      = { oldNick, changedAt: Date.now() };
+    if (nickChangeCost > 0) {
+        updates['playerProfiles/' + playerProfileId + '/stats/tokenBalance']          = newBalance;
+        // Token transaction log
+        updates['tokenTransactions/' + playerProfileId + '/' + histKey] = {
+            type: 'nicknameChange', amount: -nickChangeCost,
+            description: 'Promjena nadimka: ' + oldNick + ' → ' + newNick,
+            balanceAfter: newBalance, timestamp: Date.now()
+        };
+    }
+
+    database.ref().update(updates).then(() => {
+        // Update session
+        playerProfile.nickname = newNick;
+        if (nickChangeCost > 0) {
+            if (!playerProfile.stats) playerProfile.stats = {};
+            playerProfile.stats.tokenBalance = newBalance;
+        }
+        if (!playerProfile.nicknameHistory) playerProfile.nicknameHistory = {};
+        playerProfile.nicknameHistory[histKey] = { oldNick, changedAt: Date.now() };
+        sessionStorage.setItem('playerProfile', JSON.stringify(playerProfile));
+
+        renderHero();
+        renderStats();
+        loadNicknameSection();
+
+        document.getElementById('nick-new').value = '';
+        btn.disabled = false;
+        btn.innerHTML = '🦊 Promijeni';
+        toast('✅ Nadimak promijenjen u "' + newNick + '"' + (nickChangeCost > 0 ? ' · -' + nickChangeCost + ' 🪙' : ''));
+    }).catch(err => {
+        toast('❌ Greška: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '🦊 Promijeni';
+    });
+}
+
+// ── RESULTS ───────────────────────────────────────────
+function loadResults() {
+    database.ref('playerResults/' + playerProfileId)
+        .orderByChild('timestamp')
+        .once('value').then(snap => {
+        const raw = snap.val() || {};
+        allResults = Object.entries(raw)
+            .map(([id,r]) => ({id,...r}))
+            .sort((a,b) => b.timestamp - a.timestamp);
+        document.getElementById('results-total-label').textContent = allResults.length + ' kvizova';
+        renderResults();
+        renderPersonalBests();
+    }).catch(() => {
+        document.getElementById('results-list').innerHTML = '<div class="empty">Nema rezultata</div>';
+    });
+}
+
+function renderResults() {
+    const dir = sortDir[activeSort] === 'asc' ? 1 : -1;
+    const sorted = [...allResults].sort((a,b) => {
+        switch(activeSort) {
+            case 'date':   return (a.timestamp - b.timestamp) * dir;
+            case 'rank':   return ((a.rank||999) - (b.rank||999)) * dir;
+            case 'earn':   return ((a.earnings||0) - (b.earnings||0)) * dir;
+            case 'rating': return ((a.rating||0) - (b.rating||0)) * dir;
+            default: return 0;
+        }
+    });
+    const page = sorted.slice(0, (resultsPage + 1) * PAGE_SIZE);
+    const more = allResults.length > page.length;
+    if (!page.length) { document.getElementById('results-list').innerHTML = '<div class="empty">Još nisi odigrao nijedan kviz</div>'; return; }
+    document.getElementById('results-list').innerHTML = page.map(r => {
+        const dt     = new Date(r.timestamp).toLocaleDateString('hr-HR', { day:'2-digit', month:'2-digit', year:'numeric' });
+        const medal  = r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':'';
+        const rankC  = r.rank===1?'var(--green)':r.rank<=3?'#d97706':'#6b7280';
+        return '<div class="result-row fu">'
+            + '<div class="rr-rank" style="color:' + rankC + ';">' + (medal || '#' + (r.rank||'—')) + '</div>'
+            + '<div class="rr-info">'
+            + '<div class="rr-name">' + esc(r.quizName || 'Kviz') + '</div>'
+            + '<div class="rr-sub">📅 ' + dt + ' · ✅ ' + (r.correctAnswers||0) + '/' + (r.totalQuestions||0) + ' točnih</div>'
+            + '</div>'
+            + '<div class="rr-right">'
+            + '<div class="rr-earn">+' + (r.earnings||0) + '€</div>'
+            + '<div class="rr-rating">⭐ ' + (r.rating||0) + '/10</div>'
+            + '</div>'
+            + '</div>';
+    }).join('');
+    document.getElementById('load-more-btn').style.display = more ? '' : 'none';
+}
+
+function loadMoreResults() { resultsPage++; renderResults(); }
+
+function renderPersonalBests() {
+    if (!allResults.length) return;
+    const bestRank    = Math.min(...allResults.map(r => r.rank || 999));
+    const bestEarn    = Math.max(...allResults.map(r => r.earnings || 0));
+    const bestRating  = Math.max(...allResults.map(r => r.rating || 0));
+    const bestCorrect = Math.max(...allResults.map(r => r.correctAnswers || 0));
+    document.getElementById('pb-best-rank').textContent    = bestRank < 999 ? '#' + bestRank : '—';
+    document.getElementById('pb-best-earn').textContent    = bestEarn + '€';
+    document.getElementById('pb-best-rating').textContent  = bestRating + '/10';
+    document.getElementById('pb-best-correct').textContent = bestCorrect;
+}
+
+// ── QUALIFICATIONS ────────────────────────────────────
+function loadQuals() {
+    database.ref('playerProfiles/' + playerProfileId + '/qualifications').once('value').then(snap => {
+        const quals = snap.val() || {};
+        const el = document.getElementById('quals-list');
+        el.innerHTML = QUAL_CHAIN.slice(1).map(level => {
+            const isQual  = quals[level.key] === true;
+            const prevKey = QUAL_CHAIN.find(c => c.next === level.key);
+            const prevName= prevKey ? prevKey.name : '—';
+            return '<div class="qual-row ' + (isQual?'yes':'no') + ' fu">'
+                + '<div class="qual-head ' + (isQual?'yes':'no') + '">'
+                + '<span class="qual-name ' + (isQual?'yes':'no') + '">' + level.emoji + ' ' + level.name + '</span>'
+                + '<span class="qual-badge ' + (isQual?'qb-yes':'qb-no') + '">' + (isQual?'✅ KVALIFICIRAN':'❌ NIJE JOŠ') + '</span>'
+                + '</div>'
+                + '<div class="qual-sub">'
+                + '<span style="color:' + (isQual?'#065f46':'#991b1b') + ';font-size:.78rem;">📌 Uvjet: plasman u finale ' + prevName + '</span>'
+                + (isQual ? '<span style="color:#065f46;font-size:.75rem;font-weight:700;">🎉 Pravo sudjelovanja!</span>' : '')
+                + '</div>'
+                + '</div>';
+        }).join('');
+    });
+}
+
+// ── ACHIEVEMENTS ──────────────────────────────────────
+function loadBadges() {
+    database.ref('playerProfiles/' + playerProfileId + '/badges').once('value').then(snap => {
+        const earned = snap.val() || {};
+        const earnedCount = Object.values(earned).filter(Boolean).length;
+        document.getElementById('badges-progress').textContent = earnedCount + ' / ' + ALL_BADGES.length + ' otključano';
+        document.getElementById('badges-grid').innerHTML = ALL_BADGES.map(b => {
+            const have = !!earned[b.id];
+            return '<div class="badge-item ' + (have?'earned':'locked') + ' fu" title="' + esc(b.desc) + '">'
+                + '<div class="badge-icon">' + b.icon + '</div>'
+                + '<div class="badge-name">' + b.name + '</div>'
+                + '</div>';
+        }).join('');
+    });
+}
+
+// ── LEAGUES ───────────────────────────────────────────
+function loadLeagues() {
+    database.ref('leagueMemberships/' + playerProfileId).once('value').then(snap => {
+        const memberships = snap.val() || {};
+        const activeIds = Object.entries(memberships).filter(([,v])=>v==='member').map(([k])=>k);
+        const el = document.getElementById('leagues-list');
+        if (!activeIds.length) { el.innerHTML = '<div class="empty">Nisi u nijednoj ligi</div>'; return; }
+        let loaded = 0;
+        let rows = [];
+        activeIds.forEach(lid => {
+            database.ref('leagues/' + lid).once('value').then(ls => {
+                loaded++;
+                const l = ls.val();
+                if (l) rows.push({ id:lid, ...l });
+                if (loaded === activeIds.length) {
+                    const CAT_ICONS = {misovito:'🎲',sport:'⚽',kultura:'🎭',povijest:'📜',geografija:'🌍',film:'🎬',glazba:'🎵',opce:'🧠'};
+                    const TIER = {1:'🥇 Liga 1',2:'🥈 Liga 2',3:'🥉 Liga 3'};
+                    el.innerHTML = rows.map(l => {
+                        const myPos = l.leaderboard && l.leaderboard[playerProfileId]
+                            ? Object.values(l.leaderboard).filter(p=>(p.points||0)>=(l.leaderboard[playerProfileId].points||0)).length
+                            : '—';
+                        return '<div class="league-mini-row fu">'
+                            + '<div class="lmr-icon">' + (CAT_ICONS[l.category||'misovito']||'🎲') + '</div>'
+                            + '<div class="lmr-name">' + esc(l.name||'Liga') + '<div style="font-size:.63rem;color:#9ca3af;margin-top:2px;">' + (TIER[l.tier||3]||'') + (l.founderId===playerProfileId?' · 👑 Osnivač':'') + '</div></div>'
+                            + '<div><div class="lmr-pos">' + (myPos==='—'?'—':('#'+myPos)) + '</div><div style="font-size:.6rem;color:#9ca3af;text-align:right;">pozicija</div></div>'
+                            + '</div>';
+                    }).join('');
+                }
+            });
+        });
+    });
+}
+
+// ── SECURITY ──────────────────────────────────────────
+function renderSecurity() {
+    document.getElementById('sec-email').textContent = playerProfile.email || '—';
+    if (playerProfile.lastLoginAt) {
+        document.getElementById('last-login').textContent =
+            new Date(playerProfile.lastLoginAt).toLocaleString('hr-HR');
+    }
+    const isPublic = playerProfile.privacy !== 'private';
+    const btn = document.getElementById('privacy-btn');
+    btn.textContent = isPublic ? '🌍 Javno' : '🔒 Privatno';
+    btn.style.borderColor = isPublic ? '#a7f3d0' : '#fca5a5';
+    btn.style.color       = isPublic ? '#065f46' : '#991b1b';
+}
+
+function togglePrivacy() {
+    const newVal = playerProfile.privacy === 'private' ? 'public' : 'private';
+    database.ref('playerProfiles/' + playerProfileId + '/privacy').set(newVal).then(() => {
+        playerProfile.privacy = newVal;
+        sessionStorage.setItem('playerProfile', JSON.stringify(playerProfile));
+        renderSecurity();
+        toast(newVal === 'public' ? '🌍 Profil je sada javan' : '🔒 Profil je sada privatan');
+    });
+}
+
+function changePassword() {
+    const pwd = prompt('Upiši novu lozinku (min 8 znakova):');
+    if (!pwd || pwd.length < 8) { toast('❌ Lozinka mora imati min 8 znakova'); return; }
+    // Firebase Auth password change would go here
+    toast('✅ Zahtjev za promjenu lozinke poslan na e-mail');
+}
+
+function changeEmail() {
+    const email = prompt('Upiši novu e-mail adresu:');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('❌ Nije ispravna adresa'); return; }
+    database.ref('playerProfiles/' + playerProfileId + '/email').set(email).then(() => {
+        playerProfile.email = email;
+        sessionStorage.setItem('playerProfile', JSON.stringify(playerProfile));
+        renderSecurity();
+        toast('✅ E-mail ažuriran na: ' + email);
+    });
+}
+
+function exportData() {
+    const json = JSON.stringify({ profile: playerProfile, exportedAt: new Date().toISOString() }, null, 2);
+    const blob = new Blob([json], { type:'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'lukavac-profil-' + (playerProfile.nickname||'export') + '.json';
+    a.click();
+    toast('📤 Podaci preuzeti');
+}
+
+function confirmDeactivate() {
+    if (!confirm('Deaktivirati račun? Nećeš se moći prijaviti sve dok ga admin ne reaktivira.')) return;
+    database.ref('playerProfiles/' + playerProfileId + '/status').set('deactivated').then(() => {
+        sessionStorage.clear();
+        window.location.href = 'login.html';
+    });
+}
+
+function confirmDelete() {
+    const ok = prompt('Ovo će trajno obrisati tvoj račun i sve podatke. Upiši DELETE za potvrdu:');
+    if (ok !== 'DELETE') { toast('Brisanje otkazano'); return; }
+    database.ref('playerProfiles/' + playerProfileId).remove().then(() => {
+        database.ref('notifications/' + playerProfileId).remove();
+        database.ref('playerResults/' + playerProfileId).remove();
+        database.ref('leagueMemberships/' + playerProfileId).remove();
+        sessionStorage.clear();
+        window.location.href = 'login.html';
+    });
+}
+
+// ── TABS ──────────────────────────────────────────────
+const TAB_LOADERS = {
+    results:  () => { if (!allResults.length) loadResults(); },
+    quals:    () => loadQuals(),
+    badges:   () => loadBadges(),
+    leagues:  () => loadLeagues(),
+    info:     () => { loadNicknameSection(); fillReadView(); },
+};
+
+function showTab(tab, el) {
+    ['results','quals','badges','leagues','info','security'].forEach(t => {
+        document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
+    });
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    if (TAB_LOADERS[tab]) TAB_LOADERS[tab]();
+}
+
+// ── HELPERS ───────────────────────────────────────────
+function setVal(id, val) { const el = document.getElementById(id); if (el && val != null) el.value = val; }
+function setChk(id, val) { const el = document.getElementById(id); if (el) el.checked = !!val; }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 2800);
+}
+</script>
+</body>
+</html>
