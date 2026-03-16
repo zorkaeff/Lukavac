@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<!-- Contact v1.0 -->
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kontakt - Lukavac</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tillana:wght@400;500;600;700;800&family=Metal+Mania&display=swap" rel="stylesheet">
+    <style>
+        :root { --brand:#b75800;--brand-dark:#632705;--brand-mid:#d97706;--brand-light:#ffd995;--brand-pale:#fffff1;--green:#10b981;--red:#ef4444;--card-shadow:0 4px 15px rgba(0,0,0,.13); }
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{background:linear-gradient(135deg,#e8c99a 0%,#b87333 50%,#e8c99a 100%);font-family:'Tillana','Segoe UI',sans-serif;min-height:100vh;}
+        .topbar{background:white;box-shadow:0 2px 12px rgba(0,0,0,.12);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:10px;}
+        .topbar-title{font-family:'Metal Mania',cursive;font-size:1.3rem;color:var(--brand);}
+        .topbar-back{background:var(--brand-pale);border:1.5px solid var(--brand-light);border-radius:10px;padding:6px 14px;font-size:.82rem;font-weight:700;color:var(--brand);cursor:pointer;text-decoration:none;white-space:nowrap;}
+        .topbar-back:hover{background:var(--brand-light);}
+        .page-wrap{max-width:700px;margin:0 auto;padding:16px 12px 60px;}
+        .hero-card{background:white;border-radius:20px;box-shadow:var(--card-shadow);overflow:hidden;margin-bottom:14px;}
+        .hero-stripe{height:6px;background:linear-gradient(90deg,var(--brand-light),var(--brand),var(--brand-dark));}
+        .hero-body{padding:13px 16px 14px;}
+        
+        .hero-title{font-family:'Metal Mania',cursive;font-size:1.1rem;color:var(--brand);margin-bottom:5px;}
+        .hero-sub{font-size:.84rem;color:#6b7280;line-height:1.25;}
+        .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+        .info-box{background:white;border-radius:14px;box-shadow:var(--card-shadow);padding:11px 8px;text-align:center;border:1.5px solid var(--brand-light);transition:transform .18s;}
+        .info-box:hover{transform:translateY(-2px);}
+        .info-box a{text-decoration:none;color:inherit;}
+        .info-icon{font-size:1.3rem;margin-bottom:4px;}
+        .info-label{font-family:'Metal Mania',cursive;font-size:.66rem;color:var(--brand-dark);margin-bottom:2px;}
+        .info-val{font-size:.78rem;color:var(--brand);font-weight:700;word-break:break-word;}
+        .info-box.green{border-color:#a7f3d0;} .info-box.green .info-val{color:var(--green);}
+        .info-box.blue{border-color:#bfdbfe;}  .info-box.blue .info-val{color:#3b82f6;}
+        .section-title{font-family:'Metal Mania',cursive;font-size:1.05rem;color:var(--brand);margin-bottom:10px;padding-bottom:7px;border-bottom:3px solid var(--brand);display:flex;align-items:center;gap:7px;}
+        .form-card{background:white;border-radius:18px;box-shadow:var(--card-shadow);padding:20px 18px;margin-bottom:14px;}
+        .cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px;}
+        .cat-btn{border:2px solid var(--brand-light);border-radius:14px;padding:12px 10px;cursor:pointer;transition:all .18s;background:var(--brand-pale);display:flex;align-items:center;gap:10px;}
+        .cat-btn:hover{border-color:var(--brand);background:var(--brand-light);}
+        .cat-btn.sel{border-color:var(--brand);background:linear-gradient(135deg,var(--brand-light),#ffe4b5);box-shadow:0 3px 10px rgba(183,88,0,.2);}
+        .cat-btn.sel.red{border-color:#ef4444;background:linear-gradient(135deg,#fff1f2,#fee2e2);}
+        .cat-btn.sel.blue{border-color:#3b82f6;background:linear-gradient(135deg,#eff6ff,#dbeafe);}
+        .cat-btn.sel.green{border-color:#10b981;background:linear-gradient(135deg,#f0fdf4,#dcfce7);}
+        .cat-btn.sel.purple{border-color:#7c3aed;background:linear-gradient(135deg,#faf5ff,#ede9fe);}
+        .cat-btn.sel.yellow{border-color:#d97706;background:linear-gradient(135deg,#fefce8,#fef9c3);}
+        .cat-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;}
+        .ci-or{background:#fef3c7;border:1px solid var(--brand-light);}
+        .ci-re{background:#fee2e2;border:1px solid #fca5a5;}
+        .ci-bl{background:#dbeafe;border:1px solid #93c5fd;}
+        .ci-gr{background:#dcfce7;border:1px solid #86efac;}
+        .ci-pu{background:#ede9fe;border:1px solid #c4b5fd;}
+        .ci-ye{background:#fef9c3;border:1px solid #fde047;}
+        .cat-name{font-family:'Metal Mania',cursive;font-size:.85rem;color:var(--brand-dark);}
+        .cat-desc{font-size:.72rem;color:#9ca3af;margin-top:2px;}
+        .qreport-box{background:linear-gradient(135deg,#fff1f2,#fee2e2);border:2px solid #fca5a5;border-radius:14px;padding:14px 15px;margin-bottom:13px;display:none;}
+        .qreport-box.show{display:block;}
+        .qreport-title{font-family:'Metal Mania',cursive;font-size:.82rem;color:#991b1b;margin-bottom:10px;}
+        .field{margin-bottom:13px;}
+        label{display:block;font-family:'Metal Mania',cursive;font-size:.72rem;color:var(--brand-dark);margin-bottom:5px;}
+        label span{color:var(--red);margin-left:2px;}
+        .fi{width:100%;border:2px solid var(--brand-light);border-radius:12px;padding:10px 14px;font-family:'Tillana',sans-serif;font-size:.9rem;color:#1f2937;background:var(--brand-pale);transition:border-color .2s;}
+        .fi:focus{border-color:var(--brand);outline:none;background:white;}
+        .fi.err{border-color:var(--red);}
+        textarea.fi{resize:vertical;min-height:110px;}
+        .hint{font-size:.75rem;color:#9ca3af;margin-top:4px;}
+        .prio-row{display:flex;gap:6px;}
+        .prio-btn{flex:1;padding:8px 4px;border:1.5px solid var(--brand-light);border-radius:10px;background:var(--brand-pale);font-family:'Metal Mania',cursive;font-size:.66rem;color:var(--brand-dark);cursor:pointer;text-align:center;transition:all .18s;}
+        .prio-btn:hover{border-color:var(--brand);}
+        .pl{border-color:var(--green)!important;background:linear-gradient(135deg,#f0fdf4,#dcfce7)!important;color:#065f46!important;}
+        .pm{border-color:var(--brand)!important;background:linear-gradient(135deg,var(--brand-pale),var(--brand-light))!important;color:var(--brand-dark)!important;}
+        .ph{border-color:var(--red)!important;background:linear-gradient(135deg,#fff1f2,#fee2e2)!important;color:#991b1b!important;}
+        .attach-area{border:2px dashed var(--brand-light);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s;background:var(--brand-pale);}
+        .attach-area:hover{border-color:var(--brand);background:var(--brand-light);}
+        .attach-area input{display:none;}
+        .attach-preview{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;}
+        .attach-chip{background:var(--brand-pale);border:1px solid var(--brand-light);border-radius:8px;padding:3px 10px;font-size:.68rem;color:var(--brand-dark);display:flex;align-items:center;gap:5px;}
+        .attach-chip button{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:.8rem;padding:0;}
+        .btn-submit{width:100%;padding:14px;background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border:none;border-radius:14px;font-family:'Metal Mania',cursive;font-size:1rem;cursor:pointer;box-shadow:0 4px 15px rgba(183,88,0,.3);transition:all .2s;margin-top:4px;}
+        .btn-submit:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(183,88,0,.4);}
+        .btn-submit:disabled{opacity:.5;transform:none;cursor:not-allowed;}
+        .success-card{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #10b981;border-radius:18px;padding:28px 22px;text-align:center;box-shadow:var(--card-shadow);display:none;margin-bottom:14px;}
+        .success-card.show{display:block;}
+        .success-icon{font-size:3rem;margin-bottom:10px;}
+        .success-title{font-family:'Metal Mania',cursive;font-size:1.3rem;color:#065f46;margin-bottom:8px;}
+        .success-msg{font-size:.85rem;color:#047857;line-height:1.25;}
+        .success-ref{font-family:'Metal Mania',cursive;font-size:.8rem;color:#10b981;margin-top:10px;}
+        .btn-new{margin-top:14px;padding:10px 24px;background:white;border:2px solid #10b981;color:#065f46;border-radius:12px;font-family:'Metal Mania',cursive;font-size:.82rem;cursor:pointer;}
+        .faq-card{background:white;border-radius:18px;box-shadow:var(--card-shadow);padding:18px;margin-bottom:14px;}
+        .faq-item{border-bottom:1px solid var(--brand-light);}
+        .faq-item:last-child{border-bottom:none;}
+        .faq-q{display:flex;justify-content:space-between;align-items:center;padding:13px 0;cursor:pointer;gap:10px;}
+        .faq-qt{font-family:'Metal Mania',cursive;font-size:.88rem;color:var(--brand-dark);}
+        .faq-arrow{font-size:.7rem;color:var(--brand);transition:transform .2s;flex-shrink:0;}
+        .faq-item.open .faq-arrow{transform:rotate(180deg);}
+        .faq-a{font-size:.8rem;color:#4b5563;line-height:1.25;padding:0 0 13px;display:none;}
+        .faq-item.open .faq-a{display:block;}
+        .social-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+        .social-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:12px;border:1.5px solid transparent;font-family:'Tillana',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;text-decoration:none;transition:all .18s;}
+        .social-btn:hover{transform:translateY(-2px);}
+        .s-fb{background:#e8f4fd;color:#1877f2;border-color:#bae6fd;}
+        .s-ig{background:#fdf2f8;color:#c2185b;border-color:#f9a8d4;}
+        .s-wa{background:#f0fdf4;color:#128c7e;border-color:#a7f3d0;}
+        .s-yt{background:#fff1f2;color:#cc0000;border-color:#fca5a5;}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .spinner{width:18px;height:18px;border:3px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .6s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px;}
+        #toast{position:fixed;bottom:24px;right:16px;z-index:999;background:#1f2937;color:white;border-radius:12px;padding:10px 16px;font-size:.82rem;display:none;box-shadow:0 8px 24px rgba(0,0,0,.25);}
+        
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="topbar-title">📬 KONTAKT</div>
+    <a href="dashboard.html" class="topbar-back">← Dashboard</a>
+</div>
+
+<div class="page-wrap">
+
+    <div class="hero-card">
+        <div class="hero-stripe"></div>
+        <div class="hero-body">
+            <div class="hero-logo">🦊</div>
+            <div>
+                <div class="hero-title">Javi nam se!</div>
+                <div class="hero-sub">Pitanje, prijedlog, ili si pronašao grešku? Svaka poruka se čita i odgovara u roku <strong>48 sati</strong> radnim danom.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-box">
+            <div class="info-icon">📧</div>
+            <div class="info-label">E-mail</div>
+            <div class="info-val"><a href="/cdn-cgi/l/email-protection#167f787079567a637d77607775387e64"><span class="__cf_email__" data-cfemail="3c55525a537c5049575d4a5d5f12544e">[email&#160;protected]</span></a></div>
+        </div>
+        <div class="info-box green">
+            <div class="info-icon">🌐</div>
+            <div class="info-label">Web</div>
+            <div class="info-val"><a href="https://lukavac.hr" target="_blank">lukavac.hr</a></div>
+        </div>
+        <div class="info-box blue">
+            <div class="info-icon">📍</div>
+            <div class="info-label">Adresa</div>
+            <div class="info-val">Split, Hrvatska</div>
+        </div>
+    </div>
+
+    <div class="form-card" id="form-card">
+        <div class="section-title">✍️ Pošalji Poruku</div>
+        <div style="font-family:'Metal Mania',cursive;font-size:.72rem;color:#9ca3af;margin-bottom:9px;text-transform:uppercase;letter-spacing:.06em;">O čemu se radi?</div>
+
+        <div class="cat-grid">
+            <div class="cat-btn sel" onclick="selCat('prijedlog','',this)">
+                <div class="cat-icon ci-or">💡</div>
+                <div><div class="cat-name">Prijedlog</div><div class="cat-desc">Ideja za poboljšanje</div></div>
+            </div>
+            <div class="cat-btn" onclick="selCat('pitanje','blue',this)">
+                <div class="cat-icon ci-bl">❓</div>
+                <div><div class="cat-name">Pitanje</div><div class="cat-desc">Nejasnoće o igri</div></div>
+            </div>
+            <div class="cat-btn" onclick="selCat('prigovor','red',this)">
+                <div class="cat-icon ci-re">⚠️</div>
+                <div><div class="cat-name">Prigovor</div><div class="cat-desc">Žalba ili pritužba</div></div>
+            </div>
+            <div class="cat-btn" onclick="selCat('greska_pitanje','yellow',this)">
+                <div class="cat-icon ci-ye">🔍</div>
+                <div><div class="cat-name">Netočno Pitanje</div><div class="cat-desc">Prijavi grešku u kvizu</div></div>
+            </div>
+            <div class="cat-btn" onclick="selCat('pravila','purple',this)">
+                <div class="cat-icon ci-pu">📜</div>
+                <div><div class="cat-name">Pravila</div><div class="cat-desc">Pojašnjenje propisa</div></div>
+            </div>
+            <div class="cat-btn" onclick="selCat('tehnicko','red',this)">
+                <div class="cat-icon ci-re">🔧</div>
+                <div><div class="cat-name">Tehnički Problem</div><div class="cat-desc">Bug ili greška u aplikaciji</div></div>
+            </div>
+            <div class="cat-btn" onclick="selCat('nagrade','green',this)">
+                <div class="cat-icon ci-gr">💰</div>
+                <div><div class="cat-name">Nagrade / Isplata</div><div class="cat-desc">Upiti o nagradi</div></div>
+            </div>
+            <div class="cat-btn" onclick="selCat('ostalo','',this)">
+                <div class="cat-icon ci-or">📨</div>
+                <div><div class="cat-name">Ostalo</div><div class="cat-desc">Nešto drugo</div></div>
+            </div>
+        </div>
+
+        <div class="qreport-box" id="qreport-box">
+            <div class="qreport-title">🔍 Detalji o netočnom pitanju</div>
+            <div class="field">
+                <label>Naziv kviza <span>*</span></label>
+                <input type="text" class="fi" id="q-quiz" placeholder="npr. Lukavac Sata — Petak 20:00">
+            </div>
+            <div class="field">
+                <label>Tekst pitanja (koliko se sjećaš)</label>
+                <textarea class="fi" id="q-text" style="min-height:60px;" placeholder="Upiši pitanje ili ključne riječi..."></textarea>
+            </div>
+            <div class="field" style="margin-bottom:0;">
+                <label>Točan odgovor (po tebi)</label>
+                <input type="text" class="fi" id="q-answer" placeholder="Što misliš da je točan odgovor?">
+            </div>
+        </div>
+
+        <div class="field"><label>Ime i prezime <span>*</span></label><input type="text" class="fi" id="f-name" placeholder="Tvoje ime"></div>
+        <div class="field"><label>E-mail adresa <span>*</span></label><input type="email" class="fi" id="f-email" placeholder="tvoj@email.com"></div>
+        <div class="field"><label>Naslov poruke <span>*</span></label><input type="text" class="fi" id="f-subject" placeholder="Kratki opis teme..."></div>
+        <div class="field">
+            <label>Poruka <span>*</span></label>
+            <textarea class="fi" id="f-message" placeholder="Opiši detaljno..."></textarea>
+            <div class="hint" id="char-count">0 / 1000 znakova</div>
+        </div>
+
+        <div class="field">
+            <label>Prioritet</label>
+            <div class="prio-row">
+                <div class="prio-btn pl" onclick="selPrio('low',this)">🟢 Nisko</div>
+                <div class="prio-btn" onclick="selPrio('medium',this)">🟡 Srednje</div>
+                <div class="prio-btn" onclick="selPrio('high',this)">🔴 Visoko</div>
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Prilog (opcionalno)</label>
+            <div class="attach-area" onclick="document.getElementById('file-input').click()">
+                <input type="file" id="file-input" multiple accept="image/*,.pdf" onchange="addFiles(this.files)">
+                <div style="font-size:1.3rem;margin-bottom:3px;">📎</div>
+                <div style="font-size:.76rem;color:#9ca3af;">Klikni za slike ili PDF (max 3 datoteke, max 5 MB svaka)</div>
+            </div>
+            <div class="attach-preview" id="attach-preview"></div>
+        </div>
+
+        <button class="btn-submit" id="submit-btn" onclick="send()">📬 Pošalji Poruku</button>
+    </div>
+
+    <div class="success-card" id="success-card">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Poruka Primljena!</div>
+        <div class="success-msg">Hvala ti što si nam se javio/la!<br>Odgovorit ćemo na tvoj e-mail u roku <strong>48 sati</strong> radnim danom.<br>Za hitno: <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4a23242c250a263f212b3c2b29642238">[email&#160;protected]</a></strong></div>
+        <div class="success-ref" id="success-ref"></div>
+        <button class="btn-new" onclick="resetForm()">✍️ Nova Poruka</button>
+    </div>
+
+    <div class="faq-card">
+        <div class="section-title">❓ Česta Pitanja</div>
+        <div class="faq-item"><div class="faq-q" onclick="faq(this)"><span class="faq-qt">Kako funkcionira sustav odgovaranja s ! . ?</span><span class="faq-arrow">▼</span></div><div class="faq-a">Svaki igrač bira tip: <strong>!</strong> (Sigurno) veći bodovi uz veći rizik, <strong>.</strong> (Rizično) srednji bod/rizik, a <strong>?</strong> (Lukavac) čekanje i promatranje tuđih odgovora prije vlastite odluke. Ova tri tipa čine srce Lukavac strategije.</div></div>
+        <div class="faq-item"><div class="faq-q" onclick="faq(this)"><span class="faq-qt">Kako se isplaćuju nagrade?</span><span class="faq-arrow">▼</span></div><div class="faq-a">Nagrade se isplaćuju na IBAN koji navodiš u profilu. Isplate se vrše jednom tjedno, ponedjeljkom, za nagrade zarađene u prethodnom tjednu. Minimalni iznos za isplatu je 10€.</div></div>
+        <div class="faq-item"><div class="faq-q" onclick="faq(this)"><span class="faq-qt">Što su tokeni i čemu služe?</span><span class="faq-arrow">▼</span></div><div class="faq-a">Tokeni su virtualna valuta unutar aplikacije. Koristiš ih za prijavu na premium kvizove, ulaz u privatne lige i pay-to-enter natjecanja. Možeš ih kupiti unutar aplikacije ili zaraditi osvajanjem posebnih nagrada.</div></div>
+        <div class="faq-item"><div class="faq-q" onclick="faq(this)"><span class="faq-qt">Mogu li prijaviti netočno pitanje?</span><span class="faq-arrow">▼</span></div><div class="faq-a">Da! Koristi obrazac iznad i odaberi "Netočno Pitanje". Navedi naziv kviza, tekst pitanja i što smatraš točnim odgovorom. Svaka prijava pregledava se u roku 72 sata. Ako je greška potvrđena, kviz se boduje iznova za sve igrače.</div></div>
+        <div class="faq-item"><div class="faq-q" onclick="faq(this)"><span class="faq-qt">Kako funkcionira liga sustav?</span><span class="faq-arrow">▼</span></div><div class="faq-a">Liga sustav ima tri tiera prema ranku (Liga 1, 2, 3). Svaki igrač može osnovati privatnu ligu — igrači plaćaju ulazninu, osnivač zarađuje 30% a platforma 70%. Dostupne su i kategorijske lige: sport, kultura, povijest, geografija, film, glazba.</div></div>
+        <div class="faq-item"><div class="faq-q" onclick="faq(this)"><span class="faq-qt">Nisam primio/la nagradu za kviz koji sam dobio/la.</span><span class="faq-arrow">▼</span></div><div class="faq-a">Provjeri je li tvoj IBAN ispravno unesen u profilu. Ako je prošlo više od 7 radnih dana, kontaktiraj nas s kategorijom "Nagrade / Isplata" i navedi datum i naziv kviza. Svaki upit rješavamo prioritetno.</div></div>
+        <div class="faq-item"><div class="faq-q" onclick="faq(this)"><span class="faq-qt">Zaboravio/la sam lozinku — što sad?</span><span class="faq-arrow">▼</span></div><div class="faq-a">Na login stranici klikni "Zaboravljena lozinka" i unesi svoju e-mail adresu. Primit ćeš link za reset lozinke u roku par minuta. Provjeri i spam folder ako ga ne vidiš u inboxu.</div></div>
+    </div>
+
+    <div class="form-card" style="padding:16px 18px;">
+        <div class="section-title">📱 Prati Nas</div>
+        <div style="font-size:.86rem;color:#6b7280;line-height:1.25;">Ostani u toku s novostima, nagradnim igrama i najavama kvizova.</div>
+        <div class="social-row">
+            <a href="#" class="social-btn s-fb">📘 Facebook</a>
+            <a href="#" class="social-btn s-ig">📷 Instagram</a>
+            <a href="#" class="social-btn s-wa">💬 WhatsApp</a>
+            <a href="#" class="social-btn s-yt">▶️ YouTube</a>
+        </div>
+    </div>
+
+    <div style="text-align:center;padding:8px 0 4px;">
+        <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:10px;">
+            <a href="pravila.html" style="font-family:'Metal Mania',cursive;font-size:.72rem;color:var(--brand);text-decoration:none;">📜 Pravila Igre</a>
+            <a href="privacy.html" style="font-family:'Metal Mania',cursive;font-size:.72rem;color:var(--brand);text-decoration:none;">🔒 Privatnost</a>
+            <a href="terms.html" style="font-family:'Metal Mania',cursive;font-size:.72rem;color:var(--brand);text-decoration:none;">📋 Uvjeti Korištenja</a>
+        </div>
+        <div style="opacity:.4;">
+            <div style="font-family:'Metal Mania',cursive;font-size:.72rem;color:var(--brand);">LUKAVAC</div>
+            <div style="font-size:.56rem;color:#6b7280;">® Zaštićeno autorsko djelo · Sva prava pridržana</div>
+        </div>
+    </div>
+
+</div>
+<div id="toast"></div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+const playerProfileId = sessionStorage.getItem('playerProfileId');
+const playerProfile   = JSON.parse(sessionStorage.getItem('playerProfile') || 'null');
+let selCategory = 'prijedlog';
+let selPriority = 'low';
+let files = [];
+
+const SUBJ = { prijedlog:'Prijedlog: ', pitanje:'Pitanje: ', prigovor:'Prigovor: ', greska_pitanje:'Netočno pitanje — ', pravila:'Pojašnjenje pravila: ', tehnicko:'Tehnički problem: ', nagrade:'Upit o nagradi: ', ostalo:'' };
+
+window.onload = function() {
+    if (playerProfile) {
+        document.getElementById('f-name').value  = playerProfile.nickname || playerProfile.firstName || '';
+        document.getElementById('f-email').value = playerProfile.email || '';
+    }
+    document.getElementById('f-message').addEventListener('input', function() {
+        const n = Math.min(this.value.length, 1000);
+        if (this.value.length > 1000) this.value = this.value.slice(0,1000);
+        const el = document.getElementById('char-count');
+        el.textContent = n + ' / 1000 znakova';
+        el.style.color = n > 900 ? '#ef4444' : '#9ca3af';
+    });
+};
+
+function selCat(cat, color, el) {
+    selCategory = cat;
+    document.querySelectorAll('.cat-btn').forEach(b => b.className = 'cat-btn');
+    el.className = 'cat-btn sel' + (color ? ' '+color : '');
+    document.getElementById('qreport-box').className = 'qreport-box' + (cat==='greska_pitanje'?' show':'');
+    const s = document.getElementById('f-subject');
+    const anyPfx = Object.values(SUBJ).some(p => p && s.value.startsWith(p));
+    if (!s.value || anyPfx) s.value = SUBJ[cat] || '';
+}
+
+function selPrio(p, el) {
+    selPriority = p;
+    document.querySelectorAll('.prio-btn').forEach(b => b.className = 'prio-btn');
+    el.className = 'prio-btn p' + p.charAt(0);
+}
+
+function addFiles(fl) {
+    const left = 3 - files.length;
+    Array.from(fl).slice(0,left).forEach(f => { if (f.size < 5*1024*1024) files.push(f); });
+    renderFiles();
+}
+function renderFiles() {
+    document.getElementById('attach-preview').innerHTML = files.map((f,i) =>
+        '<div class="attach-chip">📎 '+f.name+'<button onclick="rmFile('+i+')">✕</button></div>'
+    ).join('');
+}
+function rmFile(i) { files.splice(i,1); renderFiles(); }
+
+function faq(el) {
+    const item = el.closest('.faq-item');
+    const was  = item.classList.contains('open');
+    document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+    if (!was) item.classList.add('open');
+}
+
+function send() {
+    const name    = document.getElementById('f-name').value.trim();
+    const email   = document.getElementById('f-email').value.trim();
+    const subject = document.getElementById('f-subject').value.trim();
+    const message = document.getElementById('f-message').value.trim();
+    let ok = true;
+    [['f-name',name],['f-email',email],['f-subject',subject],['f-message',message]].forEach(([id,v]) => {
+        const el = document.getElementById(id);
+        if (!v) { el.classList.add('err'); ok=false; } else el.classList.remove('err');
+    });
+    if (!ok) { toast('❌ Popuni sva obavezna polja'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { document.getElementById('f-email').classList.add('err'); toast('❌ Ispravna e-mail adresa?'); return; }
+    const extra = {};
+    if (selCategory === 'greska_pitanje') {
+        extra.quizName      = document.getElementById('q-quiz').value.trim();
+        extra.questionText  = document.getElementById('q-text').value.trim();
+        extra.correctAnswer = document.getElementById('q-answer').value.trim();
+    }
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Šaljem...';
+    const ticket = { category:selCategory, priority:selPriority, name, email, subject, message, playerId:playerProfileId||null, timestamp:Date.now(), status:'open', attachmentCount:files.length, ...extra };
+    database.ref('contactTickets').push(ticket).then(ref => {
+        const id = ref.key.slice(-8).toUpperCase();
+        database.ref('adminNotifications').push({ type:'contact', category:selCategory, priority:selPriority, from:name, subject, ticketId:ref.key, timestamp:Date.now(), read:false });
+        document.getElementById('form-card').style.display = 'none';
+        document.getElementById('success-card').classList.add('show');
+        document.getElementById('success-ref').textContent = '📋 Referentni broj: #'+id;
+    }).catch(() => { btn.disabled=false; btn.innerHTML='📬 Pošalji Poruku'; toast('❌ Greška pri slanju. Pokušaj ponovo.'); });
+}
+
+function resetForm() {
+    document.getElementById('form-card').style.display = '';
+    document.getElementById('success-card').classList.remove('show');
+    ['f-subject','f-message'].forEach(id => document.getElementById(id).value = '');
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = false; btn.innerHTML = '📬 Pošalji Poruku';
+    files = []; renderFiles

@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pravila Igre — Lukavac</title>
+    <link href="https://fonts.googleapis.com/css2?family=Metal+Mania&family=Tillana:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand: #b75800;
+            --brand-dark: #632705;
+            --brand-light: #ffd995;
+            --brand-pale: #fffff1;
+            --green: #059669;
+            --red: #dc2626;
+            --blue: #2563eb;
+            --gold: #b45309;
+            --text: #2d1a06;
+            --text-dim: #7c5a2a;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: linear-gradient(135deg, #e8c99a 0%, #b87333 50%, #e8c99a 100%);
+            font-family: 'Tillana', 'Segoe UI', sans-serif;
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* TOPBAR */
+        .topbar { position: sticky; top: 0; z-index: 100; background: white; box-shadow: 0 2px 12px rgba(0,0,0,.12); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .topbar-logo { font-family: 'Metal Mania', cursive; font-size: 1.3rem; color: var(--brand); }
+        .topbar-back { background: var(--brand-pale); border: 1.5px solid var(--brand-light); border-radius: 10px; padding: 6px 14px; font-size: .82rem; font-weight: 700; color: var(--brand); text-decoration: none; white-space: nowrap; }
+        .topbar-back:hover { background: var(--brand-light); }
+
+        /* PAGE */
+        .page { max-width: 680px; margin: 0 auto; padding: 16px 12px 60px; }
+
+        /* HERO */
+        .hero { text-align: center; padding: 24px 16px 20px; }
+        .hero-title { font-family: 'Metal Mania', cursive; font-size: 2rem; color: white; text-shadow: 0 2px 10px rgba(99,39,5,.5); margin-bottom: 6px; }
+        .hero-sub { font-size: .9rem; color: rgba(255,255,255,.85); font-style: italic; line-height: 1.5; }
+        .hero-line { width: 80px; height: 2px; background: rgba(255,255,255,.5); margin: 14px auto 0; }
+
+        /* LOGLINE */
+        .logline { background: white; border-left: 4px solid var(--brand); border-radius: 0 12px 12px 0; padding: 13px 16px; margin-bottom: 14px; font-size: .9rem; font-weight: 700; color: var(--brand-dark); line-height: 1.2; }
+
+        /* ACCORDION */
+        .acc { background: white; border-radius: 16px; box-shadow: 0 3px 14px rgba(183,88,0,.1); margin-bottom: 10px; overflow: hidden; border: 1.5px solid var(--brand-light); }
+        .acc-head { display: flex; align-items: center; gap: 10px; padding: 13px 15px; cursor: pointer; user-select: none; background: linear-gradient(135deg, var(--brand-pale), #fff8e6); border-bottom: 1.5px solid transparent; transition: background .15s; }
+        .acc.open .acc-head { border-bottom-color: var(--brand-light); }
+        .acc-head:active { background: var(--brand-light); }
+        .acc-icon { font-size: 1.15rem; flex-shrink: 0; }
+        .acc-title { font-family: 'Metal Mania', cursive; font-size: .98rem; color: var(--brand); flex: 1; }
+        .acc-arrow { font-size: .75rem; color: var(--brand); transition: transform .22s; flex-shrink: 0; }
+        .acc.open .acc-arrow { transform: rotate(180deg); }
+        .acc-body { display: none; padding: 14px 15px; }
+        .acc.open .acc-body { display: block; }
+
+        /* RULE LIST */
+        .rule-list { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+        .rule-list li { display: flex; align-items: flex-start; gap: 9px; font-size: .88rem; color: var(--text-dim); line-height: 1.2; }
+        .rule-list li::before { content: '›'; color: var(--brand); font-size: 1.05rem; flex-shrink: 0; margin-top: 1px; }
+        .rule-list li strong { color: var(--text); }
+
+        /* ANSWER METHOD CARDS — game-style */
+        .methods-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+        .mcard { border-radius: 14px; overflow: hidden; border: 2px solid transparent; }
+        .mcard-safe   { background: #eff6ff; border-color: #93c5fd; }
+        .mcard-risky  { background: #fff1f2; border-color: #fca5a5; }
+        .mcard-cunning{ background: #fffbeb; border-color: #fde68a; }
+        .mcard-top { padding: 11px 8px 8px; text-align: center; }
+        .mcard-btn { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 12px; font-family: 'Metal Mania', cursive; font-size: 1.35rem; margin-bottom: 5px; }
+        .mcard-safe   .mcard-btn { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; box-shadow: 0 3px 8px rgba(37,99,235,.35); }
+        .mcard-risky  .mcard-btn { background: linear-gradient(135deg, #dc2626, #991b1b); color: white; box-shadow: 0 3px 8px rgba(220,38,38,.35); }
+        .mcard-cunning .mcard-btn { background: linear-gradient(135deg, #d97706, #b45309); color: white; box-shadow: 0 3px 8px rgba(217,119,6,.35); }
+        .mcard-name { font-family: 'Metal Mania', cursive; font-size: .72rem; letter-spacing: .04em; }
+        .mcard-safe   .mcard-name { color: #1d4ed8; }
+        .mcard-risky  .mcard-name { color: #b91c1c; }
+        .mcard-cunning .mcard-name { color: #92400e; }
+        .mcard-score { padding: 8px 10px; border-top: 1.5px solid; font-size: .72rem; display: flex; flex-direction: column; gap: 3px; }
+        .mcard-safe   .mcard-score { border-color: #bfdbfe; }
+        .mcard-risky  .mcard-score { border-color: #fecaca; }
+        .mcard-cunning .mcard-score { border-color: #fde68a; }
+        .score-line { display: flex; justify-content: space-between; align-items: center; }
+        .score-val { font-family: 'Metal Mania', cursive; font-size: .8rem; }
+        .score-val.pos { color: var(--green); }
+        .score-val.neu { color: #6b7280; }
+        .score-val.neg { color: var(--red); }
+        .score-lbl { font-size: .65rem; color: #9ca3af; }
+
+        /* METHOD DESCRIPTION ROWS */
+        .method-desc { background: var(--brand-pale); border: 1.5px solid var(--brand-light); border-radius: 10px; padding: 10px 13px; margin-bottom: 8px; }
+        .method-desc:last-child { margin-bottom: 0; }
+        .md-head { font-family: 'Metal Mania', cursive; font-size: .85rem; color: var(--brand); margin-bottom: 4px; }
+        .md-text { font-size: .84rem; color: var(--text-dim); line-height: 1.2; }
+        .md-text strong { color: var(--text); }
+
+        /* ROUNDS — card-per-round instead of table */
+        .rounds-grid { display: flex; flex-direction: column; gap: 7px; }
+        .round-row { display: flex; align-items: center; gap: 8px; background: var(--brand-pale); border: 1.5px solid var(--brand-light); border-radius: 12px; padding: 10px 12px; }
+        .round-row.finale { background: linear-gradient(135deg, #fffbeb, #fef3c7); border-color: #fde68a; }
+        .rr-label { font-family: 'Metal Mania', cursive; font-size: .82rem; color: var(--brand-dark); min-width: 72px; flex-shrink: 0; }
+        .round-row.finale .rr-label { color: var(--gold); }
+        .rr-pills { display: flex; gap: 5px; flex-wrap: wrap; flex: 1; }
+        .rr-pill { font-family: 'Metal Mania', cursive; font-size: .72rem; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
+        .rr-pill.safe    { background: #eff6ff; color: #1d4ed8; border: 1.5px solid #bfdbfe; }
+        .rr-pill.risky   { background: #fff1f2; color: #b91c1c; border: 1.5px solid #fecaca; }
+        .rr-pill.cunning { background: #fffbeb; color: #92400e; border: 1.5px solid #fde68a; }
+        .rr-max { font-family: 'Metal Mania', cursive; font-size: .88rem; color: var(--brand); flex-shrink: 0; }
+
+        /* RULE BLOCK */
+        .rule-block { background: var(--brand-pale); border: 1.5px solid var(--brand-light); border-radius: 10px; padding: 11px 13px; margin-bottom: 8px; }
+        .rule-block:last-child { margin-bottom: 0; }
+        .rb-head { font-family: 'Metal Mania', cursive; font-size: .88rem; color: var(--brand); margin-bottom: 5px; }
+        .rb-text { font-size: .84rem; color: var(--text-dim); line-height: 1.2; }
+        .rb-text strong { color: var(--text); }
+
+        /* TIEBREAKER */
+        .tb-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+        .tb-row { display: flex; align-items: center; gap: 10px; background: white; border: 1.5px solid var(--brand-light); border-radius: 10px; padding: 9px 12px; }
+        .tb-num { font-family: 'Metal Mania', cursive; font-size: 1rem; color: var(--brand); min-width: 24px; text-align: center; flex-shrink: 0; }
+        .tb-text { font-size: .84rem; color: var(--text-dim); line-height: 1.2; }
+        .tb-text strong { color: var(--text); }
+
+        /* SCENARIO */
+        .highlight-box { background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1.5px solid #fde68a; border-radius: 12px; padding: 13px 14px; margin-top: 10px; }
+        .hb-title { font-family: 'Metal Mania', cursive; font-size: .85rem; color: var(--gold); margin-bottom: 7px; }
+        .hb-text { font-size: .84rem; color: var(--text-dim); line-height: 1.2; margin-bottom: 10px; }
+        .hb-text strong { color: var(--text); }
+        .scenario { background: #f8f4ee; border: 1px solid #e5d5b0; border-radius: 10px; padding: 11px 13px; margin-bottom: 8px; font-family: 'Courier New', monospace; font-size: .8rem; }
+        .scenario:last-child { margin-bottom: 0; }
+        .sc-title { font-family: 'Metal Mania', cursive; font-size: .78rem; color: var(--brand); margin-bottom: 7px; }
+        .sc-row { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid rgba(183,88,0,.08); }
+        .sc-row:last-of-type { border-bottom: none; }
+        .sc-player { color: var(--text-dim); min-width: 58px; font-size: .75rem; }
+        .sc-action { color: #92400e; min-width: 56px; }
+        .sc-result { color: var(--green); margin-left: auto; font-weight: 700; }
+        .sc-result.neg { color: var(--red); }
+        .sc-note { font-size: .72rem; color: var(--text-dim); margin-top: 5px; font-family: 'Tillana', sans-serif; }
+
+        /* PENALTY */
+        .pen-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(183,88,0,.1); }
+        .pen-row:last-child { border-bottom: none; }
+        .pen-badge { font-family: 'Metal Mania', cursive; font-size: .68rem; padding: 3px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+        .p1 { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .p2 { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .p3 { background: #dc2626; color: white; }
+        .pen-desc { font-size: .84rem; color: var(--text-dim); line-height: 1.2; }
+
+        /* FOOTER */
+        .foot-note { text-align: center; padding: 20px 16px 0; font-size: .8rem; color: rgba(255,255,255,.75); font-style: italic; }
+        .foot-note strong { color: white; }
+
+        @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        .acc { animation: fadeUp .25s ease both; }
+        .acc:nth-child(1){animation-delay:.03s}.acc:nth-child(2){animation-delay:.06s}
+        .acc:nth-child(3){animation-delay:.09s}.acc:nth-child(4){animation-delay:.12s}
+        .acc:nth-child(5){animation-delay:.15s}.acc:nth-child(6){animation-delay:.18s}
+        .acc:nth-child(7){animation-delay:.21s}
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="topbar-logo">🦊 LUKAVAC</div>
+    <a href="dashboard.html" class="topbar-back">← Natrag</a>
+</div>
+
+<div class="page">
+
+    <div class="hero">
+        <h1 class="hero-title">PRAVILA IGRE</h1>
+        <p class="hero-sub">Nije važno samo što znaš — važno je kako igraš.</p>
+        <div class="hero-line"></div>
+    </div>
+
+    <div class="logline">
+        Lukavac je eliminacijski kviz — svi igrači odgovaraju istovremeno na ista pitanja, ali biraju različite strategije. Znanje pomaže. Strategija pobjeđuje.
+    </div>
+
+    <!-- 1. TIJEK IGRE -->
+    <div class="acc">
+        <div class="acc-head" onclick="toggle(this)">
+            <span class="acc-icon">🎯</span>
+            <span class="acc-title">Tijek Igre</span>
+            <span class="acc-arrow">▼</span>
+        </div>
+        <div class="acc-body">
+            <ul class="rule-list">
+                <li>Svi igrači odgovaraju <strong>istovremeno</strong> putem pametnog telefona</li>
+                <li>Uz odabir odgovora (A, B, C ili D) biraš i <strong>metodu</strong> — sigurno, rizično ili lukavo</li>
+                <li>Nakon svakog pitanja ljestvica se odmah ažurira — poredak se može <strong>dramatično promijeniti</strong></li>
+                <li>Na kraju svake runde ispada igrač s <strong>najnižim zbrojem</strong></li>
+                <li>Igra traje dok ne ostanu <strong>dva finalista</strong> — pobjeđuje tko skupi više</li>
+                <li>Eliminirni igrači odlaze <strong>bez nagrade</strong> — sve ili ništa</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 2. METODE ODGOVARANJA -->
+    <div class="acc">
+        <div class="acc-head" onclick="toggle(this)">
+            <span class="acc-icon">⚡</span>
+            <span class="acc-title">Metode Odgovaranja</span>
+            <span class="acc-arrow">▼</span>
+        </div>
+        <div class="acc-body">
+            <div class="methods-grid">
+                <div class="mcard mcard-safe">
+                    <div class="mcard-top">
+                        <div class="mcard-btn">A.</div>
+                        <div class="mcard-name">SIGURNO</div>
+                    </div>
+                    <div class="mcard-score">
+                        <div class="score-line">
+                            <span class="score-lbl">točan</span>
+                            <span class="score-val pos">+bod</span>
+                        </div>
+                        <div class="score-line">
+                            <span class="score-lbl">krivi</span>
+                            <span class="score-val neu">± 0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mcard mcard-risky">
+                    <div class="mcard-top">
+                        <div class="mcard-btn">A!</div>
+                        <div class="mcard-name">RIZIČNO</div>
+                    </div>
+                    <div class="mcard-score">
+                        <div class="score-line">
+                            <span class="score-lbl">točan</span>
+                            <span class="score-val pos">+2×</span>
+                        </div>
+                        <div class="score-line">
+                            <span class="score-lbl">krivi</span>
+                            <span class="score-val neg">−2×</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mcard mcard-cunning">
+                    <div class="mcard-top">
+                        <div class="mcard-btn">A?</div>
+                        <div class="mcard-name">LUKAVO</div>
+                    </div>
+                    <div class="mcard-score">
+                        <div class="score-line">
+                            <span class="score-lbl">točan</span>
+                            <span class="score-val pos">+bod</span>
+                        </div>
+                        <div class="score-line">
+                            <span class="score-lbl">krivi</span>
+                            <span class="score-val neg">−bod</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="method-desc">
+                <div class="md-head">🔵 Sigurno &nbsp;A. B. C. D.</div>
+                <div class="md-text">Odgovaraš <strong>bez rizika</strong>. Točan = zarađuješ. Krivi = <strong>ne gubiš ništa</strong>. Sigurna opcija kada nisi siguran.</div>
+            </div>
+            <div class="method-desc">
+                <div class="md-head">🔴 Rizično &nbsp;A! B! C! D!</div>
+                <div class="md-text">Odgovaraš s <strong>punim uvjerenjem</strong>. Točan = <strong>dvostruki bod</strong>. Krivi = <strong>gubiš dvostruki bod</strong>, može i negativno. Koristi kad si siguran ili kad si na rubu eliminacije.</div>
+            </div>
+            <div class="method-desc">
+                <div class="md-head">🟡 Lukavo &nbsp;A? B? C? D?</div>
+                <div class="md-text">Čekaš — nakon isteka vremena vidiš <strong>odgovore svih igrača</strong>, pa u 5 sekundi biraš konačni odgovor. Možeš kopirati lidera ili igrati psihologiju. Ako ne odgovoriš, bilježi se <strong>pogrešan lukav odgovor</strong>.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. ZARADE PO RUNDAMA -->
+    <div class="acc">
+        <div class="acc-head" onclick="toggle(this)">
+            <span class="acc-icon">💰</span>
+            <span class="acc-title">Zarade po Rundama</span>
+            <span class="acc-arrow">▼</span>
+        </div>
+        <div class="acc-body">
+            <div class="rounds-grid">
+                <div class="round-row">
+                    <div class="rr-label">1. runda</div>
+                    <div class="rr-pills">
+                        <span class="rr-pill safe">+50 / ±0</span>
+                        <span class="rr-pill risky">+100 / −100</span>
+                        <span class="rr-pill cunning">+50 / −50</span>
+                    </div>
+                    <div class="rr-max">1.000</div>
+                </div>
+                <div class="round-row">
+                    <div class="rr-label">2. runda</div>
+                    <div class="rr-pills">
+                        <span class="rr-pill safe">+100 / ±0</span>
+                        <span class="rr-pill risky">+200 / −200</span>
+                        <span class="rr-pill cunning">+100 / −100</span>
+                    </div>
+                    <div class="rr-max">2.000</div>
+                </div>
+                <div class="round-row">
+                    <div class="rr-label">3. runda</div>
+                    <div class="rr-pills">
+                        <span class="rr-pill safe">+150 / ±0</span>
+                        <span class="rr-pill risky">+300 / −300</span>
+                        <span class="rr-pill cunning">+150 / −150</span>
+                    </div>
+                    <div class="rr-max">3.000</div>
+                </div>
+                <div class="round-row">
+                    <div class="rr-label">4. runda</div>
+                    <div class="rr-pills">
+                        <span class="rr-pill safe">+200 / ±0</span>
+                        <span class="rr-pill risky">+400 / −400</span>
+                        <span class="rr-pill cunning">+200 / −200</span>
+                    </div>
+                    <div class="rr-max">4.000</div>
+                </div>
+                <div class="round-row">
+                    <div class="rr-label">5. runda</div>
+                    <div class="rr-pills">
+                        <span class="rr-pill safe">+250 / ±0</span>
+                        <span class="rr-pill risky">+500 / −500</span>
+                        <span class="rr-pill cunning">+250 / −250</span>
+                    </div>
+                    <div class="rr-max">5.000</div>
+                </div>
+                <div class="round-row finale">
+                    <div class="rr-label">🏆 Finale</div>
+                    <div class="rr-pills">
+                        <span class="rr-pill safe">+500 / ±0</span>
+                        <span class="rr-pill risky">+1.000 / −1.000</span>
+                        <span class="rr-pill cunning">+500 / −500</span>
+                    </div>
+                    <div class="rr-max">10.000</div>
+                </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;font-size:.72rem;">
+                <span style="background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:20px;padding:3px 10px;font-family:'Metal Mania',cursive;">🔵 Sigurno (.)</span>
+                <span style="background:#fff1f2;color:#b91c1c;border:1.5px solid #fecaca;border-radius:20px;padding:3px 10px;font-family:'Metal Mania',cursive;">🔴 Rizično (!)</span>
+                <span style="background:#fffbeb;color:#92400e;border:1.5px solid #fde68a;border-radius:20px;padding:3px 10px;font-family:'Metal Mania',cursive;">🟡 Lukavo (?)</span>
+                <span style="background:var(--brand-pale);color:var(--brand);border:1.5px solid var(--brand-light);border-radius:20px;padding:3px 10px;font-family:'Metal Mania',cursive;">Maks. runde</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. ELIMINACIJA -->
+    <div class="acc">
+        <div class="acc-head" onclick="toggle(this)">
+            <span class="acc-icon">❌</span>
+            <span class="acc-title">Eliminacija</span>
+            <span class="acc-arrow">▼</span>
+        </div>
+        <div class="acc-body">
+            <div class="rule-block">
+                <div class="rb-head">🔻 Tko ispada?</div>
+                <div class="rb-text">Na kraju svake runde ispada igrač s <strong>najnižim ukupnim zbrojem</strong>. Eliminirni igrači odlaze <strong>bez nagrade</strong>.</div>
+            </div>
+            <div class="rule-block" style="border-color:#fde68a;">
+                <div class="rb-head" style="color:var(--gold);">⚖️ Izjednačeni rezultati</div>
+                <div class="rb-text" style="margin-bottom:8px;">Ako dva igrača imaju isti zbroj, ispada onaj koji je:</div>
+                <div class="tb-list">
+                    <div class="tb-row">
+                        <div class="tb-num">1.</div>
+                        <div class="tb-text">Imao <strong>manje lukavih odgovora (?)</strong> — jer je manje lukav</div>
+                    </div>
+                    <div class="tb-row">
+                        <div class="tb-num">2.</div>
+                        <div class="tb-text">Imao <strong>manje rizičnih odgovora (!)</strong> — jer je manje riskirao</div>
+                    </div>
+                    <div class="tb-row">
+                        <div class="tb-num">3.</div>
+                        <div class="tb-text">Bio <strong>sporiji</strong> u ukupnom vremenu odgovaranja</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. POBJEDNIK -->
+    <div class="acc">
+        <div class="acc-head" onclick="toggle(this)">
+            <span class="acc-icon">🏆</span>
+            <span class="acc-title">Pobjednik</span>
+            <span class="acc-arrow">▼</span>
+        </div>
+        <div class="acc-body">
+            <div class="rule-block">
+                <div class="rb-head">🥇 Kako se određuje pobjednik?</div>
+                <div class="rb-text">Pobjeđuje finalist s <strong>višim ukupnim zbrojem</strong> nakon 60 pitanja. Kod izjednačenja vrijede ista pravila kao za eliminaciju — lukaviji, riskantniji, brži.</div>
+            </div>
+            <div class="highlight-box">
+                <div class="hb-title">🦊 Primjer — Dvostruko Lukavo</div>
+                <div class="hb-text">Igrač A ima <strong>15.000</strong>, Igrač B ima <strong>14.300</strong>. Zadnje pitanje vrijedi 1.000.</div>
+                <div class="scenario">
+                    <div class="sc-title">Scenarij 1 — A kopira B</div>
+                    <div class="sc-row"><span class="sc-player">Igrač A</span><span class="sc-action">? → A?</span><span class="sc-result">+500 = 15.500</span></div>
+                    <div class="sc-row"><span class="sc-player">Igrač B</span><span class="sc-action">A!</span><span class="sc-result">+1.000 = 15.300</span></div>
+                    <div class="sc-note">→ A pobjeđuje kopiranjem</div>
+                </div>
+                <div class="scenario">
+                    <div class="sc-title">Scenarij 2 — B anticipira, igra Dvostruko Lukavo</div>
+                    <div class="sc-row"><span class="sc-player">Igrač A</span><span class="sc-action">? → B?</span><span class="sc-result neg">−500 = 14.500</span></div>
+                    <div class="sc-row"><span class="sc-player">Igrač B</span><span class="sc-action">? → A?</span><span class="sc-result">+500 = 14.800</span></div>
+                    <div class="sc-note">→ B pobjeđuje — <strong>DVOSTRUKO LUKAVO</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. KAZNE -->
+    <div class="acc">
+        <div class="acc-head" onclick="toggle(this)">
+            <span class="acc-icon">⚠️</span>
+            <span class="acc-title">Ponašanje i Kazne</span>
+            <span class="acc-arrow">▼</span>
+        </div>
+        <div class="acc-body">
+            <div class="rule-block">
+                <div class="rb-head">📋 Pravila ponašanja</div>
+                <div class="rb-text">Slobodna komunikacija je dopuštena. Zabranjeno je vrijeđanje, ometanje igre i navođenje na odgovore.</div>
+            </div>
+            <div class="rule-block">
+                <div class="rb-head">🚨 Sustav kazni</div>
+                <div class="pen-row">
+                    <span class="pen-badge p1">1. KAZNA</span>
+                    <span class="pen-desc">Upozorenje bez sankcije</span>
+                </div>
+                <div class="pen-row">
+                    <span class="pen-badge p2">2. KAZNA</span>
+                    <span class="pen-desc">Odbitak zarade za jedno pitanje</span>
+                </div>
+                <div class="pen-row">
+                    <span class="pen-badge p3">3. KAZNA</span>
+                    <span class="pen-desc"><strong>Diskvalifikacija</strong> — u toj rundi nitko drugi nije eliminiran</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. VREMENSKO OGRANIČENJE -->
+    <div class="acc">
+        <div class="acc-head" onclick="toggle(this)">
+            <span class="acc-icon">⏱️</span>
+            <span class="acc-title">Vremensko Ograničenje</span>
+            <span class="acc-arrow">▼</span>
+        </div>
+        <div class="acc-body">
+            <ul class="rule-list">
+                <li>Svako pitanje ima <strong>20 sekundi</strong> za odgovor</li>
+                <li>Ako ne odgovoriš — automatski se aktivira <strong>lukava metoda (?)</strong></li>
+                <li>Imaš dodatnih <strong>5 sekundi</strong> da odabereš iz tuđih odgovora</li>
+                <li>Bez odgovora ni u 5 sekundi = <strong>pogrešan lukav odgovor</strong> i minus</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="foot-note">
+        <strong>Lukavac</strong> — Znanje pomaže. Strategija pobjeđuje. 🦊
+    </div>
+
+</div>
+
+<script>
+function toggle(head) {
+    head.parentElement.classList.toggle('open');
+}
+// sve skupljeno po defaultu
+document.querySelectorAll('.acc').forEach(a => a.classList.remove('open'));
+</script>
+</body>
+</html>
