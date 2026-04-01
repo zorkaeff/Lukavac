@@ -1,0 +1,6502 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Kvizova — Lukavac</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Metal+Mania&family=Tillana:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root{--brand:#b75800;--brand-dark:#632705;--brand-light:#ffd995;--brand-pale:#fffff1;}
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{background:linear-gradient(135deg,#e8c99a 0%,#b87333 50%,#e8c99a 100%);font-family:'Tillana','Segoe UI',sans-serif;min-height:100vh;padding:20px 12px 60px;}
+        .card{background:white;border-radius:18px;box-shadow:0 4px 20px rgba(183,88,0,.13);padding:20px;max-width:800px;margin:0 auto 16px;}
+        .title{font-family:'Metal Mania',cursive;font-size:1.6rem;color:var(--brand);margin-bottom:6px;}
+        .sub{font-size:.88rem;color:#6b7280;line-height:1.4;margin-bottom:16px;}
+        table{width:100%;border-collapse:collapse;font-size:.84rem;}
+        th{font-family:'Metal Mania',cursive;font-size:.72rem;color:var(--brand-dark);padding:8px 10px;text-align:left;background:var(--brand-pale);border-bottom:2px solid var(--brand-light);}
+        td{padding:8px 10px;border-bottom:1px solid #f3e8d0;color:#374151;}
+        tr:hover td{background:#fffbf0;}
+        .btn{width:100%;padding:15px;background:linear-gradient(135deg,var(--brand-light),var(--brand));color:white;border:none;border-radius:14px;font-family:'Metal Mania',cursive;font-size:1.1rem;cursor:pointer;box-shadow:0 4px 15px rgba(183,88,0,.3);transition:all .2s;margin-top:16px;}
+        .btn:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(183,88,0,.4);}
+        .btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+        .btn-del{background:linear-gradient(135deg,#fecaca,#ef4444);margin-top:8px;}
+        .log{background:#1f2937;color:#e5e7eb;border-radius:12px;padding:14px;font-family:'Courier New',monospace;font-size:.78rem;line-height:1.6;max-height:300px;overflow-y:auto;margin-top:12px;display:none;}
+        .log.show{display:block;}
+        .ok{color:#34d399;} .err{color:#f87171;} .info{color:#93c5fd;}
+        .progress{height:8px;background:#f3f4f6;border-radius:4px;overflow:hidden;margin:8px 0;}
+        .progress-bar{height:100%;background:linear-gradient(90deg,var(--brand-light),var(--brand));border-radius:4px;width:0%;transition:width .3s ease;}
+        .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-family:'Metal Mania',cursive;font-size:.82rem;}
+        .badge-ok{background:#d1fae5;color:#065f46;border:1.5px solid #a7f3d0;}
+        .badge-wait{background:var(--brand-pale);color:var(--brand);border:1.5px solid var(--brand-light);}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .spinner{width:18px;height:18px;border:3px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .6s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px;}
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="title">📅 Import Kvizova u Firebase</div>
+    <div class="sub">Ova stranica će uvesti <strong>20 zakazanih kvizova</strong> u Firebase bazu (node: <code>scheduledQuizzes</code>). Svaki kviz ima 5 krugova × 3 pitanja s predefiniranim pitanjima i postavkama.</div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        <span class="badge badge-wait" id="status-badge">⏳ Spreman za import</span>
+        <span style="font-family:'Metal Mania',cursive;font-size:.82rem;color:#9ca3af;align-self:center;">20 kvizova · 15 pitanja po kviuzu · 300 pitanja ukupno</span>
+    </div>
+
+    <table>
+        <thead><tr><th>Naziv Kviza</th><th>Tip</th><th>Termin</th><th>Kategorija</th></tr></thead>
+        <tbody><tr>
+        <td>🧠 Brzi Lukavac</td>
+        <td><span style="background:#10b98122;color:#10b981;border:1px solid #10b98144;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">sata</span></td>
+        <td>Čet 02.04 12:00</td>
+        <td style="color:#9ca3af;">opce</td>
+    </tr><tr>
+        <td>⚽ Sportski Lukavac</td>
+        <td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">dana</span></td>
+        <td>Čet 02.04 18:00</td>
+        <td style="color:#9ca3af;">sport</td>
+    </tr><tr>
+        <td>🧠 Lukavac Dana — Dan 1</td>
+        <td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">dana</span></td>
+        <td>Čet 02.04 20:00</td>
+        <td style="color:#9ca3af;">opce</td>
+    </tr><tr>
+        <td>🌍 Geografski Lukavac</td>
+        <td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">dana</span></td>
+        <td>Pet 03.04 18:30</td>
+        <td style="color:#9ca3af;">geografija</td>
+    </tr><tr>
+        <td>🧠 Lukavac Dana — Dan 2</td>
+        <td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">dana</span></td>
+        <td>Pet 03.04 20:00</td>
+        <td style="color:#9ca3af;">opce</td>
+    </tr><tr>
+        <td>🎭 Kulturni Lukavac</td>
+        <td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">dana</span></td>
+        <td>Sub 04.04 18:00</td>
+        <td style="color:#9ca3af;">kultura</td>
+    </tr><tr>
+        <td>🧠 Lukavac Dana — Dan 3</td>
+        <td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">dana</span></td>
+        <td>Sub 04.04 20:00</td>
+        <td style="color:#9ca3af;">opce</td>
+    </tr><tr>
+        <td>🧠 Poslijepodnevni Lukavac</td>
+        <td><span style="background:#10b98122;color:#10b981;border:1px solid #10b98144;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">sata</span></td>
+        <td>Ned 05.04 15:00</td>
+        <td style="color:#9ca3af;">opce</td>
+    </tr><tr>
+        <td>⚽ Sportski Lukavac 2</td>
+        <td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">dana</span></td>
+        <td>Ned 05.04 18:30</td>
+        <td style="color:#9ca3af;">sport</td>
+    </tr><tr>
+        <td>🧠 Lukavac Dana — Dan 4</td>
+        <td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">dana</span></td>
+        <td>Ned 05.04 20:00</td>
+        <td style="color:#9ca3af;">opce</td>
+    </tr><tr>
+        <td>🌍 Geo Challenge</td>
+        <td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">dana</span></td>
+        <td>Pon 06.04 18:00</td>
+        <td style="color:#9ca3af;">geografija</td>
+    </tr><tr>
+        <td>🧠 Lukavac Dana — Dan 5</td>
+        <td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">dana</span></td>
+        <td>Pon 06.04 20:00</td>
+        <td style="color:#9ca3af;">opce</td>
+    </tr><tr>
+        <td>🧠 Večernji Specijal</td>
+        <td><span style="background:#7c3aed22;color:#7c3aed;border:1px solid #7c3aed44;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">poseban</span></td>
+        <td>Pon 06.04 20:30</td>
+        <td style="color:#9ca3af;">opce</td>
+    </tr><tr>
+        <td>🎭 Pop Kultura</td>
+        <td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">dana</span></td>
+        <td>Uto 07.04 18:30</td>
+        <td style="color:#9ca3af;">kultura</td>
+    </tr><tr>
+        <td>🧠 Lukavac Dana — Dan 6</td>
+        <td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">dana</span></td>
+        <td>Uto 07.04 20:00</td>
+        <td style="color:#9ca3af;">opce</td>
+    </tr><tr>
+        <td>🧠 Lukavac Vikend</td>
+        <td><span style="background:#7c3aed22;color:#7c3aed;border:1px solid #7c3aed44;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">poseban</span></td>
+        <td>Uto 07.04 20:00</td>
+        <td style="color:#9ca3af;">opce</td>
+    </tr><tr>
+        <td>🧠 Opći Lukavac Plus</td>
+        <td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">dana</span></td>
+        <td>Sri 08.04 18:00</td>
+        <td style="color:#9ca3af;">opce</td>
+    </tr><tr>
+        <td>🧠 Lukavac Dana — Dan 7</td>
+        <td><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">dana</span></td>
+        <td>Sri 08.04 20:00</td>
+        <td style="color:#9ca3af;">opce</td>
+    </tr><tr>
+        <td>🧠 Lukavac Tjedna</td>
+        <td><span style="background:#b7580022;color:#b75800;border:1px solid #b7580044;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">tjedna</span></td>
+        <td>Sri 08.04 21:00</td>
+        <td style="color:#9ca3af;">opce</td>
+    </tr><tr>
+        <td>⚽ Finale Sportske Lige</td>
+        <td><span style="background:#b7580022;color:#b75800;border:1px solid #b7580044;border-radius:20px;padding:2px 8px;font-size:.72rem;font-family:'Metal Mania',cursive;">tjedna</span></td>
+        <td>Sri 08.04 22:00</td>
+        <td style="color:#9ca3af;">sport</td>
+    </tr></tbody>
+    </table>
+
+    <div class="progress" id="prog-wrap" style="display:none;"><div class="progress-bar" id="prog-bar"></div></div>
+
+    <button class="btn" id="import-btn" onclick="doImport()">
+        🚀 Uvezi svih 20 kvizova u Firebase
+    </button>
+    <button class="btn btn-del" id="del-btn" onclick="doDelete()" style="font-size:.82rem;padding:10px;">
+        🗑️ Obriši sve uvezene kvizove (reset)
+    </button>
+
+    <div class="log" id="log"></div>
+
+    <div style="margin-top:14px;text-align:center;">
+        <a href="admin-complete.html" style="font-family:'Metal Mania',cursive;font-size:.82rem;color:var(--brand);">← Natrag na Admin Panel</a>
+    </div>
+</div>
+
+<script>
+const QUIZZES = {
+  "scheduledQuizzes": {
+    "dana_day1": {
+      "id": "dana_day1",
+      "name": "Lukavac Dana — Dan 1",
+      "type": "dana",
+      "category": "opce",
+      "description": "Svakodnevni kviz znanja i lukavosti za sve razine igrača.",
+      "startTime": 1775160000000,
+      "scheduledTime": 1775160000000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je najduži rijeka na svijetu?",
+              "answers": [
+                "Amazon",
+                "Nil",
+                "Jangce",
+                "Mississippi"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko je 7 × 8?",
+              "answers": [
+                "54",
+                "56",
+                "58",
+                "64"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko kontinenata ima Zemlja?",
+              "answers": [
+                "5",
+                "6",
+                "7",
+                "8"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Koja životinja je simbol Australije?",
+              "answers": [
+                "Lav",
+                "Kengur",
+                "Panda",
+                "Slon"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko je centimetara u jednom metru?",
+              "answers": [
+                "10",
+                "100",
+                "1000",
+                "50"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Što je H2O?",
+              "answers": [
+                "Kisik",
+                "Vodikov peroksid",
+                "Voda",
+                "Dušik"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko igrača ima momčad u košarci?",
+              "answers": [
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "correct": 1,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je najdulja rijeka u Europi?",
+              "answers": [
+                "Dunav",
+                "Ren",
+                "Volga",
+                "Thames"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je kemijska oznaka zlata?",
+              "answers": [
+                "Gl",
+                "Go",
+                "Au",
+                "Ag"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Koji grad je bio prijestolnica Bizanta?",
+              "answers": [
+                "Rim",
+                "Atena",
+                "Konstantinopol",
+                "Jeruzalem"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je kemijski simbol volframa?",
+              "answers": [
+                "Wo",
+                "Wf",
+                "W",
+                "Wu"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je drugi element u periodnom sustavu?",
+              "answers": [
+                "Litij",
+                "Helij",
+                "Vodik",
+                "Berilij"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je najduža kost u ljudskom tijelu?",
+              "answers": [
+                "Humerus",
+                "Tibia",
+                "Femur",
+                "Fibula"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je element s atomskim brojem 79?",
+              "answers": [
+                "Platina",
+                "Olovo",
+                "Zlato",
+                "Srebro"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji grad je bio prijestolnica Bizanta?",
+              "answers": [
+                "Rim",
+                "Atena",
+                "Konstantinopol",
+                "Jeruzalem"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "dana_day2": {
+      "id": "dana_day2",
+      "name": "Lukavac Dana — Dan 2",
+      "type": "dana",
+      "category": "opce",
+      "description": "Svakodnevni kviz znanja i lukavosti za sve razine igrača.",
+      "startTime": 1775246400000,
+      "scheduledTime": 1775246400000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Tko je napisao 'Romeo i Julija'?",
+              "answers": [
+                "Dante",
+                "Shakespeare",
+                "Cervantes",
+                "Homer"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je glavni grad Hrvatske?",
+              "answers": [
+                "Zagreb",
+                "Split",
+                "Rijeka",
+                "Osijek"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je boja neba za vedra dana?",
+              "answers": [
+                "Zelena",
+                "Crvena",
+                "Plava",
+                "Žuta"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je glavni grad Hrvatske?",
+              "answers": [
+                "Zagreb",
+                "Split",
+                "Rijeka",
+                "Osijek"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je najduži rijeka na svijetu?",
+              "answers": [
+                "Amazon",
+                "Nil",
+                "Jangce",
+                "Mississippi"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko je centimetara u jednom metru?",
+              "answers": [
+                "10",
+                "100",
+                "1000",
+                "50"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "U kojoj zemlji se nalazi Machu Picchu?",
+              "answers": [
+                "Meksiko",
+                "Bolivija",
+                "Peru",
+                "Kolumbija"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koja zemlja ima najviše UNESCO svjetske baštine?",
+              "answers": [
+                "Italija",
+                "Kina",
+                "Španjolska",
+                "Francuska"
+              ],
+              "correct": 0,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je izumio telefon?",
+              "answers": [
+                "Edison",
+                "Tesla",
+                "Bell",
+                "Marconi"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "U kojoj godini je osnovan FIFA?",
+              "answers": [
+                "1900",
+                "1904",
+                "1910",
+                "1914"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je napisao simfoniju 'Nedovršena'?",
+              "answers": [
+                "Beethoven",
+                "Schubert",
+                "Mozart",
+                "Brahms"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko je Nobel nagrada godišnje?",
+              "answers": [
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je drugi element u periodnom sustavu?",
+              "answers": [
+                "Litij",
+                "Helij",
+                "Vodik",
+                "Berilij"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji grad je bio prijestolnica Bizanta?",
+              "answers": [
+                "Rim",
+                "Atena",
+                "Konstantinopol",
+                "Jeruzalem"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je kemijski simbol volframa?",
+              "answers": [
+                "Wo",
+                "Wf",
+                "W",
+                "Wu"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "dana_day3": {
+      "id": "dana_day3",
+      "name": "Lukavac Dana — Dan 3",
+      "type": "dana",
+      "category": "opce",
+      "description": "Svakodnevni kviz znanja i lukavosti za sve razine igrača.",
+      "startTime": 1775332800000,
+      "scheduledTime": 1775332800000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko noga ima pauk?",
+              "answers": [
+                "6",
+                "8",
+                "4",
+                "10"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je boja neba za vedra dana?",
+              "answers": [
+                "Zelena",
+                "Crvena",
+                "Plava",
+                "Žuta"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko sati ima jedan dan?",
+              "answers": [
+                "12",
+                "20",
+                "24",
+                "48"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Tko je napisao 'Romeo i Julija'?",
+              "answers": [
+                "Dante",
+                "Shakespeare",
+                "Cervantes",
+                "Homer"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je glavni grad Hrvatske?",
+              "answers": [
+                "Zagreb",
+                "Split",
+                "Rijeka",
+                "Osijek"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji planet je najbliži Suncu?",
+              "answers": [
+                "Zemlja",
+                "Venera",
+                "Merkur",
+                "Mars"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je najdulja rijeka u Europi?",
+              "answers": [
+                "Dunav",
+                "Ren",
+                "Volga",
+                "Thames"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko je kostiju u ljudskom tijelu odrasle osobe?",
+              "answers": [
+                "186",
+                "206",
+                "226",
+                "196"
+              ],
+              "correct": 1,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "U kojoj godini je pao Berlinski zid?",
+              "answers": [
+                "1987",
+                "1988",
+                "1989",
+                "1990"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "U kojoj godini je osnovan FIFA?",
+              "answers": [
+                "1900",
+                "1904",
+                "1910",
+                "1914"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je kemijski simbol volframa?",
+              "answers": [
+                "Wo",
+                "Wf",
+                "W",
+                "Wu"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je napisao simfoniju 'Nedovršena'?",
+              "answers": [
+                "Beethoven",
+                "Schubert",
+                "Mozart",
+                "Brahms"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je prijestolnica Kazahstana?",
+              "answers": [
+                "Almati",
+                "Astana",
+                "Taškent",
+                "Bišek"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je napisao simfoniju 'Nedovršena'?",
+              "answers": [
+                "Beethoven",
+                "Schubert",
+                "Mozart",
+                "Brahms"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je najduža kost u ljudskom tijelu?",
+              "answers": [
+                "Humerus",
+                "Tibia",
+                "Femur",
+                "Fibula"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "dana_day4": {
+      "id": "dana_day4",
+      "name": "Lukavac Dana — Dan 4",
+      "type": "dana",
+      "category": "opce",
+      "description": "Svakodnevni kviz znanja i lukavosti za sve razine igrača.",
+      "startTime": 1775419200000,
+      "scheduledTime": 1775419200000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koja životinja je simbol Australije?",
+              "answers": [
+                "Lav",
+                "Kengur",
+                "Panda",
+                "Slon"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Od čega se pravi sir?",
+              "answers": [
+                "Jaja",
+                "Mlijeko",
+                "Brašno",
+                "Ulje"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je glavni grad Hrvatske?",
+              "answers": [
+                "Zagreb",
+                "Split",
+                "Rijeka",
+                "Osijek"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko je 7 × 8?",
+              "answers": [
+                "54",
+                "56",
+                "58",
+                "64"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je glavni grad Hrvatske?",
+              "answers": [
+                "Zagreb",
+                "Split",
+                "Rijeka",
+                "Osijek"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji ocean je najveći?",
+              "answers": [
+                "Atlantski",
+                "Indijski",
+                "Arktički",
+                "Tihi"
+              ],
+              "correct": 3,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je kemijska oznaka zlata?",
+              "answers": [
+                "Gl",
+                "Go",
+                "Au",
+                "Ag"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je najveći kopneni sisavac?",
+              "answers": [
+                "Nilski konj",
+                "Nosorog",
+                "Slon",
+                "Žirafa"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je najdulja rijeka u Europi?",
+              "answers": [
+                "Dunav",
+                "Ren",
+                "Volga",
+                "Thames"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je prijestolnica Kazahstana?",
+              "answers": [
+                "Almati",
+                "Astana",
+                "Taškent",
+                "Bišek"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je najduža kost u ljudskom tijelu?",
+              "answers": [
+                "Humerus",
+                "Tibia",
+                "Femur",
+                "Fibula"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je napisao 'Zločin i kazna'?",
+              "answers": [
+                "Tolstoj",
+                "Turgenjev",
+                "Dostojevski",
+                "Gogolj"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je najduža kost u ljudskom tijelu?",
+              "answers": [
+                "Humerus",
+                "Tibia",
+                "Femur",
+                "Fibula"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je element s atomskim brojem 79?",
+              "answers": [
+                "Platina",
+                "Olovo",
+                "Zlato",
+                "Srebro"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je prijestolnica Kazahstana?",
+              "answers": [
+                "Almati",
+                "Astana",
+                "Taškent",
+                "Bišek"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "dana_day5": {
+      "id": "dana_day5",
+      "name": "Lukavac Dana — Dan 5",
+      "type": "dana",
+      "category": "opce",
+      "description": "Svakodnevni kviz znanja i lukavosti za sve razine igrača.",
+      "startTime": 1775505600000,
+      "scheduledTime": 1775505600000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koja životinja je simbol Australije?",
+              "answers": [
+                "Lav",
+                "Kengur",
+                "Panda",
+                "Slon"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji ocean je najveći?",
+              "answers": [
+                "Atlantski",
+                "Indijski",
+                "Arktički",
+                "Tihi"
+              ],
+              "correct": 3,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko dana ima tjedan?",
+              "answers": [
+                "5",
+                "6",
+                "7",
+                "8"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je glavni grad Hrvatske?",
+              "answers": [
+                "Zagreb",
+                "Split",
+                "Rijeka",
+                "Osijek"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko sati ima jedan dan?",
+              "answers": [
+                "12",
+                "20",
+                "24",
+                "48"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je najduži rijeka na svijetu?",
+              "answers": [
+                "Amazon",
+                "Nil",
+                "Jangce",
+                "Mississippi"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko igrača ima momčad u košarci?",
+              "answers": [
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "correct": 1,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koja zemlja ima najviše UNESCO svjetske baštine?",
+              "answers": [
+                "Italija",
+                "Kina",
+                "Španjolska",
+                "Francuska"
+              ],
+              "correct": 0,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko žica ima standardna gitara?",
+              "answers": [
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Tko je napisao 'Zločin i kazna'?",
+              "answers": [
+                "Tolstoj",
+                "Turgenjev",
+                "Dostojevski",
+                "Gogolj"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je element s atomskim brojem 79?",
+              "answers": [
+                "Platina",
+                "Olovo",
+                "Zlato",
+                "Srebro"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je najduža kost u ljudskom tijelu?",
+              "answers": [
+                "Humerus",
+                "Tibia",
+                "Femur",
+                "Fibula"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je kemijski simbol volframa?",
+              "answers": [
+                "Wo",
+                "Wf",
+                "W",
+                "Wu"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "U kojoj godini je osnovan FIFA?",
+              "answers": [
+                "1900",
+                "1904",
+                "1910",
+                "1914"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji grad je bio prijestolnica Bizanta?",
+              "answers": [
+                "Rim",
+                "Atena",
+                "Konstantinopol",
+                "Jeruzalem"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "dana_day6": {
+      "id": "dana_day6",
+      "name": "Lukavac Dana — Dan 6",
+      "type": "dana",
+      "category": "opce",
+      "description": "Svakodnevni kviz znanja i lukavosti za sve razine igrača.",
+      "startTime": 1775592000000,
+      "scheduledTime": 1775592000000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko je 7 × 8?",
+              "answers": [
+                "54",
+                "56",
+                "58",
+                "64"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je napisao 'Romeo i Julija'?",
+              "answers": [
+                "Dante",
+                "Shakespeare",
+                "Cervantes",
+                "Homer"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je najduži rijeka na svijetu?",
+              "answers": [
+                "Amazon",
+                "Nil",
+                "Jangce",
+                "Mississippi"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je glavni grad Hrvatske?",
+              "answers": [
+                "Zagreb",
+                "Split",
+                "Rijeka",
+                "Osijek"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je napisao 'Romeo i Julija'?",
+              "answers": [
+                "Dante",
+                "Shakespeare",
+                "Cervantes",
+                "Homer"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko sati ima jedan dan?",
+              "answers": [
+                "12",
+                "20",
+                "24",
+                "48"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "U kojoj godini je pao Berlinski zid?",
+              "answers": [
+                "1987",
+                "1988",
+                "1989",
+                "1990"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko igrača ima momčad u košarci?",
+              "answers": [
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "correct": 1,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je najdulja rijeka u Europi?",
+              "answers": [
+                "Dunav",
+                "Ren",
+                "Volga",
+                "Thames"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Tko je napisao simfoniju 'Nedovršena'?",
+              "answers": [
+                "Beethoven",
+                "Schubert",
+                "Mozart",
+                "Brahms"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je kemijski simbol volframa?",
+              "answers": [
+                "Wo",
+                "Wf",
+                "W",
+                "Wu"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko je Nobel nagrada godišnje?",
+              "answers": [
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je najduža kost u ljudskom tijelu?",
+              "answers": [
+                "Humerus",
+                "Tibia",
+                "Femur",
+                "Fibula"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je napisao 'Zločin i kazna'?",
+              "answers": [
+                "Tolstoj",
+                "Turgenjev",
+                "Dostojevski",
+                "Gogolj"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je kemijski simbol volframa?",
+              "answers": [
+                "Wo",
+                "Wf",
+                "W",
+                "Wu"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "dana_day7": {
+      "id": "dana_day7",
+      "name": "Lukavac Dana — Dan 7",
+      "type": "dana",
+      "category": "opce",
+      "description": "Svakodnevni kviz znanja i lukavosti za sve razine igrača.",
+      "startTime": 1775678400000,
+      "scheduledTime": 1775678400000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koja životinja je simbol Australije?",
+              "answers": [
+                "Lav",
+                "Kengur",
+                "Panda",
+                "Slon"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Što je H2O?",
+              "answers": [
+                "Kisik",
+                "Vodikov peroksid",
+                "Voda",
+                "Dušik"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko dana ima tjedan?",
+              "answers": [
+                "5",
+                "6",
+                "7",
+                "8"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko noga ima pauk?",
+              "answers": [
+                "6",
+                "8",
+                "4",
+                "10"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je glavni grad Hrvatske?",
+              "answers": [
+                "Zagreb",
+                "Split",
+                "Rijeka",
+                "Osijek"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji ocean je najveći?",
+              "answers": [
+                "Atlantski",
+                "Indijski",
+                "Arktički",
+                "Tihi"
+              ],
+              "correct": 3,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je kemijska oznaka zlata?",
+              "answers": [
+                "Gl",
+                "Go",
+                "Au",
+                "Ag"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je najveći kopneni sisavac?",
+              "answers": [
+                "Nilski konj",
+                "Nosorog",
+                "Slon",
+                "Žirafa"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko je kostiju u ljudskom tijelu odrasle osobe?",
+              "answers": [
+                "186",
+                "206",
+                "226",
+                "196"
+              ],
+              "correct": 1,
+              "difficulty": "medium",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Koji grad je bio prijestolnica Bizanta?",
+              "answers": [
+                "Rim",
+                "Atena",
+                "Konstantinopol",
+                "Jeruzalem"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko je Nobel nagrada godišnje?",
+              "answers": [
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je napisao 'Zločin i kazna'?",
+              "answers": [
+                "Tolstoj",
+                "Turgenjev",
+                "Dostojevski",
+                "Gogolj"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je prijestolnica Kazahstana?",
+              "answers": [
+                "Almati",
+                "Astana",
+                "Taškent",
+                "Bišek"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je drugi element u periodnom sustavu?",
+              "answers": [
+                "Litij",
+                "Helij",
+                "Vodik",
+                "Berilij"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je kemijski simbol volframa?",
+              "answers": [
+                "Wo",
+                "Wf",
+                "W",
+                "Wu"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "tjedna_w1": {
+      "id": "tjedna_w1",
+      "name": "Lukavac Tjedna",
+      "type": "tjedna",
+      "category": "opce",
+      "description": "Tjedni finale! Samo beste nastavljaju dalje. Kombinacija svih kategorija.",
+      "startTime": 1775682000000,
+      "scheduledTime": 1775682000000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koji planet je najbliži Suncu?",
+              "answers": [
+                "Zemlja",
+                "Venera",
+                "Merkur",
+                "Mars"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je glavni grad Hrvatske?",
+              "answers": [
+                "Zagreb",
+                "Split",
+                "Rijeka",
+                "Osijek"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko je centimetara u jednom metru?",
+              "answers": [
+                "10",
+                "100",
+                "1000",
+                "50"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je boja neba za vedra dana?",
+              "answers": [
+                "Zelena",
+                "Crvena",
+                "Plava",
+                "Žuta"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je napisao 'Romeo i Julija'?",
+              "answers": [
+                "Dante",
+                "Shakespeare",
+                "Cervantes",
+                "Homer"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koja životinja je simbol Australije?",
+              "answers": [
+                "Lav",
+                "Kengur",
+                "Panda",
+                "Slon"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko žica ima standardna gitara?",
+              "answers": [
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je najdulja rijeka u Europi?",
+              "answers": [
+                "Dunav",
+                "Ren",
+                "Volga",
+                "Thames"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Što proučava entomologija?",
+              "answers": [
+                "Ptice",
+                "Insekte",
+                "Morske životinje",
+                "Gljive"
+              ],
+              "correct": 1,
+              "difficulty": "medium",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je kemijski simbol volframa?",
+              "answers": [
+                "Wo",
+                "Wf",
+                "W",
+                "Wu"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je drugi element u periodnom sustavu?",
+              "answers": [
+                "Litij",
+                "Helij",
+                "Vodik",
+                "Berilij"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je prijestolnica Kazahstana?",
+              "answers": [
+                "Almati",
+                "Astana",
+                "Taškent",
+                "Bišek"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je kemijski simbol volframa?",
+              "answers": [
+                "Wo",
+                "Wf",
+                "W",
+                "Wu"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je drugi element u periodnom sustavu?",
+              "answers": [
+                "Litij",
+                "Helij",
+                "Vodik",
+                "Berilij"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je napisao simfoniju 'Nedovršena'?",
+              "answers": [
+                "Beethoven",
+                "Schubert",
+                "Mozart",
+                "Brahms"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "sport_1": {
+      "id": "sport_1",
+      "name": "Sportski Lukavac",
+      "type": "dana",
+      "category": "sport",
+      "description": "Kviz za sportske znalce — od nogometa do atletike.",
+      "startTime": 1775152800000,
+      "scheduledTime": 1775152800000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "U kojoj atletskoj disciplini se baca disk?",
+              "answers": [
+                "Bacanje",
+                "Skok",
+                "Sprint",
+                "Maraton"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "sport"
+            },
+            {
+              "text": "Koji sport se igra na 'course'?",
+              "answers": [
+                "Tenis",
+                "Golf",
+                "Polo",
+                "Kroket"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "sport"
+            },
+            {
+              "text": "Koliko rundi ima boks meč u WBC naslovu?",
+              "answers": [
+                "10",
+                "12",
+                "15",
+                "20"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "sport"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "U kojoj zemlji su 2020. bili Olimpijski igre?",
+              "answers": [
+                "Kina",
+                "Japan",
+                "Brazil",
+                "Australija"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "sport"
+            },
+            {
+              "text": "U kojoj atletskoj disciplini se baca disk?",
+              "answers": [
+                "Bacanje",
+                "Skok",
+                "Sprint",
+                "Maraton"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "sport"
+            },
+            {
+              "text": "Koji klub je Luka Modrić proslavio?",
+              "answers": [
+                "Barcelona",
+                "Manchester",
+                "Real Madrid",
+                "Bayern"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "sport"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko igrača se istovremeno nalazi na terenu u rukometu?",
+              "answers": [
+                "5",
+                "6",
+                "7",
+                "8"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "sport"
+            },
+            {
+              "text": "Koji klub je najčešće osvajao Ligu prvaka?",
+              "answers": [
+                "Barcelona",
+                "Bayern",
+                "Liverpool",
+                "Real Madrid"
+              ],
+              "correct": 3,
+              "difficulty": "medium",
+              "category": "sport"
+            },
+            {
+              "text": "Koliko je centimetara visoka košarkaška koša od tla?",
+              "answers": [
+                "280",
+                "300",
+                "305",
+                "310"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "sport"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je rekord Usaina Bolta na 200m?",
+              "answers": [
+                "19.00",
+                "19.19",
+                "19.32",
+                "19.50"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "sport"
+            },
+            {
+              "text": "Koliko Grand Slam turnira ima u tenisu?",
+              "answers": [
+                "3",
+                "4",
+                "5",
+                "6"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "sport"
+            },
+            {
+              "text": "Koji grad je bio domaćin prvih modernih Olimpijskih igara?",
+              "answers": [
+                "Pariz",
+                "London",
+                "Atena",
+                "Stockholm"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "sport"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko Grand Slam turnira ima u tenisu?",
+              "answers": [
+                "3",
+                "4",
+                "5",
+                "6"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "sport"
+            },
+            {
+              "text": "U kojoj godini je osnovan FC Barcelona?",
+              "answers": [
+                "1895",
+                "1899",
+                "1902",
+                "1905"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "sport"
+            },
+            {
+              "text": "Koji grad je bio domaćin prvih modernih Olimpijskih igara?",
+              "answers": [
+                "Pariz",
+                "London",
+                "Atena",
+                "Stockholm"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "sport"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "geo_1": {
+      "id": "geo_1",
+      "name": "Geografski Lukavac",
+      "type": "dana",
+      "category": "geografija",
+      "description": "Koliko dobro poznaješ Zemlju? Gradovi, rijeke, planine...",
+      "startTime": 1775241000000,
+      "scheduledTime": 1775241000000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je najveći grad u Europi?",
+              "answers": [
+                "Pariz",
+                "London",
+                "Berlin",
+                "Moskva"
+              ],
+              "correct": 3,
+              "difficulty": "easy",
+              "category": "geografija"
+            },
+            {
+              "text": "Koja planina je najviša na svijetu?",
+              "answers": [
+                "Mont Blanc",
+                "K2",
+                "Everest",
+                "Kilimandžaro"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "geografija"
+            },
+            {
+              "text": "Koja je najveća zemlja na svijetu po površini?",
+              "answers": [
+                "Kanada",
+                "Kina",
+                "SAD",
+                "Rusija"
+              ],
+              "correct": 3,
+              "difficulty": "easy",
+              "category": "geografija"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je najmanji kontinent?",
+              "answers": [
+                "Europa",
+                "Australija",
+                "Antarktika",
+                "Južna Amerika"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "geografija"
+            },
+            {
+              "text": "Koja zemlja ima zastavicu s javorovim listom?",
+              "answers": [
+                "SAD",
+                "Kanada",
+                "Australija",
+                "Novi Zeland"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "geografija"
+            },
+            {
+              "text": "Koja planina je najviša na svijetu?",
+              "answers": [
+                "Mont Blanc",
+                "K2",
+                "Everest",
+                "Kilimandžaro"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "geografija"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Kroz koliko zemalja prolazi rijeka Dunav?",
+              "answers": [
+                "8",
+                "10",
+                "12",
+                "14"
+              ],
+              "correct": 1,
+              "difficulty": "medium",
+              "category": "geografija"
+            },
+            {
+              "text": "Koji je najmanji ocean?",
+              "answers": [
+                "Indijski",
+                "Arktički",
+                "Atlantski",
+                "Južni"
+              ],
+              "correct": 1,
+              "difficulty": "medium",
+              "category": "geografija"
+            },
+            {
+              "text": "Koji je najveći otok na svijetu?",
+              "answers": [
+                "Borneo",
+                "Madagaskar",
+                "Grenland",
+                "Australija"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "geografija"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je duljinski meridijan tzv. Nulti meridijan?",
+              "answers": [
+                "Greenwich",
+                "Pariz",
+                "Washington",
+                "Berlin"
+              ],
+              "correct": 0,
+              "difficulty": "hard",
+              "category": "geografija"
+            },
+            {
+              "text": "Koja je prijestolnica Mongolije?",
+              "answers": [
+                "Ulan Bator",
+                "Irkutsk",
+                "Choibalsan",
+                "Darkhan"
+              ],
+              "correct": 0,
+              "difficulty": "hard",
+              "category": "geografija"
+            },
+            {
+              "text": "Koja je najveća pustinja na svijetu?",
+              "answers": [
+                "Sahara",
+                "Gobi",
+                "Atacama",
+                "Antarktika"
+              ],
+              "correct": 3,
+              "difficulty": "hard",
+              "category": "geografija"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je duljinski meridijan tzv. Nulti meridijan?",
+              "answers": [
+                "Greenwich",
+                "Pariz",
+                "Washington",
+                "Berlin"
+              ],
+              "correct": 0,
+              "difficulty": "hard",
+              "category": "geografija"
+            },
+            {
+              "text": "Koja je najveća pustinja na svijetu?",
+              "answers": [
+                "Sahara",
+                "Gobi",
+                "Atacama",
+                "Antarktika"
+              ],
+              "correct": 3,
+              "difficulty": "hard",
+              "category": "geografija"
+            },
+            {
+              "text": "Koja je prijestolnica Mongolije?",
+              "answers": [
+                "Ulan Bator",
+                "Irkutsk",
+                "Choibalsan",
+                "Darkhan"
+              ],
+              "correct": 0,
+              "difficulty": "hard",
+              "category": "geografija"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "kultura_1": {
+      "id": "kultura_1",
+      "name": "Kulturni Lukavac",
+      "type": "dana",
+      "category": "kultura",
+      "description": "Film, glazba, književnost — za prave kulturnjake.",
+      "startTime": 1775325600000,
+      "scheduledTime": 1775325600000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je žanr glazbe Bob Marley?",
+              "answers": [
+                "Jazz",
+                "Blues",
+                "Reggae",
+                "Soul"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "kultura"
+            },
+            {
+              "text": "Tko je naslikao 'Mona Lisu'?",
+              "answers": [
+                "Michelangelo",
+                "Rafael",
+                "Da Vinci",
+                "Botticelli"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "kultura"
+            },
+            {
+              "text": "Koji glazbeni instrument ima tipke?",
+              "answers": [
+                "Gitara",
+                "Bubnjevi",
+                "Klavir",
+                "Violina"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "kultura"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je žanr glazbe Bob Marley?",
+              "answers": [
+                "Jazz",
+                "Blues",
+                "Reggae",
+                "Soul"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "kultura"
+            },
+            {
+              "text": "Koji glazbeni instrument ima tipke?",
+              "answers": [
+                "Gitara",
+                "Bubnjevi",
+                "Klavir",
+                "Violina"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "kultura"
+            },
+            {
+              "text": "Tko je naslikao 'Mona Lisu'?",
+              "answers": [
+                "Michelangelo",
+                "Rafael",
+                "Da Vinci",
+                "Botticelli"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "kultura"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "U kojoj godini je snimljen film 'Titanic' Jamesa Camerona?",
+              "answers": [
+                "1995",
+                "1996",
+                "1997",
+                "1998"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "kultura"
+            },
+            {
+              "text": "Koji artist ima pseudonim 'The Weeknd'?",
+              "answers": [
+                "Abel Tesfaye",
+                "Drake",
+                "Kanye",
+                "Travis"
+              ],
+              "correct": 0,
+              "difficulty": "medium",
+              "category": "kultura"
+            },
+            {
+              "text": "Tko je skladao 'Za Elise'?",
+              "answers": [
+                "Chopin",
+                "Beethoven",
+                "Mozart",
+                "Bach"
+              ],
+              "correct": 1,
+              "difficulty": "medium",
+              "category": "kultura"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Tko je naslikao 'Noćna straža'?",
+              "answers": [
+                "Vermeer",
+                "Hals",
+                "Rembrandt",
+                "Rubens"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "kultura"
+            },
+            {
+              "text": "U kojoj godini je Picasso naslikao 'Guernicu'?",
+              "answers": [
+                "1935",
+                "1937",
+                "1939",
+                "1941"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "kultura"
+            },
+            {
+              "text": "Koji je pravi naziv Bachove poznate 'Tocate i fuge'?",
+              "answers": [
+                "BWV 565",
+                "BWV 578",
+                "BWV 582",
+                "BWV 599"
+              ],
+              "correct": 0,
+              "difficulty": "hard",
+              "category": "kultura"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je pravi naziv Bachove poznate 'Tocate i fuge'?",
+              "answers": [
+                "BWV 565",
+                "BWV 578",
+                "BWV 582",
+                "BWV 599"
+              ],
+              "correct": 0,
+              "difficulty": "hard",
+              "category": "kultura"
+            },
+            {
+              "text": "Tko je naslikao 'Noćna straža'?",
+              "answers": [
+                "Vermeer",
+                "Hals",
+                "Rembrandt",
+                "Rubens"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "kultura"
+            },
+            {
+              "text": "U kojoj godini je Picasso naslikao 'Guernicu'?",
+              "answers": [
+                "1935",
+                "1937",
+                "1939",
+                "1941"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "kultura"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "sport_2": {
+      "id": "sport_2",
+      "name": "Sportski Lukavac 2",
+      "type": "dana",
+      "category": "sport",
+      "description": "Drugi sportski izazov — rekordinani i statistika.",
+      "startTime": 1775413800000,
+      "scheduledTime": 1775413800000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko poena vrijedi koš u košarci iz igre?",
+              "answers": [
+                "1",
+                "2",
+                "3",
+                "4"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "sport"
+            },
+            {
+              "text": "U kojoj atletskoj disciplini se baca disk?",
+              "answers": [
+                "Bacanje",
+                "Skok",
+                "Sprint",
+                "Maraton"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "sport"
+            },
+            {
+              "text": "Koliko rundi ima boks meč u WBC naslovu?",
+              "answers": [
+                "10",
+                "12",
+                "15",
+                "20"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "sport"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "U kojoj atletskoj disciplini se baca disk?",
+              "answers": [
+                "Bacanje",
+                "Skok",
+                "Sprint",
+                "Maraton"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "sport"
+            },
+            {
+              "text": "Koji klub je Luka Modrić proslavio?",
+              "answers": [
+                "Barcelona",
+                "Manchester",
+                "Real Madrid",
+                "Bayern"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "sport"
+            },
+            {
+              "text": "Koliko rundi ima boks meč u WBC naslovu?",
+              "answers": [
+                "10",
+                "12",
+                "15",
+                "20"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "sport"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Koji klub je najčešće osvajao Ligu prvaka?",
+              "answers": [
+                "Barcelona",
+                "Bayern",
+                "Liverpool",
+                "Real Madrid"
+              ],
+              "correct": 3,
+              "difficulty": "medium",
+              "category": "sport"
+            },
+            {
+              "text": "Tko drži rekord u 100m sprintu?",
+              "answers": [
+                "Justin Gatlin",
+                "Usain Bolt",
+                "Asafa Powell",
+                "Tyson Gay"
+              ],
+              "correct": 1,
+              "difficulty": "medium",
+              "category": "sport"
+            },
+            {
+              "text": "Koliko je centimetara visoka košarkaška koša od tla?",
+              "answers": [
+                "280",
+                "300",
+                "305",
+                "310"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "sport"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "U kojoj godini je osnovan FC Barcelona?",
+              "answers": [
+                "1895",
+                "1899",
+                "1902",
+                "1905"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "sport"
+            },
+            {
+              "text": "Koji je rekord Usaina Bolta na 200m?",
+              "answers": [
+                "19.00",
+                "19.19",
+                "19.32",
+                "19.50"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "sport"
+            },
+            {
+              "text": "Koji grad je bio domaćin prvih modernih Olimpijskih igara?",
+              "answers": [
+                "Pariz",
+                "London",
+                "Atena",
+                "Stockholm"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "sport"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koji grad je bio domaćin prvih modernih Olimpijskih igara?",
+              "answers": [
+                "Pariz",
+                "London",
+                "Atena",
+                "Stockholm"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "sport"
+            },
+            {
+              "text": "Koji je rekord Usaina Bolta na 200m?",
+              "answers": [
+                "19.00",
+                "19.19",
+                "19.32",
+                "19.50"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "sport"
+            },
+            {
+              "text": "U kojoj godini je osnovan FC Barcelona?",
+              "answers": [
+                "1895",
+                "1899",
+                "1902",
+                "1905"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "sport"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "geo_2": {
+      "id": "geo_2",
+      "name": "Geo Challenge",
+      "type": "dana",
+      "category": "geografija",
+      "description": "Napredni geografski kviz.",
+      "startTime": 1775498400000,
+      "scheduledTime": 1775498400000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je najveći grad u Europi?",
+              "answers": [
+                "Pariz",
+                "London",
+                "Berlin",
+                "Moskva"
+              ],
+              "correct": 3,
+              "difficulty": "easy",
+              "category": "geografija"
+            },
+            {
+              "text": "Koji je najmanji kontinent?",
+              "answers": [
+                "Europa",
+                "Australija",
+                "Antarktika",
+                "Južna Amerika"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "geografija"
+            },
+            {
+              "text": "Koja planina je najviša na svijetu?",
+              "answers": [
+                "Mont Blanc",
+                "K2",
+                "Everest",
+                "Kilimandžaro"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "geografija"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je najmanji kontinent?",
+              "answers": [
+                "Europa",
+                "Australija",
+                "Antarktika",
+                "Južna Amerika"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "geografija"
+            },
+            {
+              "text": "Koja zemlja ima zastavicu s javorovim listom?",
+              "answers": [
+                "SAD",
+                "Kanada",
+                "Australija",
+                "Novi Zeland"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "geografija"
+            },
+            {
+              "text": "Koja je najveća zemlja na svijetu po površini?",
+              "answers": [
+                "Kanada",
+                "Kina",
+                "SAD",
+                "Rusija"
+              ],
+              "correct": 3,
+              "difficulty": "easy",
+              "category": "geografija"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je najdulja granica između dviju zemalja?",
+              "answers": [
+                "Rusija-Kina",
+                "SAD-Kanada",
+                "Kina-Mongolija",
+                "Brazil-Argentina"
+              ],
+              "correct": 1,
+              "difficulty": "medium",
+              "category": "geografija"
+            },
+            {
+              "text": "Koja je prijestolnica Australije?",
+              "answers": [
+                "Sydney",
+                "Melbourne",
+                "Canberra",
+                "Brisbane"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "geografija"
+            },
+            {
+              "text": "Koji je najveći otok na svijetu?",
+              "answers": [
+                "Borneo",
+                "Madagaskar",
+                "Grenland",
+                "Australija"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "geografija"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je najveća pustinja na svijetu?",
+              "answers": [
+                "Sahara",
+                "Gobi",
+                "Atacama",
+                "Antarktika"
+              ],
+              "correct": 3,
+              "difficulty": "hard",
+              "category": "geografija"
+            },
+            {
+              "text": "Koja je prijestolnica Mongolije?",
+              "answers": [
+                "Ulan Bator",
+                "Irkutsk",
+                "Choibalsan",
+                "Darkhan"
+              ],
+              "correct": 0,
+              "difficulty": "hard",
+              "category": "geografija"
+            },
+            {
+              "text": "Koji je duljinski meridijan tzv. Nulti meridijan?",
+              "answers": [
+                "Greenwich",
+                "Pariz",
+                "Washington",
+                "Berlin"
+              ],
+              "correct": 0,
+              "difficulty": "hard",
+              "category": "geografija"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je prijestolnica Mongolije?",
+              "answers": [
+                "Ulan Bator",
+                "Irkutsk",
+                "Choibalsan",
+                "Darkhan"
+              ],
+              "correct": 0,
+              "difficulty": "hard",
+              "category": "geografija"
+            },
+            {
+              "text": "Koji je duljinski meridijan tzv. Nulti meridijan?",
+              "answers": [
+                "Greenwich",
+                "Pariz",
+                "Washington",
+                "Berlin"
+              ],
+              "correct": 0,
+              "difficulty": "hard",
+              "category": "geografija"
+            },
+            {
+              "text": "Koja je najveća pustinja na svijetu?",
+              "answers": [
+                "Sahara",
+                "Gobi",
+                "Atacama",
+                "Antarktika"
+              ],
+              "correct": 3,
+              "difficulty": "hard",
+              "category": "geografija"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "kultura_2": {
+      "id": "kultura_2",
+      "name": "Pop Kultura",
+      "type": "dana",
+      "category": "kultura",
+      "description": "Filmovi, serije, glazba — suvremena pop kultura.",
+      "startTime": 1775586600000,
+      "scheduledTime": 1775586600000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je žanr glazbe Bob Marley?",
+              "answers": [
+                "Jazz",
+                "Blues",
+                "Reggae",
+                "Soul"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "kultura"
+            },
+            {
+              "text": "Koji glazbeni instrument ima tipke?",
+              "answers": [
+                "Gitara",
+                "Bubnjevi",
+                "Klavir",
+                "Violina"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "kultura"
+            },
+            {
+              "text": "Tko je autor 'Malog princa'?",
+              "answers": [
+                "Camus",
+                "Saint-Exupéry",
+                "Sartre",
+                "Proust"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "kultura"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Tko je autor 'Malog princa'?",
+              "answers": [
+                "Camus",
+                "Saint-Exupéry",
+                "Sartre",
+                "Proust"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "kultura"
+            },
+            {
+              "text": "Tko je naslikao 'Mona Lisu'?",
+              "answers": [
+                "Michelangelo",
+                "Rafael",
+                "Da Vinci",
+                "Botticelli"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "kultura"
+            },
+            {
+              "text": "Koji je žanr glazbe Bob Marley?",
+              "answers": [
+                "Jazz",
+                "Blues",
+                "Reggae",
+                "Soul"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "kultura"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Tko je skladao 'Za Elise'?",
+              "answers": [
+                "Chopin",
+                "Beethoven",
+                "Mozart",
+                "Bach"
+              ],
+              "correct": 1,
+              "difficulty": "medium",
+              "category": "kultura"
+            },
+            {
+              "text": "U kojoj godini je snimljen film 'Titanic' Jamesa Camerona?",
+              "answers": [
+                "1995",
+                "1996",
+                "1997",
+                "1998"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "kultura"
+            },
+            {
+              "text": "Koji artist ima pseudonim 'The Weeknd'?",
+              "answers": [
+                "Abel Tesfaye",
+                "Drake",
+                "Kanye",
+                "Travis"
+              ],
+              "correct": 0,
+              "difficulty": "medium",
+              "category": "kultura"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je pravi naziv Bachove poznate 'Tocate i fuge'?",
+              "answers": [
+                "BWV 565",
+                "BWV 578",
+                "BWV 582",
+                "BWV 599"
+              ],
+              "correct": 0,
+              "difficulty": "hard",
+              "category": "kultura"
+            },
+            {
+              "text": "Tko je naslikao 'Noćna straža'?",
+              "answers": [
+                "Vermeer",
+                "Hals",
+                "Rembrandt",
+                "Rubens"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "kultura"
+            },
+            {
+              "text": "U kojoj godini je Picasso naslikao 'Guernicu'?",
+              "answers": [
+                "1935",
+                "1937",
+                "1939",
+                "1941"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "kultura"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je pravi naziv Bachove poznate 'Tocate i fuge'?",
+              "answers": [
+                "BWV 565",
+                "BWV 578",
+                "BWV 582",
+                "BWV 599"
+              ],
+              "correct": 0,
+              "difficulty": "hard",
+              "category": "kultura"
+            },
+            {
+              "text": "Tko je naslikao 'Noćna straža'?",
+              "answers": [
+                "Vermeer",
+                "Hals",
+                "Rembrandt",
+                "Rubens"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "kultura"
+            },
+            {
+              "text": "U kojoj godini je Picasso naslikao 'Guernicu'?",
+              "answers": [
+                "1935",
+                "1937",
+                "1939",
+                "1941"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "kultura"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "opce_1": {
+      "id": "opce_1",
+      "name": "Opći Lukavac Plus",
+      "type": "dana",
+      "category": "opce",
+      "description": "Mix svega — za one koji znaju sve.",
+      "startTime": 1775671200000,
+      "scheduledTime": 1775671200000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko je centimetara u jednom metru?",
+              "answers": [
+                "10",
+                "100",
+                "1000",
+                "50"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je napisao 'Romeo i Julija'?",
+              "answers": [
+                "Dante",
+                "Shakespeare",
+                "Cervantes",
+                "Homer"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko dana ima tjedan?",
+              "answers": [
+                "5",
+                "6",
+                "7",
+                "8"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je boja neba za vedra dana?",
+              "answers": [
+                "Zelena",
+                "Crvena",
+                "Plava",
+                "Žuta"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji ocean je najveći?",
+              "answers": [
+                "Atlantski",
+                "Indijski",
+                "Arktički",
+                "Tihi"
+              ],
+              "correct": 3,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko dana ima tjedan?",
+              "answers": [
+                "5",
+                "6",
+                "7",
+                "8"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko igrača ima momčad u košarci?",
+              "answers": [
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "correct": 1,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je najmanji planet Sunčevog sustava?",
+              "answers": [
+                "Merkur",
+                "Mars",
+                "Pluton",
+                "Venera"
+              ],
+              "correct": 0,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je najdulja rijeka u Europi?",
+              "answers": [
+                "Dunav",
+                "Ren",
+                "Volga",
+                "Thames"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "U kojoj godini je osnovan FIFA?",
+              "answers": [
+                "1900",
+                "1904",
+                "1910",
+                "1914"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je napisao simfoniju 'Nedovršena'?",
+              "answers": [
+                "Beethoven",
+                "Schubert",
+                "Mozart",
+                "Brahms"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je najduža kost u ljudskom tijelu?",
+              "answers": [
+                "Humerus",
+                "Tibia",
+                "Femur",
+                "Fibula"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko je Nobel nagrada godišnje?",
+              "answers": [
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je element s atomskim brojem 79?",
+              "answers": [
+                "Platina",
+                "Olovo",
+                "Zlato",
+                "Srebro"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "U kojoj godini je osnovan FIFA?",
+              "answers": [
+                "1900",
+                "1904",
+                "1910",
+                "1914"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "sport_3": {
+      "id": "sport_3",
+      "name": "Finale Sportske Lige",
+      "type": "tjedna",
+      "category": "sport",
+      "description": "Tjedni sportski finale!",
+      "startTime": 1775685600000,
+      "scheduledTime": 1775685600000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko igrača ima momčad u nogometu?",
+              "answers": [
+                "9",
+                "10",
+                "11",
+                "12"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "sport"
+            },
+            {
+              "text": "U kojoj zemlji su 2020. bili Olimpijski igre?",
+              "answers": [
+                "Kina",
+                "Japan",
+                "Brazil",
+                "Australija"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "sport"
+            },
+            {
+              "text": "Koji sport se igra na 'course'?",
+              "answers": [
+                "Tenis",
+                "Golf",
+                "Polo",
+                "Kroket"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "sport"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "U kojoj atletskoj disciplini se baca disk?",
+              "answers": [
+                "Bacanje",
+                "Skok",
+                "Sprint",
+                "Maraton"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "sport"
+            },
+            {
+              "text": "Koji sport se igra na 'course'?",
+              "answers": [
+                "Tenis",
+                "Golf",
+                "Polo",
+                "Kroket"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "sport"
+            },
+            {
+              "text": "Koji klub je Luka Modrić proslavio?",
+              "answers": [
+                "Barcelona",
+                "Manchester",
+                "Real Madrid",
+                "Bayern"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "sport"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Koji klub je najčešće osvajao Ligu prvaka?",
+              "answers": [
+                "Barcelona",
+                "Bayern",
+                "Liverpool",
+                "Real Madrid"
+              ],
+              "correct": 3,
+              "difficulty": "medium",
+              "category": "sport"
+            },
+            {
+              "text": "Koliko je centimetara visoka košarkaška koša od tla?",
+              "answers": [
+                "280",
+                "300",
+                "305",
+                "310"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "sport"
+            },
+            {
+              "text": "U kojoj godini je Hrvatska ušla na SP po prvi put?",
+              "answers": [
+                "1990",
+                "1994",
+                "1998",
+                "2002"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "sport"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko Grand Slam turnira ima u tenisu?",
+              "answers": [
+                "3",
+                "4",
+                "5",
+                "6"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "sport"
+            },
+            {
+              "text": "Koji grad je bio domaćin prvih modernih Olimpijskih igara?",
+              "answers": [
+                "Pariz",
+                "London",
+                "Atena",
+                "Stockholm"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "sport"
+            },
+            {
+              "text": "Koji je rekord Usaina Bolta na 200m?",
+              "answers": [
+                "19.00",
+                "19.19",
+                "19.32",
+                "19.50"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "sport"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koji grad je bio domaćin prvih modernih Olimpijskih igara?",
+              "answers": [
+                "Pariz",
+                "London",
+                "Atena",
+                "Stockholm"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "sport"
+            },
+            {
+              "text": "Koji je rekord Usaina Bolta na 200m?",
+              "answers": [
+                "19.00",
+                "19.19",
+                "19.32",
+                "19.50"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "sport"
+            },
+            {
+              "text": "U kojoj godini je osnovan FC Barcelona?",
+              "answers": [
+                "1895",
+                "1899",
+                "1902",
+                "1905"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "sport"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "trivia_1": {
+      "id": "trivia_1",
+      "name": "Brzi Lukavac",
+      "type": "sata",
+      "category": "opce",
+      "description": "Brzi kviz u podne — 5 krugova, sve je moguće!",
+      "startTime": 1775131200000,
+      "scheduledTime": 1775131200000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko je centimetara u jednom metru?",
+              "answers": [
+                "10",
+                "100",
+                "1000",
+                "50"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko je 7 × 8?",
+              "answers": [
+                "54",
+                "56",
+                "58",
+                "64"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji planet je najbliži Suncu?",
+              "answers": [
+                "Zemlja",
+                "Venera",
+                "Merkur",
+                "Mars"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Od čega se pravi sir?",
+              "answers": [
+                "Jaja",
+                "Mlijeko",
+                "Brašno",
+                "Ulje"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko je centimetara u jednom metru?",
+              "answers": [
+                "10",
+                "100",
+                "1000",
+                "50"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je najduži rijeka na svijetu?",
+              "answers": [
+                "Amazon",
+                "Nil",
+                "Jangce",
+                "Mississippi"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko je kostiju u ljudskom tijelu odrasle osobe?",
+              "answers": [
+                "186",
+                "206",
+                "226",
+                "196"
+              ],
+              "correct": 1,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je najmanji planet Sunčevog sustava?",
+              "answers": [
+                "Merkur",
+                "Mars",
+                "Pluton",
+                "Venera"
+              ],
+              "correct": 0,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je najdulja rijeka u Europi?",
+              "answers": [
+                "Dunav",
+                "Ren",
+                "Volga",
+                "Thames"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je element s atomskim brojem 79?",
+              "answers": [
+                "Platina",
+                "Olovo",
+                "Zlato",
+                "Srebro"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko je Nobel nagrada godišnje?",
+              "answers": [
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je drugi element u periodnom sustavu?",
+              "answers": [
+                "Litij",
+                "Helij",
+                "Vodik",
+                "Berilij"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je element s atomskim brojem 79?",
+              "answers": [
+                "Platina",
+                "Olovo",
+                "Zlato",
+                "Srebro"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je drugi element u periodnom sustavu?",
+              "answers": [
+                "Litij",
+                "Helij",
+                "Vodik",
+                "Berilij"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je napisao simfoniju 'Nedovršena'?",
+              "answers": [
+                "Beethoven",
+                "Schubert",
+                "Mozart",
+                "Brahms"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600392,
+      "createdBy": "system"
+    },
+    "trivia_2": {
+      "id": "trivia_2",
+      "name": "Poslijepodnevni Lukavac",
+      "type": "sata",
+      "category": "opce",
+      "description": "Osvježi znanje poslijepodne.",
+      "startTime": 1775401200000,
+      "scheduledTime": 1775401200000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je najduži rijeka na svijetu?",
+              "answers": [
+                "Amazon",
+                "Nil",
+                "Jangce",
+                "Mississippi"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko dana ima tjedan?",
+              "answers": [
+                "5",
+                "6",
+                "7",
+                "8"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko sati ima jedan dan?",
+              "answers": [
+                "12",
+                "20",
+                "24",
+                "48"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je najduži rijeka na svijetu?",
+              "answers": [
+                "Amazon",
+                "Nil",
+                "Jangce",
+                "Mississippi"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Što je H2O?",
+              "answers": [
+                "Kisik",
+                "Vodikov peroksid",
+                "Voda",
+                "Dušik"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je boja neba za vedra dana?",
+              "answers": [
+                "Zelena",
+                "Crvena",
+                "Plava",
+                "Žuta"
+              ],
+              "correct": 2,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "U kojoj zemlji se nalazi Machu Picchu?",
+              "answers": [
+                "Meksiko",
+                "Bolivija",
+                "Peru",
+                "Kolumbija"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je najdulja rijeka u Europi?",
+              "answers": [
+                "Dunav",
+                "Ren",
+                "Volga",
+                "Thames"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koja zemlja ima najviše UNESCO svjetske baštine?",
+              "answers": [
+                "Italija",
+                "Kina",
+                "Španjolska",
+                "Francuska"
+              ],
+              "correct": 0,
+              "difficulty": "medium",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je najduža kost u ljudskom tijelu?",
+              "answers": [
+                "Humerus",
+                "Tibia",
+                "Femur",
+                "Fibula"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je prijestolnica Kazahstana?",
+              "answers": [
+                "Almati",
+                "Astana",
+                "Taškent",
+                "Bišek"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je drugi element u periodnom sustavu?",
+              "answers": [
+                "Litij",
+                "Helij",
+                "Vodik",
+                "Berilij"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko je Nobel nagrada godišnje?",
+              "answers": [
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je drugi element u periodnom sustavu?",
+              "answers": [
+                "Litij",
+                "Helij",
+                "Vodik",
+                "Berilij"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji grad je bio prijestolnica Bizanta?",
+              "answers": [
+                "Rim",
+                "Atena",
+                "Konstantinopol",
+                "Jeruzalem"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600393,
+      "createdBy": "system"
+    },
+    "trivia_3": {
+      "id": "trivia_3",
+      "name": "Večernji Specijal",
+      "type": "poseban",
+      "category": "opce",
+      "description": "Posebni tematski večernji kviz.",
+      "startTime": 1775507400000,
+      "scheduledTime": 1775507400000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Od čega se pravi sir?",
+              "answers": [
+                "Jaja",
+                "Mlijeko",
+                "Brašno",
+                "Ulje"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je glavni grad Hrvatske?",
+              "answers": [
+                "Zagreb",
+                "Split",
+                "Rijeka",
+                "Osijek"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko noga ima pauk?",
+              "answers": [
+                "6",
+                "8",
+                "4",
+                "10"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Koji je najduži rijeka na svijetu?",
+              "answers": [
+                "Amazon",
+                "Nil",
+                "Jangce",
+                "Mississippi"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko je centimetara u jednom metru?",
+              "answers": [
+                "10",
+                "100",
+                "1000",
+                "50"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko je 7 × 8?",
+              "answers": [
+                "54",
+                "56",
+                "58",
+                "64"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Koja je kemijska oznaka zlata?",
+              "answers": [
+                "Gl",
+                "Go",
+                "Au",
+                "Ag"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je najveći kopneni sisavac?",
+              "answers": [
+                "Nilski konj",
+                "Nosorog",
+                "Slon",
+                "Žirafa"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koja zemlja ima najviše UNESCO svjetske baštine?",
+              "answers": [
+                "Italija",
+                "Kina",
+                "Španjolska",
+                "Francuska"
+              ],
+              "correct": 0,
+              "difficulty": "medium",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Koji grad je bio prijestolnica Bizanta?",
+              "answers": [
+                "Rim",
+                "Atena",
+                "Konstantinopol",
+                "Jeruzalem"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je kemijski simbol volframa?",
+              "answers": [
+                "Wo",
+                "Wf",
+                "W",
+                "Wu"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je element s atomskim brojem 79?",
+              "answers": [
+                "Platina",
+                "Olovo",
+                "Zlato",
+                "Srebro"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko je Nobel nagrada godišnje?",
+              "answers": [
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je drugi element u periodnom sustavu?",
+              "answers": [
+                "Litij",
+                "Helij",
+                "Vodik",
+                "Berilij"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je element s atomskim brojem 79?",
+              "answers": [
+                "Platina",
+                "Olovo",
+                "Zlato",
+                "Srebro"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600393,
+      "createdBy": "system"
+    },
+    "trivia_4": {
+      "id": "trivia_4",
+      "name": "Lukavac Vikend",
+      "type": "poseban",
+      "category": "opce",
+      "description": "Vikend specijal za relaxed igranje.",
+      "startTime": 1775592000000,
+      "scheduledTime": 1775592000000,
+      "status": "scheduled",
+      "rounds": 5,
+      "questionsPerRound": 3,
+      "totalQuestions": 15,
+      "maxPlayers": 8,
+      "minPlayers": 2,
+      "entryFee": 0,
+      "prizePool": 0,
+      "roundSettings": [
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 80,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            20,
+            10,
+            0,
+            -10,
+            -20
+          ],
+          "questionsList": [
+            {
+              "text": "Koja životinja je simbol Australije?",
+              "answers": [
+                "Lav",
+                "Kengur",
+                "Panda",
+                "Slon"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je napisao 'Romeo i Julija'?",
+              "answers": [
+                "Dante",
+                "Shakespeare",
+                "Cervantes",
+                "Homer"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koliko je 7 × 8?",
+              "answers": [
+                "54",
+                "56",
+                "58",
+                "64"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 65,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            40,
+            20,
+            0,
+            -20,
+            -40
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko noga ima pauk?",
+              "answers": [
+                "6",
+                "8",
+                "4",
+                "10"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koja životinja je simbol Australije?",
+              "answers": [
+                "Lav",
+                "Kengur",
+                "Panda",
+                "Slon"
+              ],
+              "correct": 1,
+              "difficulty": "easy",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je glavni grad Hrvatske?",
+              "answers": [
+                "Zagreb",
+                "Split",
+                "Rijeka",
+                "Osijek"
+              ],
+              "correct": 0,
+              "difficulty": "easy",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 50,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            60,
+            30,
+            0,
+            -30,
+            -60
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko igrača ima momčad u košarci?",
+              "answers": [
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "correct": 1,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "U kojoj zemlji se nalazi Machu Picchu?",
+              "answers": [
+                "Meksiko",
+                "Bolivija",
+                "Peru",
+                "Kolumbija"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je najdulja rijeka u Europi?",
+              "answers": [
+                "Dunav",
+                "Ren",
+                "Volga",
+                "Thames"
+              ],
+              "correct": 2,
+              "difficulty": "medium",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "percent",
+          "remainingValue": 35,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            100,
+            50,
+            0,
+            -50,
+            -100
+          ],
+          "questionsList": [
+            {
+              "text": "Koji grad je bio prijestolnica Bizanta?",
+              "answers": [
+                "Rim",
+                "Atena",
+                "Konstantinopol",
+                "Jeruzalem"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Tko je napisao simfoniju 'Nedovršena'?",
+              "answers": [
+                "Beethoven",
+                "Schubert",
+                "Mozart",
+                "Brahms"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koji je drugi element u periodnom sustavu?",
+              "answers": [
+                "Litij",
+                "Helij",
+                "Vodik",
+                "Berilij"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        },
+        {
+          "questions": 3,
+          "remainingType": "number",
+          "remainingValue": 1,
+          "timeAnswer": 20,
+          "timePause": 5,
+          "time1": 10,
+          "time2": 8,
+          "skipCunning": false,
+          "earlyContinue": true,
+          "autoKickPlayers": true,
+          "autoNextRound": true,
+          "values": [
+            200,
+            100,
+            0,
+            -100,
+            -200
+          ],
+          "questionsList": [
+            {
+              "text": "Koliko je Nobel nagrada godišnje?",
+              "answers": [
+                "4",
+                "5",
+                "6",
+                "7"
+              ],
+              "correct": 2,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "Koja je prijestolnica Kazahstana?",
+              "answers": [
+                "Almati",
+                "Astana",
+                "Taškent",
+                "Bišek"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            },
+            {
+              "text": "U kojoj godini je osnovan FIFA?",
+              "answers": [
+                "1900",
+                "1904",
+                "1910",
+                "1914"
+              ],
+              "correct": 1,
+              "difficulty": "hard",
+              "category": "opce"
+            }
+          ]
+        }
+      ],
+      "showHeaderBar": true,
+      "leaderboardPosition": "bottom",
+      "createdAt": 1775048600393,
+      "createdBy": "system"
+    }
+  }
+};
+
+function log(msg, cls='') {
+    const el = document.getElementById('log');
+    el.classList.add('show');
+    el.innerHTML += `<div class="${cls || 'info'}">${msg}</div>`;
+    el.scrollTop = el.scrollHeight;
+}
+
+function setProgress(pct) {
+    document.getElementById('prog-bar').style.width = pct + '%';
+}
+
+async function doImport() {
+    const btn = document.getElementById('import-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Uvozim...';
+    document.getElementById('prog-wrap').style.display = '';
+    document.getElementById('log').innerHTML = '';
+
+    const quizzes = QUIZZES.scheduledQuizzes;
+    const ids = Object.keys(quizzes);
+    let ok = 0, err = 0;
+
+    log('Počinjem import ' + ids.length + ' kvizova...', 'info');
+
+    for (let i = 0; i < ids.length; i++) {
+        const id = ids[i];
+        const q  = quizzes[id];
+        try {
+            await database.ref('scheduledQuizzes/' + id).set(q);
+            log('✓ ' + q.name, 'ok');
+            ok++;
+        } catch(e) {
+            log('✗ ' + q.name + ' — ' + e.message, 'err');
+            err++;
+        }
+        setProgress(Math.round((i+1)/ids.length*100));
+    }
+
+    log('\n--- Završeno: ' + ok + ' OK, ' + err + ' grešaka ---', ok === ids.length ? 'ok' : 'err');
+    document.getElementById('status-badge').className = 'badge badge-ok';
+    document.getElementById('status-badge').textContent = '✅ Uvezeno ' + ok + '/' + ids.length;
+    btn.disabled = false;
+    btn.innerHTML = '✅ Import završen — ponovi ako treba';
+}
+
+async function doDelete() {
+    if (!confirm('Obrisati sve uvezene kvizove iz Firebase?')) return;
+    const btn = document.getElementById('del-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Brišem...';
+    const ids = Object.keys(QUIZZES.scheduledQuizzes);
+    const updates = {};
+    ids.forEach(id => updates['scheduledQuizzes/' + id] = null);
+    try {
+        await database.ref().update(updates);
+        log('✓ Obrisano ' + ids.length + ' kvizova', 'ok');
+        document.getElementById('status-badge').className = 'badge badge-wait';
+        document.getElementById('status-badge').textContent = '🗑️ Obrisano';
+    } catch(e) {
+        log('✗ Greška: ' + e.message, 'err');
+    }
+    btn.disabled = false;
+    btn.innerHTML = '🗑️ Obriši sve uvezene kvizove (reset)';
+}
+</script>
+</body>
+</html>
