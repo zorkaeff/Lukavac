@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8" />
+    <title>Auto-Runner — Lukavac</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; }
+        .runner-iframe { width: 1px; height: 1px; opacity: 0; pointer-events: none; position: absolute; }
+        .quiz-card { transition: all 0.2s; }
+        .status-scheduled { background: #1e40af; }
+        .status-live { background: #16a34a; }
+        .status-finished { background: #475569; }
+        .status-cancelled { background: #b91c1c; }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-start mb-6">
+            <div>
+                <h1 class="text-3xl font-bold mb-1">🤖 Auto-Runner</h1>
+                <p class="text-slate-400 text-sm">
+                    Pokreće zakazane online kvizove automatski. Drži ovaj tab otvoren dok god želiš da auto-kvizovi rade.
+                </p>
+            </div>
+            <div id="globalStatus" class="text-right">
+                <div class="text-xs text-slate-500">STATUS</div>
+                <div id="globalStatusText" class="text-lg font-bold text-green-400 pulse">● AKTIVAN</div>
+                <div id="lastTick" class="text-xs text-slate-500 mt-1">—</div>
+            </div>
+        </header>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-4 gap-3 mb-6">
+            <div class="bg-slate-800 rounded-lg p-4">
+                <div class="text-xs text-slate-400">ZAKAZANIH</div>
+                <div id="statScheduled" class="text-2xl font-bold">0</div>
+            </div>
+            <div class="bg-slate-800 rounded-lg p-4">
+                <div class="text-xs text-slate-400">UŽIVO</div>
+                <div id="statLive" class="text-2xl font-bold text-green-400">0</div>
+            </div>
+            <div class="bg-slate-800 rounded-lg p-4">
+                <div class="text-xs text-slate-400">ZAVRŠENIH (DANAS)</div>
+                <div id="statFinished" class="text-2xl font-bold text-slate-300">0</div>
+            </div>
+            <div class="bg-slate-800 rounded-lg p-4">
+                <div class="text-xs text-slate-400">RUNNERA AKTIVNO</div>
+                <div id="statRunners" class="text-2xl font-bold text-blue-400">0</div>
+            </div>
+        </div>
+
+        <!-- Live quizzes -->
+        <section class="mb-6">
+            <h2 class="text-xl font-bold mb-3">🟢 Uživo</h2>
+            <div id="liveList" class="space-y-2">
+                <div class="text-slate-500 text-sm">Nijedan kviz trenutno nije uživo.</div>
+            </div>
+        </section>
+
+        <!-- Scheduled -->
+        <section class="mb-6">
+            <h2 class="text-xl font-bold mb-3">📅 Zakazani</h2>
+            <div id="scheduledList" class="space-y-2">
+                <div class="text-slate-500 text-sm">Nema zakazanih kvizova.</div>
+            </div>
+        </section>
+
+        <!-- Log -->
+        <section>
+            <h2 class="text-xl font-bold mb-3">📜 Log</h2>
+            <div id="log" class="bg-black rounded-lg p-4 font-mono text-xs h-64 overflow-y-auto"></div>
+        </section>
+    </div>
+
+    <!-- Hidden iframes go here -->
+    <div id="iframeHost"></div>
+
+    <script src="firebase-config.js"></script>
+    <script src="firebase-helper.js"></script>
+    <script>
+        // ===================================================================
+        // AUTO-RUNNER
+        // ===================================================================
+        // Logika:
+        //  1. Čita scheduledQuizzes iz Firebase
+        //  2. Kad neki kviz pređe startTime i status je 'scheduled' → POKREĆE GA:
+        //      - Kopira questions/settings u liveQuizzes/{id}/
+        //      - Prebaci lobby → players (samo igrači koji su tamo)
+        //      - Postavlja gameState s autoMode: true, phase: 'waiting'
+        //      - Mijenja status na 'live'
+        //      - Otvara skriven iframe admin.html?quiz=ID&autopilot=1
+        //  3. Iframe se "ponaša" kao auto-admin za taj kviz, i koristi
+        //     postojeću logiku state machine-a iz admin.html.
+        //  4. Kad iframe javi da je kviz gotov → status 'finished',
+        //     zatvaramo iframe.
+        // ===================================================================
+
+        const activeRunners = {}; // quizId → iframe element
+        let allScheduled = {};
+
+        function log(msg, level = 'info') {
+            const colors = { info: '#94a3b8', ok: '#4ade80', warn: '#facc15', err: '#f87171' };
+            const time = new Date().toLocaleTimeString('hr-HR');
+            const el = document.getElementById('log');
+            const line = document.createElement('div');
+            line.style.color = colors[level] || colors.info;
+            line.textContent = `[${time}] ${msg}`;
+            el.appendChild(line);
+            el.scrollTop = el.scrollHeight;
+            console.log(`[auto-runner] ${msg}`);
+        }
+
+        function updateLastTick() {
+            document.getElementById('lastTick').textContent =
+                'Posljednja provjera: ' + new Date().toLocaleTimeString('hr-HR');
+        }
+
+        // Sluša scheduled kvizove
+        database.ref('scheduledQuizzes').on('value', snap => {
+            allScheduled = snap.val() || {};
+            renderLists();
+        });
+
+        // Glavni tick — svake 5s provjeri da li neki kviz treba startovati
+        setInterval(tick, 5000);
+        tick();
+
+        function tick() {
+            updateLastTick();
+            const now = Date.now();
+            for (const [id, quiz] of Object.entries(allScheduled)) {
+                if (quiz.status === 'scheduled' && quiz.startTime && now >= quiz.startTime) {
+                    if (!activeRunners[id]) {
+                        startQuiz(id, quiz);
+                    }
+                }
+                // Ako je live ali nemamo runner (npr. tab se restartovao), ponovo zakači
+                if (quiz.status === 'live' && !activeRunners[id]) {
+                    log(`Reconnecting iframe runner za "${quiz.name}"`, 'warn');
+                    spawnRunnerIframe(id);
+                }
+            }
+        }
+
+        async function startQuiz(quizId, quiz) {
+            log(`▶️ Pokrećem "${quiz.name}" (${quizId})`, 'ok');
+
+            try {
+                // 1. Kopiraj pitanja i postavke u liveQuizzes/{id}/
+                const liveRef = database.ref(`liveQuizzes/${quizId}`);
+
+                await liveRef.child('questions').set(quiz.questions || []);
+                await liveRef.child('settings').set(quiz.settings || {});
+
+                // 2. Prebaci lobby → players
+                const lobbySnap = await liveRef.child('lobby').once('value');
+                const lobby = lobbySnap.val() || {};
+                const players = {};
+                Object.entries(lobby).forEach(([lobbyId, p]) => {
+                    players[lobbyId] = {
+                        nickname: p.nickname || 'Anoniman',
+                        score: 0,
+                        answered: false,
+                        joinedAt: p.joinedAt || Date.now()
+                    };
+                });
+                await liveRef.child('players').set(players);
+
+                const playerCount = Object.keys(players).length;
+                log(`  └ ${playerCount} igrača prebačeno iz lobby-ja`, 'info');
+
+                if (playerCount < 2) {
+                    log(`  └ Premalo igrača (${playerCount}), otkazujem.`, 'warn');
+                    await database.ref(`scheduledQuizzes/${quizId}/status`).set('cancelled');
+                    await database.ref(`scheduledQuizzes/${quizId}/cancelReason`).set('Nedovoljno igrača (min 2)');
+                    return;
+                }
+
+                // 3. Postavi gameState
+                await liveRef.child('gameState').set({
+                    currentRound: 1,
+                    currentQuestion: 0,
+                    isActive: true,
+                    autoMode: true,           // ⭐ ovo aktivira auto-tranzicije u admin.html
+                    phase: 'waiting',
+                    timerEnd: null,
+                    showResults: false,
+                    startedAt: Date.now()
+                });
+
+                // 4. Status = live
+                await database.ref(`scheduledQuizzes/${quizId}/status`).set('live');
+                await database.ref(`scheduledQuizzes/${quizId}/liveStartedAt`).set(Date.now());
+
+                // 5. Otvori iframe runner
+                spawnRunnerIframe(quizId);
+
+                log(`✅ "${quiz.name}" pokrenut`, 'ok');
+            } catch (err) {
+                log(`❌ Greška pri pokretanju: ${err.message}`, 'err');
+                console.error(err);
+            }
+        }
+
+        function spawnRunnerIframe(quizId) {
+            if (activeRunners[quizId]) return;
+            const iframe = document.createElement('iframe');
+            iframe.className = 'runner-iframe';
+            iframe.src = `admin.html?quiz=${quizId}&autopilot=1`;
+            iframe.dataset.quizId = quizId;
+            document.getElementById('iframeHost').appendChild(iframe);
+            activeRunners[quizId] = iframe;
+            log(`  └ iframe runner spawn-an za quiz=${quizId}`, 'info');
+        }
+
+        function killRunnerIframe(quizId) {
+            const iframe = activeRunners[quizId];
+            if (iframe) {
+                iframe.remove();
+                delete activeRunners[quizId];
+                log(`  └ iframe runner uklonjen za quiz=${quizId}`, 'info');
+            }
+        }
+
+        // Sluša promjene statusa za sve live kvizove
+        database.ref('scheduledQuizzes').on('child_changed', snap => {
+            const id = snap.key;
+            const quiz = snap.val();
+            if (quiz.status === 'finished' || quiz.status === 'cancelled') {
+                if (activeRunners[id]) {
+                    log(`🏁 "${quiz.name}" završio (${quiz.status})`, quiz.status === 'finished' ? 'ok' : 'warn');
+                    killRunnerIframe(id);
+                }
+            }
+        });
+
+        // ===================================================================
+        // RENDER
+        // ===================================================================
+
+        function renderLists() {
+            const now = Date.now();
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+
+            const live = [], scheduled = [], finishedToday = [];
+            for (const [id, q] of Object.entries(allScheduled)) {
+                if (q.status === 'live' || q.status === 'running') live.push([id, q]);
+                else if (q.status === 'scheduled') scheduled.push([id, q]);
+                else if ((q.status === 'finished' || q.status === 'cancelled') &&
+                         (q.liveStartedAt || q.createdAt || 0) >= today.getTime()) {
+                    finishedToday.push([id, q]);
+                }
+            }
+
+            document.getElementById('statScheduled').textContent = scheduled.length;
+            document.getElementById('statLive').textContent = live.length;
+            document.getElementById('statFinished').textContent = finishedToday.length;
+            document.getElementById('statRunners').textContent = Object.keys(activeRunners).length;
+
+            // Live
+            const liveEl = document.getElementById('liveList');
+            liveEl.innerHTML = live.length ? live.map(([id, q]) => renderLiveCard(id, q)).join('')
+                : '<div class="text-slate-500 text-sm">Nijedan kviz trenutno nije uživo.</div>';
+
+            // Scheduled — sortirano po vremenu
+            scheduled.sort((a, b) => (a[1].startTime || 0) - (b[1].startTime || 0));
+            const schedEl = document.getElementById('scheduledList');
+            schedEl.innerHTML = scheduled.length ? scheduled.map(([id, q]) => renderSchedCard(id, q, now)).join('')
+                : '<div class="text-slate-500 text-sm">Nema zakazanih kvizova.</div>';
+        }
+
+        function renderLiveCard(id, q) {
+            const playerCount = q.playerCount || '?';
+            const max = q.maxPlayers || '∞';
+            const elapsed = q.liveStartedAt ? Math.floor((Date.now() - q.liveStartedAt) / 60000) : 0;
+            return `
+                <div class="quiz-card status-live rounded-lg p-3 flex items-center justify-between">
+                    <div>
+                        <div class="font-bold">${q.name}</div>
+                        <div class="text-xs opacity-80">
+                            ${playerCount}/${max} igrača · ${elapsed} min uživo · iframe ${activeRunners[id] ? '🟢' : '🔴'}
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="admin.html?quiz=${id}" target="_blank"
+                           class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded text-sm">
+                            👀 Open admin
+                        </a>
+                        <button onclick="forceFinish('${id}')"
+                                class="bg-red-700 hover:bg-red-800 px-3 py-1 rounded text-sm">
+                            ⏹ Stop
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSchedCard(id, q, now) {
+            const diff = (q.startTime || 0) - now;
+            let countdown;
+            if (diff < 0) countdown = '<span class="text-yellow-300">▶ pokrećem...</span>';
+            else if (diff < 60000) countdown = `<span class="text-yellow-300">${Math.floor(diff/1000)}s</span>`;
+            else if (diff < 3600000) countdown = `${Math.floor(diff/60000)}m ${Math.floor((diff%60000)/1000)}s`;
+            else countdown = new Date(q.startTime).toLocaleString('hr-HR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+
+            const playerCount = q.playerCount || 0;
+            const max = q.maxPlayers || '∞';
+            return `
+                <div class="quiz-card status-scheduled rounded-lg p-3 flex items-center justify-between">
+                    <div>
+                        <div class="font-bold">${q.name}</div>
+                        <div class="text-xs opacity-80">
+                            🕐 ${countdown} · ${playerCount}/${max} u lobby-ju
+                        </div>
+                    </div>
+                    <a href="lobby.html?quiz=${id}" target="_blank"
+                       class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded text-sm">
+                        🔗 Lobby link
+                    </a>
+                </div>
+            `;
+        }
+
+        // Re-render svake sekunde da countdown ide
+        setInterval(renderLists, 1000);
+
+        window.forceFinish = async (quizId) => {
+            if (!confirm('Forsirano završi ovaj kviz?')) return;
+            await database.ref(`scheduledQuizzes/${quizId}/status`).set('finished');
+            await database.ref(`scheduledQuizzes/${quizId}/forcedStop`).set(true);
+            log(`⏹ Forsirano stop za ${quizId}`, 'warn');
+        };
+
+        // Inicijalna poruka
+        log('Auto-runner spreman. Tab MORA ostati otvoren da bi kvizovi radili.', 'ok');
+    </script>
+</body>
+</html>

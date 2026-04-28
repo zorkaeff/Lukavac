@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lobby — Lukavac</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: linear-gradient(135deg, #1e3a8a 0%, #4338ca 100%); min-height: 100vh; }
+        .glass { background: rgba(255,255,255,0.08); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15); }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .countdown { font-variant-numeric: tabular-nums; }
+    </style>
+</head>
+<body class="text-white">
+    <div class="container mx-auto px-4 py-8 max-w-2xl">
+        <!-- LOADING -->
+        <div id="loading" class="text-center py-20">
+            <div class="text-6xl mb-4">⏳</div>
+            <div class="text-xl">Učitavanje kviza...</div>
+        </div>
+
+        <!-- ERROR -->
+        <div id="errorBox" class="hidden glass rounded-2xl p-8 text-center">
+            <div class="text-6xl mb-4">⚠️</div>
+            <h1 class="text-2xl font-bold mb-2">Kviz nije pronađen</h1>
+            <p id="errorMsg" class="text-white/70 mb-6">Provjeri link ili kontaktiraj organizatora.</p>
+            <a href="quizzes.html" class="inline-block bg-white text-blue-900 px-6 py-3 rounded-lg font-bold hover:bg-blue-50">
+                ← Nazad na sve kvizove
+            </a>
+        </div>
+
+        <!-- JOIN FORM -->
+        <div id="joinForm" class="hidden glass rounded-2xl p-8">
+            <div class="text-center mb-6">
+                <div class="text-5xl mb-3">🎯</div>
+                <h1 id="quizTitle" class="text-3xl font-bold mb-1">—</h1>
+                <p id="quizSubtitle" class="text-white/70">—</p>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 mb-6 text-center text-sm">
+                <div class="bg-white/10 rounded-lg p-3">
+                    <div class="text-white/60">Početak</div>
+                    <div id="startTimeDisplay" class="font-bold mt-1">—</div>
+                </div>
+                <div class="bg-white/10 rounded-lg p-3">
+                    <div class="text-white/60">Igrača</div>
+                    <div id="playerCountDisplay" class="font-bold mt-1">0/0</div>
+                </div>
+                <div class="bg-white/10 rounded-lg p-3">
+                    <div class="text-white/60">Nagrada</div>
+                    <div id="prizeDisplay" class="font-bold mt-1">—</div>
+                </div>
+            </div>
+
+            <form id="joinFormElement" class="space-y-4">
+                <div>
+                    <label class="block text-sm mb-1 text-white/80">Tvoj nadimak</label>
+                    <input id="nicknameInput" type="text" maxlength="20" required
+                           class="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 focus:border-white/50 outline-none text-white placeholder-white/40"
+                           placeholder="npr. Igor123" />
+                </div>
+                <div id="passwordRow" class="hidden">
+                    <label class="block text-sm mb-1 text-white/80">Šifra kviza</label>
+                    <input id="passwordInput" type="text"
+                           class="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 focus:border-white/50 outline-none text-white placeholder-white/40"
+                           placeholder="Šifra koju si dobio od organizatora" />
+                </div>
+                <button type="submit"
+                        class="w-full bg-yellow-400 hover:bg-yellow-300 text-blue-900 font-bold py-3 rounded-lg text-lg transition">
+                    Pridruži se kvizu →
+                </button>
+            </form>
+        </div>
+
+        <!-- WAITING ROOM -->
+        <div id="waitingRoom" class="hidden glass rounded-2xl p-8">
+            <div class="text-center mb-6">
+                <div class="text-5xl mb-3">⏰</div>
+                <h1 id="waitingTitle" class="text-3xl font-bold mb-1">—</h1>
+                <p class="text-white/70">Čekaj početak kviza</p>
+            </div>
+
+            <!-- Countdown -->
+            <div id="countdownBox" class="bg-yellow-400 text-blue-900 rounded-xl p-6 text-center mb-6">
+                <div class="text-sm font-bold mb-2">KVIZ POČINJE ZA</div>
+                <div id="countdown" class="countdown text-5xl font-bold">--:--:--</div>
+            </div>
+
+            <!-- Player list -->
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-bold">Igrači u lobby-ju</span>
+                    <span id="lobbyCount" class="text-sm text-white/70">0 igrača</span>
+                </div>
+                <div id="lobbyList" class="space-y-2 max-h-64 overflow-y-auto"></div>
+            </div>
+
+            <button id="leaveBtn" class="w-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-200 py-2 rounded-lg text-sm">
+                Napusti lobby
+            </button>
+        </div>
+
+        <!-- STARTED — redirect -->
+        <div id="startedBox" class="hidden glass rounded-2xl p-8 text-center">
+            <div class="text-6xl mb-4 pulse">🎮</div>
+            <h1 class="text-2xl font-bold mb-2">Kviz je počeo!</h1>
+            <p class="text-white/70 mb-4">Prebacujemo te...</p>
+        </div>
+    </div>
+
+    <script src="firebase-config.js"></script>
+    <script src="firebase-helper.js"></script>
+    <script>
+        // ===================================================================
+        // LOBBY za auto-mode online kvizove
+        // ===================================================================
+        // URL: lobby.html?quiz=ID
+        // Igrač upiše nadimak (i šifru ako treba), upisuje se u lobby,
+        // čeka da se pokrene kviz pa se redirect-uje na player.html?quiz=ID
+        // ===================================================================
+
+        const params = new URLSearchParams(location.search);
+        const quizId = params.get('quiz');
+
+        if (!quizId) {
+            showError('URL ne sadrži ?quiz=ID parametar.');
+        } else {
+            Q.setQuizId(quizId);
+            loadQuiz();
+        }
+
+        let quizData = null;
+        let myLobbyId = localStorage.getItem('lobbyId_' + quizId) || null;
+        let myNickname = localStorage.getItem('lobbyNick_' + quizId) || '';
+        let countdownInterval = null;
+
+        function showError(msg) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('errorBox').classList.remove('hidden');
+            document.getElementById('errorMsg').textContent = msg;
+        }
+
+        function loadQuiz() {
+            // scheduledQuizzes je GLOBALNA putanja — Q.ref auto-routing je preskače
+            // jer prvi segment nije u PER_QUIZ_PATHS.
+            database.ref(`scheduledQuizzes/${quizId}`).once('value').then(snap => {
+                if (!snap.exists()) {
+                    showError('Ovaj kviz ne postoji ili je obrisan.');
+                    return;
+                }
+                quizData = snap.val();
+                renderQuizInfo();
+
+                // Da li sam već u lobby-ju? → idi pravo u waiting room
+                if (myLobbyId) {
+                    Q.ref('lobby/' + myLobbyId).once('value').then(s => {
+                        if (s.exists()) {
+                            enterWaitingRoom();
+                        } else {
+                            // Nije više tamo — pokaži formu
+                            myLobbyId = null;
+                            localStorage.removeItem('lobbyId_' + quizId);
+                            showJoinForm();
+                        }
+                    });
+                } else {
+                    showJoinForm();
+                }
+
+                // Slušaj status kviza — ako pređe u 'live', redirect
+                database.ref(`scheduledQuizzes/${quizId}/status`).on('value', s => {
+                    const status = s.val();
+                    if (status === 'live' || status === 'running') {
+                        redirectToPlayer();
+                    } else if (status === 'finished') {
+                        showError('Ovaj kviz je već završio.');
+                    } else if (status === 'cancelled') {
+                        showError('Kviz je otkazan.');
+                    }
+                });
+            }).catch(err => {
+                console.error(err);
+                showError('Greška pri učitavanju: ' + err.message);
+            });
+        }
+
+        function renderQuizInfo() {
+            document.getElementById('quizTitle').textContent = quizData.name || 'Kviz';
+            document.getElementById('waitingTitle').textContent = quizData.name || 'Kviz';
+            const sub = (quizData.type ? quizData.type.toUpperCase() : 'ONLINE') + ' kviz';
+            document.getElementById('quizSubtitle').textContent = sub;
+
+            const startDate = new Date(quizData.startTime);
+            document.getElementById('startTimeDisplay').textContent =
+                startDate.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
+
+            const playerCount = quizData.playerCount || 0;
+            document.getElementById('playerCountDisplay').textContent =
+                playerCount + '/' + (quizData.maxPlayers || '∞');
+
+            document.getElementById('prizeDisplay').textContent =
+                (quizData.prizePool ? quizData.prizePool + '€' : 'Bez nagrade');
+
+            if (quizData.password && quizData.password.trim()) {
+                document.getElementById('passwordRow').classList.remove('hidden');
+                document.getElementById('passwordInput').required = true;
+            }
+        }
+
+        function showJoinForm() {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('joinForm').classList.remove('hidden');
+            if (myNickname) document.getElementById('nicknameInput').value = myNickname;
+        }
+
+        document.getElementById('joinFormElement').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nick = document.getElementById('nicknameInput').value.trim();
+            const pwd = document.getElementById('passwordInput').value.trim();
+
+            if (!nick) return;
+
+            if (quizData.password && quizData.password.trim() && pwd !== quizData.password) {
+                alert('❌ Pogrešna šifra.');
+                return;
+            }
+
+            if (quizData.maxPlayers && (quizData.playerCount || 0) >= quizData.maxPlayers) {
+                alert('🚫 Kviz je popunjen.');
+                return;
+            }
+
+            // Upiši se u lobby
+            const newId = Q.ref('lobby').push().key;
+            await Q.ref('lobby/' + newId).set({
+                nickname: nick,
+                joinedAt: Date.now()
+            });
+
+            // Increment playerCount na scheduledQuizzes
+            await database.ref(`scheduledQuizzes/${quizId}/playerCount`)
+                .transaction(v => (v || 0) + 1);
+
+            myLobbyId = newId;
+            myNickname = nick;
+            localStorage.setItem('lobbyId_' + quizId, newId);
+            localStorage.setItem('lobbyNick_' + quizId, nick);
+
+            enterWaitingRoom();
+        });
+
+        function enterWaitingRoom() {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('joinForm').classList.add('hidden');
+            document.getElementById('waitingRoom').classList.remove('hidden');
+
+            // Slušaj listu igrača u lobby-ju
+            Q.ref('lobby').on('value', snap => {
+                const all = snap.val() || {};
+                const list = Object.entries(all).sort((a, b) => a[1].joinedAt - b[1].joinedAt);
+                document.getElementById('lobbyCount').textContent = list.length + ' igrača';
+                document.getElementById('lobbyList').innerHTML = list.map(([id, p]) => `
+                    <div class="flex items-center gap-3 bg-white/5 rounded-lg p-2 ${id === myLobbyId ? 'border border-yellow-400' : ''}">
+                        <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center font-bold">
+                            ${(p.nickname || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <div class="flex-1">${p.nickname || 'Anoniman'}</div>
+                        ${id === myLobbyId ? '<span class="text-xs bg-yellow-400 text-blue-900 px-2 py-0.5 rounded">TI</span>' : ''}
+                    </div>
+                `).join('');
+            });
+
+            // Countdown
+            startCountdown();
+        }
+
+        function startCountdown() {
+            if (countdownInterval) clearInterval(countdownInterval);
+            const update = () => {
+                const now = Date.now();
+                const diff = quizData.startTime - now;
+                const el = document.getElementById('countdown');
+                if (diff <= 0) {
+                    el.textContent = 'POČINJE...';
+                    document.getElementById('countdownBox').classList.add('pulse');
+                    return;
+                }
+                const h = Math.floor(diff / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+                el.textContent =
+                    String(h).padStart(2, '0') + ':' +
+                    String(m).padStart(2, '0') + ':' +
+                    String(s).padStart(2, '0');
+            };
+            update();
+            countdownInterval = setInterval(update, 1000);
+        }
+
+        document.getElementById('leaveBtn').addEventListener('click', async () => {
+            if (!confirm('Sigurno napuštaš lobby?')) return;
+            if (myLobbyId) {
+                await Q.ref('lobby/' + myLobbyId).remove();
+                await database.ref(`scheduledQuizzes/${quizId}/playerCount`)
+                    .transaction(v => Math.max(0, (v || 1) - 1));
+                localStorage.removeItem('lobbyId_' + quizId);
+                localStorage.removeItem('lobbyNick_' + quizId);
+            }
+            location.href = 'quizzes.html';
+        });
+
+        function redirectToPlayer() {
+            if (countdownInterval) clearInterval(countdownInterval);
+            document.getElementById('waitingRoom').classList.add('hidden');
+            document.getElementById('joinForm').classList.add('hidden');
+            document.getElementById('startedBox').classList.remove('hidden');
+            // Predaj nickname player.html-u kroz localStorage (player.html već koristi sličan flow)
+            if (myNickname) {
+                localStorage.setItem('playerNickname', myNickname);
+            }
+            setTimeout(() => {
+                location.href = 'player.html?quiz=' + quizId;
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
